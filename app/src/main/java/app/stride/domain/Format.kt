@@ -1,0 +1,54 @@
+package app.stride.domain
+
+import java.time.LocalDate
+import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+private val DAYS_SHORT = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+private val DAYS_LONG = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+fun dayShort(d: LocalDate) = DAYS_SHORT[d.dayOfWeek.value - 1]
+fun dayLong(d: LocalDate) = DAYS_LONG[d.dayOfWeek.value - 1]
+fun dowShort(dow: Int) = DAYS_SHORT[(dow - 1).coerceIn(0, 6)]
+fun dateShort(d: LocalDate) = "${MONTHS[d.monthValue - 1]} ${d.dayOfMonth}"
+fun dateNum(d: LocalDate) = "${d.monthValue}/${d.dayOfMonth}"
+
+fun weekRange(monday: LocalDate): String {
+    val sunday = monday.plusDays(6)
+    return if (monday.month == sunday.month) "${MONTHS[monday.monthValue - 1]} ${monday.dayOfMonth}–${sunday.dayOfMonth}"
+    else "${dateShort(monday)} – ${dateShort(sunday)}"
+}
+
+/** 42:10 or 1:02:10 */
+fun fmtDur(sec: Double?): String {
+    if (sec == null || sec.isNaN()) return "–"
+    val s = sec.roundToInt()
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    val ss = s % 60
+    return if (h > 0) String.format(Locale.US, "%d:%02d:%02d", h, m, ss) else String.format(Locale.US, "%d:%02d", m, ss)
+}
+
+fun fmtMin(sec: Double?): String = if (sec == null) "–" else "${(sec / 60).roundToInt()} min"
+
+fun fmtKm(meters: Double?): String =
+    if (meters == null) "–" else String.format(Locale.US, "%.2f km", meters / 1000)
+
+fun fmtMeters(meters: Double?): String =
+    if (meters == null) "–" else if (meters >= 1000) fmtKm(meters) else "${meters.roundToInt()} m"
+
+fun fmtHr(hr: Double?): String = if (hr == null) "–" else "${hr.roundToInt()}"
+
+fun fmtKg(kg: Double): String {
+    val r = (kg * 10).roundToInt() / 10.0
+    return if (r == r.toLong().toDouble()) "${r.toLong()}" else String.format(Locale.US, "%.1f", r)
+}
+
+fun fmtSigned(v: Double, unit: String = ""): String {
+    val sign = if (v > 0) "+" else if (v < 0) "−" else "±"
+    return "$sign${fmtKg(abs(v))}$unit"
+}
+
+fun parseNum(s: String): Double? = s.trim().replace(',', '.').toDoubleOrNull()

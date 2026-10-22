@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="stride_bg">#FF0A0F1E</color>
+    <color name="stride_icon_bg">#FF0A0F1E</color>
+    <style name="Theme.Stride" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/stride_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

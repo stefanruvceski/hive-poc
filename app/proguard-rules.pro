@@ -1,0 +1,7 @@
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
+-keepattributes *Annotation*, InnerClasses
+-keep,includedescriptorclasses class app.stride.**$$serializer { *; }
+-keepclassmembers class app.stride.** { *** Companion; }
+-keepclasseswithmembers class app.stride.** { kotlinx.serialization.KSerializer serializer(...); }
