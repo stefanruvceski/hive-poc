@@ -1,16 +1,34 @@
 name: Build Stride APK
 
+# Every push to main builds a signed release APK and publishes it as a GitHub
+# Release tagged `android-b<N>` (N = versionCode = run_number) with the asset
+# `Stride.apk`. The installed app checks these releases and offers one-tap
+# updates. Pull requests get the same build and tests, uploaded as an artifact
+# instead of released.
+#
+# Do not rename this file: run_number is per workflow, and a new workflow would
+# restart at 1, below the versionCode already installed on the phone.
+
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
+env:
+  VERSION_CODE: ${{ github.run_number }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -19,22 +37,68 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
-
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
+      # Every signed build uses the same key; changing it breaks in-place updates.
+      - name: Decode keystore
+        id: signing
+        env:
+          KS: ${{ secrets.STRIDE_KEYSTORE_BASE64 }}
+          PW: ${{ secrets.STRIDE_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS" ] && [ -n "$PW" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/stride-release.jks"
+            echo "STRIDE_KEYSTORE_PATH=$RUNNER_TEMP/stride-release.jks" >> "$GITHUB_ENV"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Signing secrets STRIDE_KEYSTORE_BASE64 / STRIDE_KEYSTORE_PASSWORD are not set; building unsigned."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Unit tests
+        run: gradle testReleaseUnitTest -PversionCode=$VERSION_CODE --no-daemon --stacktrace
+
       - name: Build release APK
-        run: gradle assembleRelease -PversionCode=${{ github.run_number }} --no-daemon --stacktrace
+        env:
+          STRIDE_KEYSTORE_PASSWORD: ${{ secrets.STRIDE_KEYSTORE_PASSWORD }}
+        run: gradle assembleRelease -PversionCode=$VERSION_CODE --no-daemon --stacktrace
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk Stride.apk
+      - name: Require signing for releases
+        if: steps.signing.outputs.ready != 'true' && github.event_name != 'pull_request'
+        run: |
+          echo "::error::Missing STRIDE_KEYSTORE_BASE64 / STRIDE_KEYSTORE_PASSWORD secrets. Run scripts/set-github-secrets.sh once. No release was published."
+          exit 1
 
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      - name: Verify signature
+        if: steps.signing.outputs.ready == 'true'
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs "$APK" | head -3
+          cp "$APK" Stride.apk
+
+      - name: Upload test APK (PR)
+        if: github.event_name == 'pull_request' && steps.signing.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v${{ github.run_number }}
-          name: Stride v${{ github.run_number }}
-          files: Stride.apk
-          make_latest: true
+          name: stride-pr-apk
+          path: Stride.apk
+          retention-days: 7
+
+      - name: Publish GitHub release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="android-b${VERSION_CODE}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists (re-run); not publishing again."
+            exit 0
+          fi
+          gh release create "$TAG" Stride.apk \
+            --title "Stride · build ${VERSION_CODE}" \
+            --notes "$(git log -1 --pretty=%s)" \
+            --target "$GITHUB_SHA" \
+            --latest
