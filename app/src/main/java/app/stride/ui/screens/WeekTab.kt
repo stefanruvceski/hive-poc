@@ -1,5 +1,13 @@
 package app.stride.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import app.stride.ui.RowCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,7 +31,6 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,7 +59,6 @@ import app.stride.ui.StatGrid
 import app.stride.ui.kindIcon
 import app.stride.ui.levelColor
 import app.stride.ui.theme.StrideColors
-import app.stride.ui.theme.NumberStyle
 import java.time.LocalDate
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -83,25 +89,22 @@ fun WeekTab(
             item { ConnectCard(onSettings) }
         }
         item {
+            // Header like Streakli's day navigator: bordered square buttons, faint kicker, 18sp title.
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { onWeekOffset(weekOffset - 1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous week")
-                }
+                NavButton(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous week") { onWeekOffset(weekOffset - 1) }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(weekRange(monday), style = MaterialTheme.typography.titleMedium)
                     Text(
                         when (weekOffset) {
-                            0 -> "This week"
-                            -1 -> "Last week"
-                            else -> "${-weekOffset} weeks ago"
+                            0 -> "THIS WEEK"
+                            -1 -> "LAST WEEK"
+                            else -> "${-weekOffset} WEEKS AGO"
                         },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp),
+                        color = StrideColors.Faint,
                     )
+                    Text(weekRange(monday), style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text)
                 }
-                IconButton(onClick = { onWeekOffset(weekOffset + 1) }, enabled = weekOffset < 0) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next week")
-                }
+                NavButton(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next week", enabled = weekOffset < 0) { onWeekOffset(weekOffset + 1) }
             }
         }
         item { SummaryCard(week, today, onDay) }
@@ -120,6 +123,22 @@ fun WeekTab(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NavButton(icon: ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(42.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = StrideColors.Elev,
+        border = BorderStroke(1.dp, StrideColors.Border),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, description, tint = if (enabled) StrideColors.Text else StrideColors.Faint.copy(alpha = 0.5f))
         }
     }
 }
@@ -154,12 +173,12 @@ private fun SummaryCard(week: WeekResult, today: LocalDate, onDay: (LocalDate) -
             Spacer(Modifier.width(16.dp))
             Column {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text("${s.done}", style = NumberStyle.copy(fontSize = 34.sp), color = StrideColors.Text)
-                    Text(" / ${s.planned}", style = MaterialTheme.typography.titleMedium, color = StrideColors.Dim, modifier = Modifier.padding(bottom = 5.dp))
+                    Text("${s.done}", style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold), color = StrideColors.Text)
+                    Text(" / ${s.planned}", style = TextStyle(fontSize = 18.sp), color = StrideColors.Faint, modifier = Modifier.padding(bottom = 2.dp))
                 }
-                Text("workouts done this week", style = MaterialTheme.typography.bodySmall, color = StrideColors.Faint)
+                Text("workouts done this week", style = TextStyle(fontSize = 13.sp), color = StrideColors.Dim)
                 if (s.saunasPlanned > 0) {
-                    Text("Sauna ${s.saunas}/${s.saunasPlanned}", style = MaterialTheme.typography.bodySmall, color = StrideColors.Accent2)
+                    Text("Sauna ${s.saunas}/${s.saunasPlanned}", style = TextStyle(fontSize = 13.sp), color = StrideColors.Accent2)
                 }
             }
         }
@@ -212,8 +231,7 @@ private fun DayRow(d: DayResult, isToday: Boolean, onClick: () -> Unit) {
         DayStatus.UPCOMING -> d.plan?.time ?: ""
         DayStatus.REST -> d.verdict?.headline ?: "Rest"
     }
-    FCard(onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    RowCard(onClick = onClick) {
             IconBubble(kindIcon(d.plan?.kind), if (d.status == DayStatus.UPCOMING) muted else color)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -222,7 +240,7 @@ private fun DayRow(d: DayResult, isToday: Boolean, onClick: () -> Unit) {
                     style = MaterialTheme.typography.labelMedium,
                     color = if (isToday) primary else muted,
                 )
-                Text(d.plan?.title ?: "No plan", style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Text(d.plan?.title ?: "No plan", style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text, maxLines = 1)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = muted, maxLines = 1)
             }
             Spacer(Modifier.width(8.dp))
@@ -233,6 +251,5 @@ private fun DayRow(d: DayResult, isToday: Boolean, onClick: () -> Unit) {
                 DayStatus.UPCOMING, DayStatus.REST -> Icons.Filled.RadioButtonUnchecked
             }
             Icon(statusIcon, null, tint = color, modifier = Modifier.size(22.dp))
-        }
     }
 }

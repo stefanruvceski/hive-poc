@@ -61,6 +61,7 @@ import app.stride.model.StrengthSession
 import app.stride.ui.AppViewModel
 import app.stride.ui.FCard
 import app.stride.ui.IconBubble
+import app.stride.ui.RowCard
 import app.stride.ui.SectionLabel
 import app.stride.ui.kindIcon
 import app.stride.ui.theme.StrideColors
@@ -136,21 +137,19 @@ fun StrengthTab(
             }
             items(sessions, key = { it.id }) { s ->
                 val d = LocalDate.parse(s.date)
-                FCard(onClick = { onOpen(s) }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconBubble(kindIcon(s.kind), MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("${dayShort(d)}, ${dateShort(d)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(shortKind(s.kind), style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "${s.exercises.size} exercises · ${fmtKg(s.volume)} kg volume",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (s.sauna) Icon(Icons.Filled.HotTub, "Sauna", tint = MaterialTheme.colorScheme.primary)
+                RowCard(onClick = { onOpen(s) }) {
+                    IconBubble(kindIcon(s.kind), MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("${dayShort(d)}, ${dateShort(d)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(shortKind(s.kind), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "${s.exercises.size} exercises · ${fmtKg(s.volume)} kg volume",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
+                    if (s.sauna) Icon(Icons.Filled.HotTub, "Sauna", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }

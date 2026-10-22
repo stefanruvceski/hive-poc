@@ -35,9 +35,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -78,13 +82,28 @@ fun FCard(
     }
 }
 
+/** Section heading like Streakli's todTitle / sectionTitle: dim, 13sp, bold. */
+/** List row like Streakli's habit/day row: radius 16, 1dp border, elevated navy, 12dp padding. */
+@Composable
+fun RowCard(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = StrideColors.Elev,
+        border = BorderStroke(1.dp, StrideColors.Border),
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, content = content)
+    }
+}
+
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
-        text.uppercase(),
+        text,
         modifier = modifier,
-        style = TextStyle(fontSize = 11.sp, letterSpacing = 0.8.sp, fontWeight = FontWeight.SemiBold),
-        color = StrideColors.Faint,
+        style = TextStyle(fontSize = 13.sp, letterSpacing = 0.3.sp, fontWeight = FontWeight.Bold),
+        color = StrideColors.Dim,
     )
 }
 
@@ -132,10 +151,11 @@ fun kindIcon(kind: DayKind?): ImageVector = when (kind) {
     DayKind.REST, null -> Icons.Filled.Bedtime
 }
 
+/** Icon tile like Streakli's emojiBox: rounded square tinted with the color at ~13% alpha. */
 @Composable
-fun IconBubble(icon: ImageVector, tint: Color, size: Int = 40) {
+fun IconBubble(icon: ImageVector, tint: Color, size: Int = 44) {
     Box(
-        Modifier.size(size.dp).clip(CircleShape).background(tint.copy(alpha = 0.16f)),
+        Modifier.size(size.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.13f)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size((size * 0.55f).dp))
@@ -194,6 +214,10 @@ fun ZoneBar(times: List<Double>) {
     }
 }
 
+/**
+ * Line chart in the style of Streakli's TrendChart: three labelled grid lines,
+ * gradient area under the line, small dots, dashed reference line, faint 9sp labels.
+ */
 @Composable
 fun LineChart(
     values: List<Double?>,
@@ -205,62 +229,84 @@ fun LineChart(
     refLine: Double? = null,
 ) {
     val measurer = rememberTextMeasurer()
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val valueColor = MaterialTheme.colorScheme.onSurface
-    val grid = MaterialTheme.colorScheme.outlineVariant
-    val hole = MaterialTheme.colorScheme.surfaceContainer
     val pts = values.mapIndexedNotNull { i, v -> v?.let { i to it } }
     if (pts.isEmpty()) {
-        Text("No data yet", style = MaterialTheme.typography.bodyMedium, color = labelColor, modifier = Modifier.padding(vertical = 24.dp))
+        EmptyChart(modifier, 170)
         return
     }
-    Canvas(modifier.fillMaxWidth().height(150.dp)) {
+    Canvas(modifier.fillMaxWidth().height(170.dp)) {
         val all = pts.map { it.second } + listOfNotNull(refLine) + (band?.toList() ?: emptyList())
         var lo = all.min()
         var hi = all.max()
-        if (hi - lo < 1e-6) { lo -= 1; hi += 1 }
-        val pad = (hi - lo) * 0.18
+        if (hi - lo < 1e-9) { lo -= 1; hi += 1 }
+        val pad = (hi - lo) * 0.12
         lo -= pad; hi += pad
-        val top = 18.dp.toPx()
-        val bottom = size.height - 20.dp.toPx()
-        val sidePad = 10.dp.toPx()
+        val padL = 34.dp.toPx()
+        val padR = 10.dp.toPx()
+        val top = 12.dp.toPx()
+        val bottom = size.height - 22.dp.toPx()
         val n = values.size
-        fun x(i: Int): Float = if (n <= 1) size.width / 2 else sidePad + (size.width - 2 * sidePad) * i / (n - 1)
+        fun x(i: Int): Float = if (n <= 1) padL + (size.width - padL - padR) / 2 else padL + (size.width - padL - padR) * i / (n - 1)
         fun y(v: Double): Float = (bottom - (bottom - top) * ((v - lo) / (hi - lo))).toFloat()
+        val tickStyle = TextStyle(fontSize = 9.sp, color = StrideColors.Faint)
 
         band?.let { (a, b) ->
-            drawRect(color.copy(alpha = 0.10f), topLeft = Offset(0f, y(b)), size = Size(size.width, y(a) - y(b)))
+            drawRect(color.copy(alpha = 0.10f), topLeft = Offset(padL, y(b)), size = Size(size.width - padL - padR, y(a) - y(b)))
         }
-        for (k in 0..2) {
-            val yy = top + (bottom - top) * k / 2
-            drawLine(grid, Offset(0f, yy), Offset(size.width, yy), strokeWidth = 1f)
+        listOf(hi - pad, (hi + lo) / 2, lo + pad).forEach { t ->
+            drawLine(StrideColors.Border, Offset(padL, y(t)), Offset(size.width - padR, y(t)), strokeWidth = 1.dp.toPx())
+            val l = measurer.measure(format(t), tickStyle)
+            drawText(l, topLeft = Offset((padL - 6.dp.toPx() - l.size.width).coerceAtLeast(0f), y(t) - l.size.height / 2f))
         }
         refLine?.let {
-            drawLine(color.copy(alpha = 0.7f), Offset(0f, y(it)), Offset(size.width, y(it)), strokeWidth = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f)))
+            drawLine(
+                StrideColors.Dim, Offset(padL, y(it)), Offset(size.width - padR, y(it)),
+                strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
+            )
         }
         if (pts.size > 1) {
-            val path = Path()
-            pts.forEachIndexed { j, (i, v) -> if (j == 0) path.moveTo(x(i), y(v)) else path.lineTo(x(i), y(v)) }
-            drawPath(path, color, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            val line = Path()
+            pts.forEachIndexed { j, (i, v) -> if (j == 0) line.moveTo(x(i), y(v)) else line.lineTo(x(i), y(v)) }
+            val area = Path().apply {
+                addPath(line)
+                lineTo(x(pts.last().first), bottom)
+                lineTo(x(pts.first().first), bottom)
+                close()
+            }
+            drawPath(area, Brush.verticalGradient(listOf(color.copy(alpha = 0.28f), color.copy(alpha = 0f)), startY = top, endY = bottom))
+            drawPath(line, color, style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
-        pts.forEach { (i, v) ->
-            drawCircle(color, 4.5.dp.toPx(), Offset(x(i), y(v)))
-            drawCircle(hole, 2.dp.toPx(), Offset(x(i), y(v)))
-        }
-        val (li, lv) = pts.last()
-        val vl = measurer.measure(format(lv), TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = valueColor))
-        val vx = (x(li) - vl.size.width / 2f).coerceIn(0f, size.width - vl.size.width)
-        val vy = (y(lv) - vl.size.height - 6.dp.toPx()).coerceAtLeast(0f)
-        drawText(vl, topLeft = Offset(vx, vy))
+        pts.forEach { (i, v) -> drawCircle(color, 2.6.dp.toPx(), Offset(x(i), y(v))) }
 
         val idx = if (n <= 3) (0 until n).toList() else listOf(0, n / 2, n - 1)
         idx.forEach { i ->
             val text = labels.getOrNull(i) ?: return@forEach
             if (text.isEmpty()) return@forEach
-            val l = measurer.measure(text, TextStyle(fontSize = 10.sp, color = labelColor))
-            val lx = (x(i) - l.size.width / 2f).coerceIn(0f, size.width - l.size.width)
+            val l = measurer.measure(text, tickStyle)
+            val lx = when {
+                n > 1 && i == 0 -> x(i)
+                n > 1 && i == n - 1 -> x(i) - l.size.width
+                else -> x(i) - l.size.width / 2f
+            }.coerceIn(0f, size.width - l.size.width)
             drawText(l, topLeft = Offset(lx, size.height - l.size.height))
         }
+    }
+}
+
+/** Placeholder like Streakli's empty chart: dashed outline, faint text. */
+@Composable
+private fun EmptyChart(modifier: Modifier, heightDp: Int) {
+    Box(
+        modifier.fillMaxWidth().height(heightDp.dp).drawBehind {
+            drawRoundRect(
+                StrideColors.Border,
+                cornerRadius = CornerRadius(12.dp.toPx()),
+                style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))),
+            )
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("No data yet", style = TextStyle(fontSize = 13.sp), color = StrideColors.Faint)
     }
 }
 
@@ -274,11 +320,13 @@ fun BarChart(
     maxValue: Double? = null,
 ) {
     val measurer = rememberTextMeasurer()
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val empty = MaterialTheme.colorScheme.surfaceContainerHighest
+    if (values.all { it == null || it <= 0.0 }) {
+        EmptyChart(modifier, 140)
+        return
+    }
+    val empty = StrideColors.Elev2
     Canvas(modifier.fillMaxWidth().height(140.dp)) {
         val n = values.size
-        if (n == 0) return@Canvas
         val hi = maxValue ?: (values.filterNotNull().maxOrNull()?.takeIf { it > 0 } ?: 1.0)
         val top = 16.dp.toPx()
         val bottom = size.height - 18.dp.toPx()
@@ -287,18 +335,18 @@ fun BarChart(
         values.forEachIndexed { i, v ->
             val cx = slot * i + slot / 2
             val h = if (v == null) 0f else ((bottom - top) * (v / hi).coerceIn(0.0, 1.0)).toFloat()
-            drawRoundRect(empty, topLeft = Offset(cx - bw / 2, top), size = Size(bw, bottom - top), cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
+            drawRoundRect(empty, topLeft = Offset(cx - bw / 2, top), size = Size(bw, bottom - top), cornerRadius = CornerRadius(6.dp.toPx()))
             if (h > 0) {
                 val c = if (i == n - 1) color else color.copy(alpha = 0.55f)
-                drawRoundRect(c, topLeft = Offset(cx - bw / 2, bottom - h), size = Size(bw, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
+                drawRoundRect(c, topLeft = Offset(cx - bw / 2, bottom - h), size = Size(bw, h), cornerRadius = CornerRadius(6.dp.toPx()))
             }
             if (i == n - 1 && v != null) {
-                val l = measurer.measure(format(v), TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = labelColor))
+                val l = measurer.measure(format(v), TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StrideColors.Text))
                 drawText(l, topLeft = Offset((cx - l.size.width / 2f).coerceIn(0f, size.width - l.size.width), 0f))
             }
             val lab = labels.getOrNull(i).orEmpty()
             if (lab.isNotEmpty() && (n <= 8 || i % 2 == 0)) {
-                val l = measurer.measure(lab, TextStyle(fontSize = 10.sp, color = labelColor))
+                val l = measurer.measure(lab, TextStyle(fontSize = 9.sp, color = StrideColors.Faint))
                 drawText(l, topLeft = Offset((cx - l.size.width / 2f).coerceIn(0f, size.width - l.size.width), size.height - l.size.height))
             }
         }
@@ -333,18 +381,18 @@ fun WeekStrip(
     onSelect: (java.time.LocalDate) -> Unit,
 ) {
     val labels = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
+    val cellShape = RoundedCornerShape(12.dp)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         days.forEachIndexed { i, d ->
             val p = fill(d).coerceIn(0f, 1f)
             val isToday = d == today
             val future = d.isAfter(today)
-            val c = dotColor(d)
             Column(
                 Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, if (isToday) c.copy(alpha = 0.6f) else Color.Transparent, RoundedCornerShape(12.dp))
-                    .background(if (isToday) c.copy(alpha = 0.10f) else Color.Transparent)
+                    .clip(cellShape)
+                    .border(1.dp, if (isToday) StrideColors.Accent else Color.Transparent, cellShape)
+                    .background(if (isToday) StrideColors.Accent.copy(alpha = 0.10f) else Color.Transparent)
                     .clickable { onSelect(d) }
                     .padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -354,9 +402,10 @@ fun WeekStrip(
                 Box(
                     Modifier
                         .size(30.dp)
+                        .alpha(if (p > 0f) 0.35f + p * 0.65f else if (future) 0.5f else 1f)
                         .clip(CircleShape)
-                        .background(if (p > 0f) c.copy(alpha = 0.35f + p * 0.65f) else StrideColors.Elev2.copy(alpha = if (future) 0.5f else 1f))
-                        .border(if (isToday) 1.dp else 0.dp, if (isToday) c else Color.Transparent, CircleShape),
+                        .background(if (p > 0f) dotColor(d) else StrideColors.Elev2)
+                        .border(if (isToday) 1.dp else 0.dp, if (isToday) StrideColors.Accent else Color.Transparent, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
