@@ -51,6 +51,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // BuildConfig.DEBUG / VERSION_CODE drive the in-app update check.
+        buildConfig = true
     }
 }
 
@@ -68,4 +70,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

@@ -2,6 +2,7 @@ package app.stride.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -36,7 +37,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.stride.ui.screens.DayScreen
@@ -46,6 +50,8 @@ import app.stride.ui.screens.StrengthTab
 import app.stride.ui.screens.TrendsTab
 import app.stride.ui.screens.WeekTab
 import app.stride.ui.screens.WeightTab
+import app.stride.update.UpdateBanner
+import app.stride.update.UpdateViewModel
 import java.time.LocalDate
 
 sealed interface Overlay {
@@ -65,8 +71,12 @@ private val TABS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StrideApp(vm: AppViewModel = viewModel()) {
+fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewModel()) {
     val data by vm.data.collectAsStateWithLifecycle()
+    val update by updates.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // Runs on launch and every time the app comes back to the foreground.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.onForeground(context) }
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val intervals by vm.intervals.collectAsStateWithLifecycle()
@@ -94,18 +104,27 @@ fun StrideApp(vm: AppViewModel = viewModel()) {
             null -> Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = {
-                    TopAppBar(
-                        title = { Text(if (tab == 0) "Stride" else TABS[tab].title, style = MaterialTheme.typography.headlineSmall) },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                        actions = {
-                            if (syncing) {
-                                CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp)
-                            } else {
-                                IconButton(onClick = { vm.sync() }) { Icon(Icons.Filled.Sync, "Sync") }
-                            }
-                            IconButton(onClick = { push(Overlay.Settings) }) { Icon(Icons.Filled.Settings, "Settings") }
-                        },
-                    )
+                    Column {
+                        TopAppBar(
+                            title = { Text(if (tab == 0) "Stride" else TABS[tab].title, style = MaterialTheme.typography.headlineSmall) },
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                            actions = {
+                                if (syncing) {
+                                    CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp)
+                                } else {
+                                    IconButton(onClick = { vm.sync() }) { Icon(Icons.Filled.Sync, "Sync") }
+                                }
+                                IconButton(onClick = { push(Overlay.Settings) }) { Icon(Icons.Filled.Settings, "Settings") }
+                            },
+                        )
+                        UpdateBanner(
+                            state = update,
+                            onInstall = { updates.install(context) },
+                            onDismiss = updates::dismiss,
+                            onOpenSettings = { updates.openPermissionSettings(context) },
+                            onCancelPermission = updates::cancelPermission,
+                        )
+                    }
                 },
                 bottomBar = {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {

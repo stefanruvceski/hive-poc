@@ -11,6 +11,13 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 - Local: `gradle assembleRelease` with Gradle 8.9, JDK 17, Android SDK 35 (no wrapper committed; add one with `gradle wrapper --gradle-version 8.9` if useful).
 - Signing: no keystore exists yet and none may be committed. `app/build.gradle.kts` reads `STRIDE_KEYSTORE_PATH` and `STRIDE_KEYSTORE_PASSWORD` (alias `stride`). CI must decode the keystore from secrets `STRIDE_KEYSTORE_BASE64` + `STRIDE_KEYSTORE_PASSWORD`, like Streakli does. Once the first release is out, never change the key, or updates won't install over the old app.
 
+## In-app updates
+`app/stride/update/`: on launch and on every return to the foreground, release builds read
+`https://api.github.com/repos/stefanruvceski/stride/releases` (no token; the repo must stay public), take the
+highest non-draft `android-b<N>` release with an `.apk` asset and show a banner if N > `BuildConfig.VERSION_CODE`.
+Pure logic in `UpdateLogic.kt` (unit tested); download + FileProvider + installer in `Updater.kt`. Disabled in debug.
+Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new workflow and versionCode must keep increasing.
+
 ## Design
 Match Streakli, the user's habit tracker: repo `stefanruvceski/habit-tracker`, folder `apps/mobile/src`
 (`lib/theme.ts`, `components/ui.tsx`, `components/WeekStrip.tsx`, `components/Charts.tsx`, `screens/TodayScreen.tsx`).
