@@ -105,4 +105,31 @@ class TrainingTest {
         assertNull(restDayToSwap(plan, LocalDate.parse("2026-10-21"))) // Wednesday is rest itself
         assertNull(restDayToSwap(plan, LocalDate.parse("2026-10-24"))) // no rest day left on Saturday
     }
+
+    @Test
+    fun comparison_thisWeekVsLast() {
+        val monday = LocalDate.parse("2026-10-19")
+        fun s(date: String, vararg e: ExerciseEntry) = StrengthSession(date, date, DayKind.STRENGTH_UPPER, e.toList())
+        fun e(name: String, kg: Double, reps: Int) = ExerciseEntry(name).withSets(List(2) { SetEntry(kg, reps, true) })
+        val sessions = listOf(
+            s("2026-10-13", e("Row", 16.0, 10), e("Press", 20.0, 8), e("Curl", 12.0, 9)),
+            s("2026-10-22", e("Row", 18.0, 7), e("Press", 20.0, 9), e("Curl", 12.0, 8), e("Fly", 8.0, 10)),
+        )
+        val c = strengthComparison(sessions, monday).associateBy { it.name }
+        assertEquals(setOf("Row", "Press", "Curl"), c.keys) // Fly is new this week, nothing to compare
+        assertEquals(1, c["Row"]!!.trend)
+        assertEquals(2.0, c["Row"]!!.kgDelta, 0.0)
+        assertEquals(1, c["Press"]!!.trend)
+        assertEquals(1, c["Press"]!!.repsDelta)
+        assertEquals(-1, c["Curl"]!!.trend)
+    }
+
+    @Test
+    fun comparison_takesBestSessionOfTheWeek() {
+        val monday = LocalDate.parse("2026-10-19")
+        fun s(date: String, kg: Double, reps: Int) = StrengthSession(date, date, DayKind.STRENGTH_LEGS, listOf(ExerciseEntry("Swing").withSets(List(2) { SetEntry(kg, reps, true) })))
+        val c = strengthComparison(listOf(s("2026-10-12", 16.0, 10), s("2026-10-20", 16.0, 8), s("2026-10-23", 20.0, 6)), monday).single()
+        assertEquals(20.0, c.now.topKg, 0.0)
+        assertEquals(1, c.trend)
+    }
 }

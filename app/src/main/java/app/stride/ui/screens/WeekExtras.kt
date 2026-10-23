@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -31,7 +32,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.domain.ExerciseComparison
 import app.stride.domain.WeeklyTargets
+import app.stride.domain.fmtKg
+import app.stride.domain.fmtSigned
 import app.stride.ui.GlassCard
 import app.stride.ui.theme.StrideColors
 
@@ -108,4 +112,49 @@ fun SwapCard(reason: String, todayTitle: String, restDay: String, onSwap: () -> 
             Text("Rest today · move $todayTitle to $restDay", maxLines = 1)
         }
     }
+}
+
+/** Exercises done this week and last week, side by side with the change. */
+@Composable
+fun StrengthComparisonCard(rows: List<ExerciseComparison>) {
+    GlassCard(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.FitnessCenter, null, tint = StrideColors.Accent2, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Strength vs last week", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold))
+        }
+        rows.forEach { r ->
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(r.name, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(
+                        "last week ${setText(r.before.topKg, r.before.reps)}",
+                        style = TextStyle(fontSize = 12.sp),
+                        color = StrideColors.Faint,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(setText(r.now.topKg, r.now.reps), style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold))
+                    val (label, color) = changeLabel(r)
+                    Text(label, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = color)
+                }
+            }
+        }
+    }
+}
+
+private fun setText(kg: Double, reps: Int) = if (kg > 0) "${fmtKg(kg)} kg × $reps" else "$reps reps"
+
+private fun changeLabel(r: ExerciseComparison): Pair<String, Color> {
+    val parts = buildList {
+        if (kotlin.math.abs(r.kgDelta) > 0.01) add(fmtSigned(r.kgDelta, " kg"))
+        if (r.repsDelta != 0) add((if (r.repsDelta > 0) "+" else "−") + "${kotlin.math.abs(r.repsDelta)} rep" + if (kotlin.math.abs(r.repsDelta) == 1) "" else "s")
+    }
+    val color = when (r.trend) {
+        1 -> StrideColors.Good
+        -1 -> StrideColors.Warn
+        else -> StrideColors.Dim
+    }
+    return (if (parts.isEmpty()) "same as last week" else parts.joinToString(" · ")) to color
 }

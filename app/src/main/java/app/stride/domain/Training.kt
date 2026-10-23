@@ -196,3 +196,43 @@ fun restDayToSwap(plan: List<PlanDay>, today: LocalDate): Int? {
     if (todayPlan.kind.isRest) return null
     return plan.filter { it.dow > today.dayOfWeek.value && it.kind.isRest }.minByOrNull { it.dow }?.dow
 }
+
+// ------------------------------------------------------------------ strength: this week vs last week
+
+data class ExerciseComparison(val name: String, val now: ExercisePoint, val before: ExercisePoint) {
+    val kgDelta: Double get() = now.topKg - before.topKg
+    val repsDelta: Int get() = now.reps - before.reps
+    val volumeDelta: Double get() = now.volume - before.volume
+
+    /** +1 better (heavier, or more reps at the same weight), -1 worse, 0 same. */
+    val trend: Int
+        get() = when {
+            kgDelta > 0.01 -> 1
+            kgDelta < -0.01 -> -1
+            repsDelta > 0 -> 1
+            repsDelta < 0 -> -1
+            else -> 0
+        }
+}
+
+/**
+ * Exercises done in the week starting [monday] that were also done the week before, with each
+ * week's best set (heaviest top weight, then most reps at it). Ordered as first done this week.
+ */
+fun strengthComparison(sessions: List<StrengthSession>, monday: LocalDate): List<ExerciseComparison> {
+    fun best(from: LocalDate): Map<String, Pair<String, ExercisePoint>> {
+        val inWeek = sessions.filter { it.logged && it.date >= from.toString() && it.date < from.plusDays(7).toString() }.sortedBy { it.date }
+        val out = LinkedHashMap<String, Pair<String, ExercisePoint>>()
+        for (s in inWeek) for (e in s.exercises) {
+            if (!(e.done || s.finished) || e.workingSets.none { it.reps > 0 }) continue
+            val key = e.name.trim().lowercase()
+            val p = ExercisePoint(s.date, e.weightKg, e.reps, e.volume)
+            val old = out[key]?.second
+            if (old == null || p.topKg > old.topKg || (p.topKg == old.topKg && p.reps > old.reps)) out[key] = e.name to p
+        }
+        return out
+    }
+    val now = best(monday)
+    val before = best(monday.minusWeeks(1))
+    return now.mapNotNull { (key, v) -> before[key]?.let { ExerciseComparison(v.first, v.second, it.second) } }
+}
