@@ -2,6 +2,7 @@
 <!-- Refreshed by the app on every data change and every 30 min. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_streak_description"
+    android:previewLayout="@layout/widget_preview_streak"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:minWidth="110dp"
     android:minHeight="50dp"

@@ -36,24 +36,38 @@ object WidgetArt {
         return bmp
     }
 
-    /** A month as rounded tiles, 7 columns, Monday first; [colors] has one entry per day (null = blank). */
-    fun month(colors: List<Int?>, lead: Int, today: Int?, widthPx: Int): Bitmap {
+    /**
+     * A month as rounded tiles with day numbers under a weekday header, Monday first.
+     * [colors] has one fill per day; [filled] marks days whose tile is a status color (dark number on it).
+     */
+    fun month(colors: List<Int>, filled: List<Boolean>, lead: Int, today: Int?, widthPx: Int): Bitmap {
         val cols = 7
         val rows = (lead + colors.size + 6) / 7
-        val gap = widthPx / 60f
+        val gap = widthPx / 48f
         val cell = (widthPx - gap * (cols - 1)) / cols
-        val h = (rows * cell + (rows - 1) * gap).toInt()
+        val header = cell * 0.62f
+        val h = (header + rows * cell + (rows - 1) * gap).toInt()
         val bmp = Bitmap.createBitmap(widthPx, max(h, 1), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
+        val bold = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        val headerPaint = paint(0xFF64748B.toInt()).apply { textSize = cell * 0.34f; typeface = bold; textAlign = Paint.Align.CENTER }
+        listOf("M", "T", "W", "T", "F", "S", "S").forEachIndexed { i, l ->
+            c.drawText(l, i * (cell + gap) + cell / 2, header * 0.62f, headerPaint)
+        }
+        val number = paint(0).apply { textSize = cell * 0.4f; typeface = bold; textAlign = Paint.Align.CENTER }
         colors.forEachIndexed { i, color ->
             val pos = lead + i
             val x = (pos % cols) * (cell + gap)
-            val y = (pos / cols) * (cell + gap)
+            val y = header + (pos / cols) * (cell + gap)
             val r = RectF(x, y, x + cell, y + cell)
-            c.drawRoundRect(r, cell * 0.24f, cell * 0.24f, paint(color ?: 0xFF16203A.toInt()))
+            c.drawRoundRect(r, cell * 0.26f, cell * 0.26f, paint(color))
             if (today == i + 1) {
-                c.drawRoundRect(r, cell * 0.24f, cell * 0.24f, paint(0xFF34D399.toInt()).apply { style = Paint.Style.STROKE; strokeWidth = cell / 10 })
+                val inset = cell / 18
+                c.drawRoundRect(RectF(r.left + inset, r.top + inset, r.right - inset, r.bottom - inset), cell * 0.22f, cell * 0.22f,
+                    paint(0xFFEEF2FF.toInt()).apply { style = Paint.Style.STROKE; strokeWidth = cell / 12 })
             }
+            number.color = if (filled[i]) 0xE60A0F1E.toInt() else if (today == i + 1) 0xFFEEF2FF.toInt() else 0xFF64748B.toInt()
+            c.drawText("${i + 1}", r.centerX(), r.centerY() - (number.descent() + number.ascent()) / 2, number)
         }
         return bmp
     }
