@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import app.stride.ui.kindIcon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
@@ -31,6 +34,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.domain.MetricDelta
+import app.stride.domain.WorkoutComparison
 import app.stride.domain.WeeklyTargets
 import app.stride.ui.GlassCard
 import app.stride.ui.theme.StrideColors
@@ -107,5 +112,41 @@ fun SwapCard(reason: String, todayTitle: String, restDay: String, onSwap: () -> 
         Button(onClick = onSwap, modifier = Modifier.fillMaxWidth()) {
             Text("Rest today · move $todayTitle to $restDay", maxLines = 1)
         }
+    }
+}
+
+/** Each workout done this week and last week (run, swims, each gym day) with its key numbers compared. */
+@Composable
+fun WorkoutComparisonCard(rows: List<WorkoutComparison>) {
+    GlassCard(Modifier.fillMaxWidth()) {
+        Text("This week vs last week", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold))
+        rows.forEach { w ->
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(kindIcon(w.kind), null, tint = StrideColors.Accent, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(w.title, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                w.metrics.forEach { m -> DeltaCell(m, Modifier.weight(1f)) }
+                repeat(3 - w.metrics.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeltaCell(m: MetricDelta, modifier: Modifier) {
+    val color = when (m.trend) {
+        1 -> StrideColors.Good
+        -1 -> StrideColors.Warn
+        else -> StrideColors.Dim
+    }
+    Column(modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.05f)).padding(horizontal = 10.dp, vertical = 8.dp)) {
+        Text(m.label.uppercase(), style = TextStyle(fontSize = 9.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.SemiBold), color = StrideColors.Faint, maxLines = 1)
+        Text(m.now, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), maxLines = 1)
+        Text(m.delta, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = color, maxLines = 1)
+        Text("was ${m.before}", style = TextStyle(fontSize = 10.sp), color = StrideColors.Faint, maxLines = 1)
     }
 }

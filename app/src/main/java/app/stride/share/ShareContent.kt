@@ -101,6 +101,9 @@ object ShareContent {
         }
 
         val track = route(act.id)
+        // Dark OpenStreetMap-based map behind the route; null offline, then the plain background is used.
+        val mapView = track?.let { MapTiles.fit(it, ShareCard.ROUTE_BOX) }
+        val map = mapView?.let { runCatching { MapTiles.render(context, it, ShareCard.W, ShareCard.H) }.getOrNull() }
         val km = (act.distance ?: 0.0) / 1000
         val run = DayKind.RUN.matches(act.type)
         return withContext(Dispatchers.Default) {
@@ -120,6 +123,8 @@ object ShareContent {
                 zones = act.hrZoneTimes?.takeIf { it.sum() > 0 },
                 route = track,
                 footer = footer,
+                map = map,
+                mapView = mapView,
             )
         }
     }

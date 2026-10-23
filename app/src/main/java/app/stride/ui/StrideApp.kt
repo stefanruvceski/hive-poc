@@ -169,7 +169,7 @@ fun StrideApp(
                         onSwap = { d, dow -> vm.swapToday(d, dow) },
                         padding = padding,
                     )
-                    1 -> TrendsTab(data = data, today = today, padding = padding)
+                    1 -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) })
                     2 -> StrengthTab(
                         data = data, today = today, padding = padding,
                         onNew = { push(Overlay.Strength(today, null)) },

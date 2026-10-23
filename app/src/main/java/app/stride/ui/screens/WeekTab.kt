@@ -57,6 +57,7 @@ import app.stride.domain.Analyzer
 import app.stride.domain.Recovery
 import app.stride.domain.dayLong
 import app.stride.domain.restDayToSwap
+import app.stride.domain.workoutComparison
 import app.stride.domain.weekPlan
 import app.stride.domain.weeklyTargets
 import app.stride.domain.DayResult
@@ -165,6 +166,11 @@ fun WeekTab(
         if (week.summary.bullets.isNotEmpty()) {
             item { SectionLabel("Summary", Modifier.padding(top = 8.dp, start = 4.dp)) }
             items(week.summary.bullets) { b -> SummaryItem(b) }
+        }
+        val comparison = workoutComparison(data, monday, today)
+        if (comparison.isNotEmpty()) {
+            if (week.summary.bullets.isEmpty()) item { SectionLabel("Summary", Modifier.padding(top = 8.dp, start = 4.dp)) }
+            item { WorkoutComparisonCard(comparison) }
         }
     }
 }

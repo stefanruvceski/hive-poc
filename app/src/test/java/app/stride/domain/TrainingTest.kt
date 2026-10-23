@@ -105,4 +105,28 @@ class TrainingTest {
         assertNull(restDayToSwap(plan, LocalDate.parse("2026-10-21"))) // Wednesday is rest itself
         assertNull(restDayToSwap(plan, LocalDate.parse("2026-10-24"))) // no rest day left on Saturday
     }
+
+    @Test
+    fun workoutComparison_runAndStrength() {
+        val monday = LocalDate.parse("2026-10-19")
+        val today = LocalDate.parse("2026-10-25")
+        fun run(date: String, km: Double, sec: Double, hr: Double) = app.stride.model.Activity(
+            id = date, startLocal = "${date}T06:00:00", type = "Run", distance = km * 1000, movingTime = sec, avgHr = hr,
+        )
+        fun gym(date: String, kg: Double) = StrengthSession(date, date, DayKind.STRENGTH_UPPER, listOf(ExerciseEntry("Row").withSets(List(2) { SetEntry(kg, 10, true) })))
+        val data = AppData(
+            activities = listOf(run("2026-10-16", 5.0, 1800.0, 160.0), run("2026-10-23", 5.2, 1790.0, 154.0)),
+            strength = listOf(gym("2026-10-15", 16.0), gym("2026-10-22", 20.0)),
+        )
+        val c = workoutComparison(data, monday, today).associateBy { it.kind }
+        val runMetrics = c[DayKind.RUN]!!.metrics.associateBy { it.label }
+        assertEquals(1, runMetrics["Distance"]!!.trend)
+        assertEquals(1, runMetrics["Pace /km"]!!.trend) // faster
+        assertEquals(1, runMetrics["Avg HR"]!!.trend) // lower
+        assertEquals("−6 bpm", runMetrics["Avg HR"]!!.delta)
+        val gymMetrics = c[DayKind.STRENGTH_UPPER]!!.metrics.associateBy { it.label }
+        assertEquals("+80 kg", gymMetrics["Lifted"]!!.delta)
+        assertEquals(1, gymMetrics["Lifted"]!!.trend)
+        assertNull(c[DayKind.SWIM_EASY]) // not done in either week
+    }
 }

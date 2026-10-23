@@ -3,6 +3,7 @@ package app.stride.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,7 +55,7 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @Composable
-fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues) {
+fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (LocalDate) -> Unit) {
     val points = remember(data, today) { Analyzer.trends(data, today, 8) }
     val labels = points.map { dateNum(it.monday) }
     val t = data.settings.targets
@@ -65,7 +66,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues) {
         contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { MonthCard(data, today) }
+        item { MonthCard(data, today, onDay) }
         item {
             ChartCard("Easy swim", "pace per 100 m, lower is better") {
                 LineChart(points.map { it.easySwimPace100 }, labels, accent, { fmtDur(it) })
@@ -136,7 +137,7 @@ private fun ChartCard(title: String, subtitle: String, content: @Composable () -
 
 /** Calendar heatmap of a month, like Streakli's: one tile per day colored by how the day went. */
 @Composable
-private fun MonthCard(data: AppData, today: LocalDate) {
+private fun MonthCard(data: AppData, today: LocalDate, onDay: (LocalDate) -> Unit) {
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     val results = remember(data, month, today) { (1..month.lengthOfMonth()).map { Analyzer.day(month.atDay(it), today, data) } }
     val lead = month.atDay(1).dayOfWeek.value - 1
@@ -165,7 +166,7 @@ private fun MonthCard(data: AppData, today: LocalDate) {
         Spacer(Modifier.height(4.dp))
         (List<DayResult?>(lead) { null } + results).chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth()) {
-                week.forEach { d -> DayTile(d, today, Modifier.weight(1f)) }
+                week.forEach { d -> DayTile(d, today, Modifier.weight(1f), onDay) }
                 repeat(7 - week.size) { Spacer(Modifier.weight(1f)) }
             }
         }
@@ -183,7 +184,7 @@ private fun MonthCard(data: AppData, today: LocalDate) {
 }
 
 @Composable
-private fun DayTile(d: DayResult?, today: LocalDate, modifier: Modifier) {
+private fun DayTile(d: DayResult?, today: LocalDate, modifier: Modifier, onDay: (LocalDate) -> Unit) {
     Box(modifier.aspectRatio(1f).padding(2.dp)) {
         if (d == null) return@Box
         val (bg, fg) = when (d.status) {
@@ -195,7 +196,7 @@ private fun DayTile(d: DayResult?, today: LocalDate, modifier: Modifier) {
         }
         val shape = RoundedCornerShape(9.dp)
         Box(
-            Modifier.fillMaxSize().clip(shape).background(bg)
+            Modifier.fillMaxSize().clip(shape).background(bg).clickable { onDay(d.date) }
                 .border(if (d.date == today) 1.5.dp else 0.dp, if (d.date == today) StrideColors.Accent else Color.Transparent, shape),
             contentAlignment = Alignment.Center,
         ) {
