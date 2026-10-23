@@ -9,7 +9,7 @@ val buildNumber = (project.findProperty("versionCode") as String?)?.toIntOrNull(
 
 android {
     namespace = "app.stride"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.stride"

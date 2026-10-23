@@ -31,8 +31,8 @@ Pulls workouts from a Garmin watch through intervals.icu. Visual design matches 
 Releases are signed with a keystore kept in GitHub secrets (`STRIDE_KEYSTORE_BASE64`, `STRIDE_KEYSTORE_PASSWORD`), never in the repo.
 
 ## Tech
-Kotlin 2.0, Jetpack Compose (Material 3), kotlinx.serialization, OkHttp. AGP 8.7, Gradle 8.9, JDK 17, compileSdk 35, minSdk 26.
-No Gradle wrapper is committed; CI uses `gradle/actions/setup-gradle` with Gradle 8.9.
+Kotlin 2.0, Jetpack Compose (Material 3), kotlinx.serialization, OkHttp. AGP 8.9, Gradle 8.11.1, JDK 17, compileSdk 36 (targetSdk 35), minSdk 26.
+No Gradle wrapper is committed; CI uses `gradle/actions/setup-gradle` with Gradle 8.11.1.
 
 ```
 app/src/main/java/app/stride/
