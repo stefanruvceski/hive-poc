@@ -107,29 +107,26 @@ class TrainingTest {
     }
 
     @Test
-    fun comparison_thisWeekVsLast() {
+    fun workoutComparison_runAndStrength() {
         val monday = LocalDate.parse("2026-10-19")
-        fun s(date: String, vararg e: ExerciseEntry) = StrengthSession(date, date, DayKind.STRENGTH_UPPER, e.toList())
-        fun e(name: String, kg: Double, reps: Int) = ExerciseEntry(name).withSets(List(2) { SetEntry(kg, reps, true) })
-        val sessions = listOf(
-            s("2026-10-13", e("Row", 16.0, 10), e("Press", 20.0, 8), e("Curl", 12.0, 9)),
-            s("2026-10-22", e("Row", 18.0, 7), e("Press", 20.0, 9), e("Curl", 12.0, 8), e("Fly", 8.0, 10)),
+        val today = LocalDate.parse("2026-10-25")
+        fun run(date: String, km: Double, sec: Double, hr: Double) = app.stride.model.Activity(
+            id = date, startLocal = "${date}T06:00:00", type = "Run", distance = km * 1000, movingTime = sec, avgHr = hr,
         )
-        val c = strengthComparison(sessions, monday).associateBy { it.name }
-        assertEquals(setOf("Row", "Press", "Curl"), c.keys) // Fly is new this week, nothing to compare
-        assertEquals(1, c["Row"]!!.trend)
-        assertEquals(2.0, c["Row"]!!.kgDelta, 0.0)
-        assertEquals(1, c["Press"]!!.trend)
-        assertEquals(1, c["Press"]!!.repsDelta)
-        assertEquals(-1, c["Curl"]!!.trend)
-    }
-
-    @Test
-    fun comparison_takesBestSessionOfTheWeek() {
-        val monday = LocalDate.parse("2026-10-19")
-        fun s(date: String, kg: Double, reps: Int) = StrengthSession(date, date, DayKind.STRENGTH_LEGS, listOf(ExerciseEntry("Swing").withSets(List(2) { SetEntry(kg, reps, true) })))
-        val c = strengthComparison(listOf(s("2026-10-12", 16.0, 10), s("2026-10-20", 16.0, 8), s("2026-10-23", 20.0, 6)), monday).single()
-        assertEquals(20.0, c.now.topKg, 0.0)
-        assertEquals(1, c.trend)
+        fun gym(date: String, kg: Double) = StrengthSession(date, date, DayKind.STRENGTH_UPPER, listOf(ExerciseEntry("Row").withSets(List(2) { SetEntry(kg, 10, true) })))
+        val data = AppData(
+            activities = listOf(run("2026-10-16", 5.0, 1800.0, 160.0), run("2026-10-23", 5.2, 1790.0, 154.0)),
+            strength = listOf(gym("2026-10-15", 16.0), gym("2026-10-22", 20.0)),
+        )
+        val c = workoutComparison(data, monday, today).associateBy { it.kind }
+        val runMetrics = c[DayKind.RUN]!!.metrics.associateBy { it.label }
+        assertEquals(1, runMetrics["Distance"]!!.trend)
+        assertEquals(1, runMetrics["Pace /km"]!!.trend) // faster
+        assertEquals(1, runMetrics["Avg HR"]!!.trend) // lower
+        assertEquals("−6 bpm", runMetrics["Avg HR"]!!.delta)
+        val gymMetrics = c[DayKind.STRENGTH_UPPER]!!.metrics.associateBy { it.label }
+        assertEquals("+80 kg", gymMetrics["Lifted"]!!.delta)
+        assertEquals(1, gymMetrics["Lifted"]!!.trend)
+        assertNull(c[DayKind.SWIM_EASY]) // not done in either week
     }
 }

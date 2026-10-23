@@ -1,6 +1,8 @@
 package app.stride.domain
 
+import app.stride.model.Activity
 import app.stride.model.AppData
+import app.stride.model.DayKind
 import app.stride.model.ExerciseEntry
 import app.stride.model.PlanDay
 import app.stride.model.SetEntry
@@ -197,42 +199,70 @@ fun restDayToSwap(plan: List<PlanDay>, today: LocalDate): Int? {
     return plan.filter { it.dow > today.dayOfWeek.value && it.kind.isRest }.minByOrNull { it.dow }?.dow
 }
 
-// ------------------------------------------------------------------ strength: this week vs last week
+// ------------------------------------------------------------------ workouts: this week vs last week
 
-data class ExerciseComparison(val name: String, val now: ExercisePoint, val before: ExercisePoint) {
-    val kgDelta: Double get() = now.topKg - before.topKg
-    val repsDelta: Int get() = now.reps - before.reps
-    val volumeDelta: Double get() = now.volume - before.volume
+/** One number compared with last week. [trend]: +1 better, -1 worse, 0 about the same (or no better/worse). */
+data class MetricDelta(val label: String, val now: String, val before: String, val delta: String, val trend: Int)
 
-    /** +1 better (heavier, or more reps at the same weight), -1 worse, 0 same. */
-    val trend: Int
-        get() = when {
-            kgDelta > 0.01 -> 1
-            kgDelta < -0.01 -> -1
-            repsDelta > 0 -> 1
-            repsDelta < 0 -> -1
-            else -> 0
-        }
+data class WorkoutComparison(val kind: DayKind, val title: String, val metrics: List<MetricDelta>)
+
+private fun compare(
+    label: String, now: Double?, before: Double?, fmt: (Double) -> String, fmtDelta: (Double) -> String,
+    threshold: Double, higherIsBetter: Boolean?,
+): MetricDelta? {
+    if (now == null || before == null) return null
+    val d = now - before
+    val trend = when {
+        abs(d) < threshold || higherIsBetter == null -> 0
+        (d > 0) == higherIsBetter -> 1
+        else -> -1
+    }
+    val delta = if (abs(d) < threshold) "same" else fmtDelta(d)
+    return MetricDelta(label, fmt(now), fmt(before), delta, trend)
 }
 
+private fun signed(v: Double, body: String) = (if (v > 0) "+" else "−") + body
+
 /**
- * Exercises done in the week starting [monday] that were also done the week before, with each
- * week's best set (heaviest top weight, then most reps at it). Ordered as first done this week.
+ * Each planned workout of the week starting [monday] that was done both this week and last week
+ * (the same kind of day), with its key numbers side by side.
  */
-fun strengthComparison(sessions: List<StrengthSession>, monday: LocalDate): List<ExerciseComparison> {
-    fun best(from: LocalDate): Map<String, Pair<String, ExercisePoint>> {
-        val inWeek = sessions.filter { it.logged && it.date >= from.toString() && it.date < from.plusDays(7).toString() }.sortedBy { it.date }
-        val out = LinkedHashMap<String, Pair<String, ExercisePoint>>()
-        for (s in inWeek) for (e in s.exercises) {
-            if (!(e.done || s.finished) || e.workingSets.none { it.reps > 0 }) continue
-            val key = e.name.trim().lowercase()
-            val p = ExercisePoint(s.date, e.weightKg, e.reps, e.volume)
-            val old = out[key]?.second
-            if (old == null || p.topKg > old.topKg || (p.topKg == old.topKg && p.reps > old.reps)) out[key] = e.name to p
-        }
-        return out
+fun workoutComparison(data: AppData, monday: LocalDate, today: LocalDate): List<WorkoutComparison> {
+    val now = (0..6).map { Analyzer.day(monday.plusDays(it.toLong()), today, data) }
+    val before = (0..6).map { Analyzer.day(monday.minusWeeks(1).plusDays(it.toLong()), today, data) }
+    val kinds = now.mapNotNull { it.plan?.kind }.filter { !it.isRest }.distinct()
+    return kinds.mapNotNull { kind ->
+        val a = now.firstOrNull { it.plan?.kind == kind && it.status == DayStatus.DONE } ?: return@mapNotNull null
+        val b = before.firstOrNull { it.plan?.kind == kind && it.status == DayStatus.DONE } ?: return@mapNotNull null
+        val metrics = if (kind.isStrength) strengthMetrics(a, b) else cardioMetrics(kind, a.matched.firstOrNull(), b.matched.firstOrNull())
+        if (metrics.isEmpty()) null else WorkoutComparison(kind, a.plan?.title ?: kind.label, metrics)
     }
-    val now = best(monday)
-    val before = best(monday.minusWeeks(1))
-    return now.mapNotNull { (key, v) -> before[key]?.let { ExerciseComparison(v.first, v.second, it.second) } }
+}
+
+private fun cardioMetrics(kind: DayKind, a: Activity?, b: Activity?): List<MetricDelta> {
+    if (a == null || b == null) return emptyList()
+    val swim = kind == DayKind.SWIM_EASY || kind == DayKind.SWIM_INTENSE
+    val dist = if (swim) compare("Distance", a.distance, b.distance, { "${it.toInt()} m" }, { signed(it, "${abs(it).toInt()} m") }, 25.0, true)
+    else compare("Distance", a.distance?.div(1000), b.distance?.div(1000), { fmtNum(it, 2) + " km" }, { signed(it, fmtNum(abs(it), 2) + " km") }, 0.05, true)
+    // Overall pace (per-rep data is only loaded when a day is opened). Lower is better.
+    val pace = if (swim) compare("Pace /100 m", a.pace100(), b.pace100(), { fmtDur(it) }, { signed(it, "${abs(it).toInt()} s") }, 1.0, false)
+    else compare("Pace /km", a.paceKm(), b.paceKm(), { fmtDur(it) }, { signed(it, "${abs(it).toInt()} s") }, 1.0, false)
+    val hr = if (kind == DayKind.SWIM_INTENSE) compare("Max HR", a.maxHr, b.maxHr, { fmtNum(it) }, { signed(it, "${fmtNum(abs(it))} bpm") }, 1.0, null)
+    else compare("Avg HR", a.avgHr, b.avgHr, { fmtNum(it) }, { signed(it, "${fmtNum(abs(it))} bpm") }, 1.0, false)
+    return listOfNotNull(dist, pace, hr)
+}
+
+private fun strengthMetrics(a: DayResult, b: DayResult): List<MetricDelta> {
+    val sa = a.strength
+    val sb = b.strength
+    val volume = compare("Lifted", sa?.volume, sb?.volume, { fmtKg(it) + " kg" }, { signed(it, fmtKg(abs(it)) + " kg") }, 1.0, true)
+    val sets = compare(
+        "Sets", sa?.exercises?.sumOf { it.workingSets.size }?.toDouble(), sb?.exercises?.sumOf { it.workingSets.size }?.toDouble(),
+        { fmtNum(it) }, { signed(it, fmtNum(abs(it))) }, 1.0, null,
+    )
+    val time = compare(
+        "Time", a.matched.firstOrNull()?.movingTime, b.matched.firstOrNull()?.movingTime,
+        { fmtDur(it) }, { signed(it, "${(abs(it) / 60).toInt()} min") }, 60.0, null,
+    )
+    return listOfNotNull(volume, sets, time)
 }
