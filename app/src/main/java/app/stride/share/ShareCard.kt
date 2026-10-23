@@ -136,11 +136,22 @@ object ShareCard {
     fun run(
         ctx: Context, kicker: String, subtitle: String, distance: String, unit: String,
         stats: List<Stat>, zones: List<Double>?, route: List<Pair<Double, Double>>?, footer: String,
+        map: Bitmap? = null, mapView: MapTiles.View? = null,
     ): Bitmap {
         val f = Fonts(ctx)
         val bmp = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(BG)
+        if (map != null && mapView != null) {
+            drawMap(c, f, map)
+            if (route != null && route.size >= 2) drawRoute(c, f, route, ROUTE_BOX, mapView::project)
+            c.header(f, kicker, subtitle, EMERALD)
+            bigNumber(c, f, distance, unit, 1500f, 300f, 110f, EMERALD)
+            c.statsRow(f, stats, 1580f)
+            zones?.let { c.zoneBar(it, 1720f) }
+            c.footer(ctx, f, footer)
+            return bmp
+        }
         c.radial(216f, 0f, 1200f, 0xFF123A33.toInt(), 0.55f)
 
         // Topographic rings for texture.
@@ -155,7 +166,7 @@ object ShareCard {
             c.restore()
         }
 
-        if (route != null && route.size >= 2) drawRoute(c, f, route, RectF(90f, 300f, 990f, 1160f))
+        if (route != null && route.size >= 2) drawRoute(c, f, route, ROUTE_BOX)
 
         c.header(f, kicker, subtitle, EMERALD)
         bigNumber(c, f, distance, unit, 1500f, 300f, 110f, EMERALD)
@@ -165,16 +176,38 @@ object ShareCard {
         return bmp
     }
 
-    private fun drawRoute(c: Canvas, f: Fonts, route: List<Pair<Double, Double>>, box: RectF) {
-        // Equirectangular projection around the route's mean latitude: fine at city scale.
-        val lat0 = route.map { it.first }.average() * PI / 180
-        val xs = route.map { it.second * cos(lat0) }
-        val ys = route.map { -it.first }
-        val minX = xs.min(); val maxX = xs.max(); val minY = ys.min(); val maxY = ys.max()
-        val scale = min(box.width() / max(maxX - minX, 1e-9), box.height() / max(maxY - minY, 1e-9)) * 0.92
-        val ox = box.centerX() - (maxX - minX) * scale / 2
-        val oy = box.centerY() - (maxY - minY) * scale / 2
-        val pts = xs.indices.map { i -> ((xs[i] - minX) * scale + ox).toFloat() to ((ys[i] - minY) * scale + oy).toFloat() }
+    /** Where the route goes on the card: between the header and the big distance. */
+    val ROUTE_BOX = RectF(90f, 300f, 990f, 1160f)
+
+    /** Map full-bleed, tinted toward the app's navy, faded out behind the header and the stats. */
+    private fun drawMap(c: Canvas, f: Fonts, map: Bitmap) {
+        c.drawBitmap(map, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
+        c.drawColor(0x330A0F1E)
+        c.radial(216f, 0f, 1100f, 0x66123A33, 0.6f)
+        c.drawRect(0f, 0f, W.toFloat(), 560f, paint().apply {
+            shader = LinearGradient(0f, 0f, 0f, 560f, 0xF20A0F1E.toInt(), 0x000A0F1E, Shader.TileMode.CLAMP)
+        })
+        c.drawRect(0f, 1120f, W.toFloat(), H.toFloat(), paint().apply {
+            shader = LinearGradient(0f, 1120f, 0f, 1420f, 0x000A0F1E, 0xF70A0F1E.toInt(), Shader.TileMode.CLAMP)
+        })
+        c.text(MapTiles.ATTRIBUTION, W - 80f, 1250f, f.semi, 18f, 0x99FFFFFF.toInt(), align = Paint.Align.RIGHT)
+    }
+
+    private fun drawRoute(
+        c: Canvas, f: Fonts, route: List<Pair<Double, Double>>, box: RectF,
+        project: ((Pair<Double, Double>) -> Pair<Float, Float>)? = null,
+    ) {
+        val pts = if (project != null) route.map(project) else {
+            // Equirectangular projection around the route's mean latitude: fine at city scale.
+            val lat0 = route.map { it.first }.average() * PI / 180
+            val xs = route.map { it.second * cos(lat0) }
+            val ys = route.map { -it.first }
+            val minX = xs.min(); val maxX = xs.max(); val minY = ys.min(); val maxY = ys.max()
+            val scale = min(box.width() / max(maxX - minX, 1e-9), box.height() / max(maxY - minY, 1e-9)) * 0.92
+            val ox = box.centerX() - (maxX - minX) * scale / 2
+            val oy = box.centerY() - (maxY - minY) * scale / 2
+            xs.indices.map { i -> ((xs[i] - minX) * scale + ox).toFloat() to ((ys[i] - minY) * scale + oy).toFloat() }
+        }
 
         val path = Path().apply {
             moveTo(pts[0].first, pts[0].second)
