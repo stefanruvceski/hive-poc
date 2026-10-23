@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.stride.data.IntervalsApi
 import app.stride.data.Store
+import app.stride.data.Sync
 import app.stride.data.toUserMessage
 import app.stride.domain.dateShort
 import app.stride.domain.dayLong
@@ -18,6 +19,9 @@ import app.stride.model.SRC_GARMIN
 import app.stride.model.SRC_MANUAL
 import app.stride.model.PlanDay
 import app.stride.model.Settings
+import app.stride.model.LayoutPrefs
+import app.stride.model.NotifType
+import app.stride.model.ShareStyle
 import app.stride.model.StrengthSession
 import app.stride.model.WeightEntry
 import kotlinx.coroutines.Dispatchers
@@ -87,32 +91,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _syncing.value = true
             try {
-                val today = LocalDate.now()
-                val oldest = today.minusDays(84)
-                val all = api.activities(oldest, today.plusDays(1))
-                val strava = all.count { it.isRestrictedStub }
-                val acts = all.filter { !it.isRestrictedStub && it.type != null && it.startLocal != null }
-                val well = runCatching { api.wellness(today.minusDays(180), today) }.getOrDefault(emptyList())
-                update { d ->
-                    val kept = d.activities.filter { a -> a.date()?.isBefore(oldest) ?: false }
-                    val byDate = d.weights.associateBy { it.date }.toMutableMap()
-                    for (w in well) {
-                        val kg = w.weight ?: continue
-                        val existing = byDate[w.id]
-                        if (existing == null || existing.source != SRC_MANUAL) byDate[w.id] = WeightEntry(w.id, kg, SRC_GARMIN)
-                    }
-                    val recoverySince = today.minusDays(120).toString()
-                    val recovery = (d.wellness + well.filter { it.hasRecovery }) // fresh values win; a failed fetch keeps the old ones
-                        .associateBy { it.id }.values
-                        .filter { it.id >= recoverySince }
-                        .sortedBy { it.id }
-                    d.copy(
-                        wellness = recovery,
-                        activities = (kept + acts).distinctBy { it.id },
-                        weights = byDate.values.sortedBy { it.date },
-                        lastSync = LocalDateTime.now().toString(),
-                    )
-                }
+                val result = Sync.fetch(api)
+                val acts = result.activities
+                val strava = result.stravaSkipped
+                update { d -> result.apply(d) }
                 if (!silent) when {
                     acts.isEmpty() && strava > 0 -> toast(
                         "intervals.icu has $strava workouts from Strava, but doesn't share Strava data with other apps. " +
@@ -161,6 +143,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 _intervals.value = _intervals.value + (activityId to emptyList())
             }
         }
+    }
+
+    /** Picks up what the background sync wrote while the app was away (watch data only; app edits stay). */
+    fun reloadFromDisk() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val disk = store.load()
+            val mine = _data.value
+            if ((disk.lastSync ?: "") > (mine.lastSync ?: "")) {
+                _data.value = mine.copy(activities = disk.activities, wellness = disk.wellness, weights = disk.weights, lastSync = disk.lastSync)
+            }
+        }
+    }
+
+    fun setShareStyle(s: ShareStyle) {
+        if (s != _data.value.settings.share) update { d -> d.copy(settings = d.settings.copy(share = s)) }
+    }
+
+    fun setLayout(l: LayoutPrefs) {
+        update { d -> d.copy(settings = d.settings.copy(layout = l)) }
+    }
+
+    fun setNotification(t: NotifType, on: Boolean) {
+        update { d -> d.copy(settings = d.settings.copy(notifications = d.settings.notifications + (t.id to on))) }
     }
 
     fun saveSettings(s: Settings) {

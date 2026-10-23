@@ -28,6 +28,8 @@ import androidx.compose.ui.text.style.TextAlign
 import app.stride.domain.DayResult
 import app.stride.domain.DayStatus
 import app.stride.ui.levelColor
+import app.stride.ui.SectionHost
+import app.stride.ui.longPressToEdit
 import java.time.YearMonth
 import java.util.Locale
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,71 +57,93 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @Composable
-fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (LocalDate) -> Unit) {
+fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (LocalDate) -> Unit, host: SectionHost) {
     val points = remember(data, today) { Analyzer.trends(data, today, 8) }
     val labels = points.map { dateNum(it.monday) }
     val t = data.settings.targets
     val accent = MaterialTheme.colorScheme.primary
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().longPressToEdit(!host.editing, host.onLongPress),
         contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { MonthCard(data, today, onDay) }
-        item {
-            ChartCard("Easy swim", "pace per 100 m, lower is better") {
-                LineChart(points.map { it.easySwimPace100 }, labels, accent, { fmtDur(it) })
-            }
-        }
-        item {
-            ChartCard("Run: average HR", "target zone ${t.runHrLow}–${t.runHrHigh} bpm") {
-                LineChart(
-                    points.map { it.runAvgHr }, labels, StrideColors.Bad, { "${it.roundToInt()}" },
-                    band = t.runHrLow.toDouble() to t.runHrHigh.toDouble(),
-                )
-            }
-        }
-        item {
-            ChartCard("Run: pace", "min/km") {
-                LineChart(points.map { it.runPaceKm }, labels, StrideColors.Warn, { fmtDur(it) })
-            }
-        }
-        item {
-            ChartCard("Intense swim", "max heart rate") {
-                LineChart(points.map { it.intenseMaxHr }, labels, StrideColors.Zones[5], { "${it.roundToInt()}" })
-            }
-        }
-        item {
-            ChartCard("Plan completed", "% of workouts per week") {
-                BarChart(points.map { it.compliance }, labels, StrideColors.Good, { "${it.roundToInt()}%" }, maxValue = 100.0)
-            }
-        }
-        item {
-            ChartCard("Total time", "watch workout minutes per week") {
-                BarChart(points.map { it.minutes }, labels, accent, { "${it.roundToInt()}" })
-            }
-        }
-        if (data.wellness.isNotEmpty()) {
-            item {
-                ChartCard("HRV", "weekly average, ms, higher is better") {
-                    LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.hrv } }, labels, MetricColors.Fitness, { "${it.roundToInt()}" })
+        with(host) {
+            sections {
+                section("month") { item { MonthCard(data, today, onDay) } }
+                section("swim_pace") {
+                    item {
+                        ChartCard("Easy swim", "pace per 100 m, lower is better") {
+                            LineChart(points.map { it.easySwimPace100 }, labels, accent, { fmtDur(it) })
+                        }
+                    }
                 }
-            }
-            item {
-                ChartCard("Sleep", "weekly average per night, hours") {
-                    BarChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.sleepSecs }?.div(3600) }, labels, StrideColors.Manual, { String.format(java.util.Locale.US, "%.1f", it) }, maxValue = 9.0)
+                section("run_hr") {
+                    item {
+                        ChartCard("Run: average HR", "target zone ${t.runHrLow}–${t.runHrHigh} bpm") {
+                            LineChart(
+                                points.map { it.runAvgHr }, labels, StrideColors.Bad, { "${it.roundToInt()}" },
+                                band = t.runHrLow.toDouble() to t.runHrHigh.toDouble(),
+                            )
+                        }
+                    }
                 }
-            }
-            item {
-                ChartCard("Resting heart rate", "weekly average, bpm, lower is better") {
-                    LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.restingHR } }, labels, MetricColors.Heart, { "${it.roundToInt()}" })
+                section("run_pace") {
+                    item {
+                        ChartCard("Run: pace", "min/km") {
+                            LineChart(points.map { it.runPaceKm }, labels, StrideColors.Warn, { fmtDur(it) })
+                        }
+                    }
                 }
-            }
-        }
-        item {
-            ChartCard("Weight", "weekly average, kg") {
-                LineChart(points.map { it.avgWeight }, labels, MaterialTheme.colorScheme.secondary, { fmtKg(it) }, refLine = t.weightGoalKg)
+                section("intense_swim") {
+                    item {
+                        ChartCard("Intense swim", "max heart rate") {
+                            LineChart(points.map { it.intenseMaxHr }, labels, StrideColors.Zones[5], { "${it.roundToInt()}" })
+                        }
+                    }
+                }
+                section("compliance") {
+                    item {
+                        ChartCard("Plan completed", "% of workouts per week") {
+                            BarChart(points.map { it.compliance }, labels, StrideColors.Good, { "${it.roundToInt()}%" }, maxValue = 100.0)
+                        }
+                    }
+                }
+                section("time") {
+                    item {
+                        ChartCard("Total time", "watch workout minutes per week") {
+                            BarChart(points.map { it.minutes }, labels, accent, { "${it.roundToInt()}" })
+                        }
+                    }
+                }
+                section("hrv") {
+                    if (data.wellness.isNotEmpty()) item {
+                        ChartCard("HRV", "weekly average, ms, higher is better") {
+                            LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.hrv } }, labels, MetricColors.Fitness, { "${it.roundToInt()}" })
+                        }
+                    }
+                }
+                section("sleep") {
+                    if (data.wellness.isNotEmpty()) item {
+                        ChartCard("Sleep", "weekly average per night, hours") {
+                            BarChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.sleepSecs }?.div(3600) }, labels, StrideColors.Manual, { String.format(java.util.Locale.US, "%.1f", it) }, maxValue = 9.0)
+                        }
+                    }
+                }
+                section("rhr") {
+                    if (data.wellness.isNotEmpty()) item {
+                        ChartCard("Resting heart rate", "weekly average, bpm, lower is better") {
+                            LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.restingHR } }, labels, MetricColors.Heart, { "${it.roundToInt()}" })
+                        }
+                    }
+                }
+                section("weight") {
+                    item {
+                        ChartCard("Weight", "weekly average, kg") {
+                            LineChart(points.map { it.avgWeight }, labels, MaterialTheme.colorScheme.secondary, { fmtKg(it) }, refLine = t.weightGoalKg)
+                        }
+                    }
+                }
             }
         }
     }

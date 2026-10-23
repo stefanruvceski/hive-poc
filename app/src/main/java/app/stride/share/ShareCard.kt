@@ -15,6 +15,9 @@ import android.graphics.Typeface
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import app.stride.R
+import app.stride.model.ShareBackground
+import app.stride.model.SharePalette
+import app.stride.model.ShareStyle
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.cos
@@ -45,6 +48,50 @@ object ShareCard {
     const val AMBER = 0xFFF59E0B.toInt()
     private const val BLUE = 0xFF60A5FA.toInt()
     private val ZONES = intArrayOf(FAINT, BLUE, EMERALD, AMBER, RED, PINK, 0xFFA855F7.toInt())
+
+    /** Colors and options for one card: accent, two companion colors for gradients, and the user's toggles. */
+    class Look(val a1: Int, val a2: Int, val a3: Int, val style: ShareStyle) {
+        val background: ShareBackground get() = style.background
+    }
+
+    private val PALETTES = mapOf(
+        SharePalette.EMERALD to Triple(EMERALD, CYAN, PINK),
+        SharePalette.CYAN to Triple(CYAN, 0xFF2563EB.toInt(), 0xFFA78BFA.toInt()),
+        SharePalette.PINK to Triple(PINK, 0xFFA855F7.toInt(), AMBER),
+        SharePalette.AMBER to Triple(AMBER, RED, PINK),
+        SharePalette.VIOLET to Triple(0xFFA78BFA.toInt(), PINK, CYAN),
+        SharePalette.MONO to Triple(0xFFF8FAFC.toInt(), 0xFFCBD5E1.toInt(), 0xFF94A3B8.toInt()),
+    )
+
+    /** [auto] is the card's own palette, used when the user keeps "Auto". */
+    fun look(style: ShareStyle, auto: Triple<Int, Int, Int>): Look {
+        val (a, b, c) = PALETTES[style.palette] ?: auto
+        return Look(a, b, c, style)
+    }
+
+    val RUN_AUTO = Triple(EMERALD, CYAN, PINK)
+    val STRENGTH_AUTO = Triple(PINK, EMERALD, CYAN)
+    val SWIM_AUTO = Triple(CYAN, 0xFF2563EB.toInt(), 0xFFA78BFA.toInt())
+
+    /** [c] mixed into the navy background, for glows and gradients. */
+    private fun dim(c: Int, amount: Float = 0.24f): Int {
+        fun ch(shift: Int) = (((c shr shift) and 0xFF) * amount + ((BG shr shift) and 0xFF) * (1 - amount)).toInt()
+        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
+
+    private fun withAlpha(c: Int, alpha: Int) = (alpha shl 24) or (c and 0x00FFFFFF)
+
+    /** Background for cards without a map: glow (default), vertical gradient or plain navy. */
+    private fun Canvas.backdrop(look: Look, glowX: Float, glowY: Float) {
+        drawColor(BG)
+        when (look.background) {
+            ShareBackground.GLOW -> radial(glowX, glowY, 1200f, dim(look.a1), 0.55f)
+            ShareBackground.GRADIENT -> drawPaint(paint().apply {
+                shader = LinearGradient(0f, 0f, W.toFloat(), H.toFloat(), intArrayOf(dim(look.a1, 0.38f), dim(look.a2, 0.16f), BG), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
+            })
+            ShareBackground.PLAIN -> Unit
+        }
+    }
 
     data class Stat(val label: String, val value: String, val unit: String = "", val color: Int = TEXT)
     data class Row(val name: String, val sets: String, val kg: String, val fraction: Float, val record: Boolean)
@@ -134,44 +181,42 @@ object ShareCard {
     // ------------------------------------------------------------------ run (and other GPS activities)
 
     fun run(
-        ctx: Context, kicker: String, subtitle: String, distance: String, unit: String,
+        ctx: Context, look: Look, kicker: String, subtitle: String, distance: String, unit: String,
         stats: List<Stat>, zones: List<Double>?, route: List<Pair<Double, Double>>?, footer: String,
-        map: Bitmap? = null, mapView: MapTiles.View? = null,
+        map: MapTiles.Map? = null, mapView: MapTiles.View? = null,
     ): Bitmap {
         val f = Fonts(ctx)
         val bmp = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        c.drawColor(BG)
         if (map != null && mapView != null) {
-            drawMap(c, f, map)
-            if (route != null && route.size >= 2) drawRoute(c, f, route, ROUTE_BOX, mapView::project)
-            c.header(f, kicker, subtitle, EMERALD)
-            bigNumber(c, f, distance, unit, 1500f, 300f, 110f, EMERALD)
+            c.drawColor(BG)
+            drawMap(c, f, map, look)
+            if (route != null && route.size >= 2) drawRoute(c, f, route, ROUTE_BOX, look, mapView::project)
+        } else {
+            c.backdrop(look, 216f, 0f)
+            if (look.background != ShareBackground.PLAIN) {
+                // Topographic rings for texture.
+                val rnd = Random(7)
+                val topo = paint(0x09FFFFFF).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
+                for (r in 80 until 1400 step 55) {
+                    c.save()
+                    c.rotate(rnd.nextInt(-25, 25).toFloat(), 540f, 880f)
+                    val cx = 540f + rnd.nextInt(-60, 60)
+                    val cy = 880f + rnd.nextInt(-40, 40)
+                    c.drawOval(RectF(cx - r, cy - r * 0.62f, cx + r, cy + r * 0.62f), topo)
+                    c.restore()
+                }
+            }
+            if (route != null && route.size >= 2) drawRoute(c, f, route, ROUTE_BOX, look)
+        }
+        c.header(f, kicker, subtitle, look.a1)
+        if (look.style.stats) {
+            bigNumber(c, f, distance, unit, 1500f, 300f, 110f, look.a1)
             c.statsRow(f, stats, 1580f)
-            zones?.let { c.zoneBar(it, 1720f) }
-            c.footer(ctx, f, footer)
-            return bmp
+        } else {
+            bigNumber(c, f, distance, unit, 1640f, 340f, 120f, look.a1)
         }
-        c.radial(216f, 0f, 1200f, 0xFF123A33.toInt(), 0.55f)
-
-        // Topographic rings for texture.
-        val rnd = Random(7)
-        val topo = paint(0x09FFFFFF).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
-        for (r in 80 until 1400 step 55) {
-            c.save()
-            c.rotate(rnd.nextInt(-25, 25).toFloat(), 540f, 880f)
-            val cx = 540f + rnd.nextInt(-60, 60)
-            val cy = 880f + rnd.nextInt(-40, 40)
-            c.drawOval(RectF(cx - r, cy - r * 0.62f, cx + r, cy + r * 0.62f), topo)
-            c.restore()
-        }
-
-        if (route != null && route.size >= 2) drawRoute(c, f, route, ROUTE_BOX)
-
-        c.header(f, kicker, subtitle, EMERALD)
-        bigNumber(c, f, distance, unit, 1500f, 300f, 110f, EMERALD)
-        c.statsRow(f, stats, 1580f)
-        zones?.let { c.zoneBar(it, 1720f) }
+        if (look.style.zones) zones?.let { c.zoneBar(it, 1720f) }
         c.footer(ctx, f, footer)
         return bmp
     }
@@ -180,21 +225,21 @@ object ShareCard {
     val ROUTE_BOX = RectF(90f, 300f, 990f, 1160f)
 
     /** Map full-bleed, tinted toward the app's navy, faded out behind the header and the stats. */
-    private fun drawMap(c: Canvas, f: Fonts, map: Bitmap) {
-        c.drawBitmap(map, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
+    private fun drawMap(c: Canvas, f: Fonts, map: MapTiles.Map, look: Look) {
+        c.drawBitmap(map.bitmap, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
         c.drawColor(0x330A0F1E)
-        c.radial(216f, 0f, 1100f, 0x66123A33, 0.6f)
+        if (look.background != ShareBackground.PLAIN) c.radial(216f, 0f, 1100f, withAlpha(dim(look.a1, 0.4f), 0x66), 0.6f)
         c.drawRect(0f, 0f, W.toFloat(), 560f, paint().apply {
             shader = LinearGradient(0f, 0f, 0f, 560f, 0xF20A0F1E.toInt(), 0x000A0F1E, Shader.TileMode.CLAMP)
         })
         c.drawRect(0f, 1120f, W.toFloat(), H.toFloat(), paint().apply {
             shader = LinearGradient(0f, 1120f, 0f, 1420f, 0x000A0F1E, 0xF70A0F1E.toInt(), Shader.TileMode.CLAMP)
         })
-        c.text(MapTiles.ATTRIBUTION, W - 80f, 1250f, f.semi, 18f, 0x99FFFFFF.toInt(), align = Paint.Align.RIGHT)
+        c.text(map.attribution, W - 80f, 1250f, f.semi, 18f, 0x99FFFFFF.toInt(), align = Paint.Align.RIGHT)
     }
 
     private fun drawRoute(
-        c: Canvas, f: Fonts, route: List<Pair<Double, Double>>, box: RectF,
+        c: Canvas, f: Fonts, route: List<Pair<Double, Double>>, box: RectF, look: Look,
         project: ((Pair<Double, Double>) -> Pair<Float, Float>)? = null,
     ) {
         val pts = if (project != null) route.map(project) else {
@@ -213,7 +258,7 @@ object ShareCard {
             moveTo(pts[0].first, pts[0].second)
             for (i in 1 until pts.size) lineTo(pts[i].first, pts[i].second)
         }
-        val routeShader = LinearGradient(box.left, box.top, box.right, box.bottom, intArrayOf(EMERALD, CYAN, PINK), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+        val routeShader = LinearGradient(box.left, box.top, box.right, box.bottom, intArrayOf(look.a1, look.a2, look.a3), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
         fun stroke(w: Float) = paint().apply {
             style = Paint.Style.STROKE; strokeWidth = w; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         }
@@ -224,7 +269,7 @@ object ShareCard {
         // Kilometre markers along the track.
         var meters = 0.0
         var nextKm = 1
-        for (i in 1 until route.size) {
+        for (i in 1 until if (look.style.kmMarkers) route.size else 0) {
             meters += haversine(route[i - 1], route[i])
             if (meters >= nextKm * 1000) {
                 val (x, y) = pts[i]
@@ -236,10 +281,10 @@ object ShareCard {
         }
         val (sx, sy) = pts.first()
         val (ex, ey) = pts.last()
-        c.drawCircle(sx, sy, 22f, paint(EMERALD))
+        c.drawCircle(sx, sy, 22f, paint(look.a1))
         c.drawCircle(sx, sy, 22f, paint(BG).apply { style = Paint.Style.STROKE; strokeWidth = 7f })
-        c.drawCircle(ex, ey, 70f, paint().apply { shader = RadialGradient(ex, ey, 70f, intArrayOf(0xE6F472B6.toInt(), 0x00F472B6), null, Shader.TileMode.CLAMP) })
-        c.drawCircle(ex, ey, 22f, paint(PINK))
+        c.drawCircle(ex, ey, 70f, paint().apply { shader = RadialGradient(ex, ey, 70f, intArrayOf(withAlpha(look.a3, 0xE6), withAlpha(look.a3, 0)), null, Shader.TileMode.CLAMP) })
+        c.drawCircle(ex, ey, 22f, paint(look.a3))
         c.drawCircle(ex, ey, 22f, paint(BG).apply { style = Paint.Style.STROKE; strokeWidth = 7f })
     }
 
@@ -254,22 +299,27 @@ object ShareCard {
     // ------------------------------------------------------------------ strength
 
     fun strength(
-        ctx: Context, kicker: String, subtitle: String, lifted: String, record: String?,
+        ctx: Context, look: Look, kicker: String, subtitle: String, lifted: String, record: String?,
         rows: List<Row>, stats: List<Stat>, footer: String,
     ): Bitmap {
         val f = Fonts(ctx)
         val bmp = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(BG)
-        c.radial(918f, 192f, 1000f, 0xFF3B1530.toInt())
-        c.radial(0f, H.toFloat(), 1100f, 0xFF0F3A35.toInt())
-        listOf(300f to 0x1AF472B6, 200f to 0x1434D399, 100f to 0x1422D3EE).forEach { (r, col) ->
-            c.drawCircle(980f, 420f, r, paint(col).apply { style = Paint.Style.STROKE; strokeWidth = 40f })
+        when (look.background) {
+            ShareBackground.GLOW -> {
+                c.radial(918f, 192f, 1000f, dim(look.a1, 0.22f))
+                c.radial(0f, H.toFloat(), 1100f, dim(look.a2, 0.2f))
+            }
+            else -> c.backdrop(look, 918f, 192f)
+        }
+        listOf(300f to look.a1, 200f to look.a2, 100f to look.a3).forEachIndexed { i, (r, col) ->
+            c.drawCircle(980f, 420f, r, paint(withAlpha(col, if (i == 0) 0x1A else 0x14)).apply { style = Paint.Style.STROKE; strokeWidth = 40f })
         }
 
-        c.header(f, kicker, subtitle, PINK)
+        c.header(f, kicker, subtitle, look.a1)
         c.text(lifted, 80f, 470f, f.bebas, 250f, TEXT, spacing = 2f)
-        c.text("KG LIFTED", 80f, 560f, f.bebas, 90f, PINK, spacing = 2f)
+        c.text("KG LIFTED", 80f, 560f, f.bebas, 90f, look.a1, spacing = 2f)
 
         var y = 620f
         if (record != null) {
@@ -287,7 +337,7 @@ object ShareCard {
             y += 30f
         }
 
-        val shown = rows.take(7)
+        val shown = if (look.style.details) rows.take(7) else emptyList()
         shown.forEach { r ->
             val nameBase = y + 36f
             val nameW = c.text(ellipsize(r.name, f.xbold, 32f, 560f), 80f, nameBase, f.xbold, 32f, TEXT)
@@ -297,14 +347,14 @@ object ShareCard {
             val track = RectF(80f, nameBase + 22f, W - 80f, nameBase + 34f)
             c.drawRoundRect(track, 6f, 6f, paint(ELEV2))
             val fill = RectF(track.left, track.top, track.left + track.width() * r.fraction.coerceIn(0.04f, 1f), track.bottom)
-            c.drawRoundRect(fill, 6f, 6f, paint().apply { shader = LinearGradient(fill.left, 0f, track.right, 0f, EMERALD, CYAN, Shader.TileMode.CLAMP) })
+            c.drawRoundRect(fill, 6f, 6f, paint().apply { shader = LinearGradient(fill.left, 0f, track.right, 0f, look.a2, look.a3, Shader.TileMode.CLAMP) })
             y += 100f
         }
-        if (rows.size > shown.size) {
+        if (shown.isNotEmpty() && rows.size > shown.size) {
             c.text("+${rows.size - shown.size} more", 80f, y + 30f, f.xbold, 28f, DIM)
             y += 50f
         }
-        c.statsRow(f, stats, y + 60f)
+        if (look.style.stats) c.statsRow(f, stats, y + 60f)
         c.footer(ctx, f, footer)
         return bmp
     }
@@ -319,13 +369,16 @@ object ShareCard {
     // ------------------------------------------------------------------ swim
 
     fun swim(
-        ctx: Context, kicker: String, subtitle: String, distance: String,
+        ctx: Context, look: Look, kicker: String, subtitle: String, distance: String,
         stats: List<Stat>, reps: List<Rep>, repTitle: String, zones: List<Double>?, footer: String,
     ): Bitmap {
         val f = Fonts(ctx)
         val bmp = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        c.drawPaint(paint().apply { shader = LinearGradient(0f, 0f, 0f, H * 0.6f, 0xFF071B2E.toInt(), BG, Shader.TileMode.CLAMP) })
+        when (look.background) {
+            ShareBackground.GLOW -> c.drawPaint(paint().apply { shader = LinearGradient(0f, 0f, 0f, H * 0.6f, dim(look.a1, 0.12f), BG, Shader.TileMode.CLAMP) })
+            else -> c.backdrop(look, 540f, 0f)
+        }
 
         val lane = paint(0x0AFFFFFF).apply { style = Paint.Style.STROKE; strokeWidth = 4f; pathEffect = DashPathEffect(floatArrayOf(40f, 30f), 0f) }
         for (x in 180 until W step 180) c.drawLine(x.toFloat(), 0f, x.toFloat(), H.toFloat(), lane)
@@ -335,14 +388,16 @@ object ShareCard {
                 cubicTo(150f, y - 40f, 350f, y + 40f, 540f, y)
                 cubicTo(730f, y - 40f, 930f, y + 40f, 1130f, y)
             }
-            c.drawPath(p, paint((a shl 24) or (CYAN and 0x00FFFFFF)).apply { style = Paint.Style.STROKE; strokeWidth = w })
+            c.drawPath(p, paint(withAlpha(look.a1, a)).apply { style = Paint.Style.STROKE; strokeWidth = w })
         }
 
-        c.header(f, kicker, subtitle, CYAN)
-        bigNumber(c, f, distance, "M", 560f, 300f, 110f, CYAN)
-        c.statsRow(f, stats, 640f)
+        c.header(f, kicker, subtitle, look.a1)
+        bigNumber(c, f, distance, "M", 560f, 300f, 110f, look.a1)
+        if (look.style.stats) c.statsRow(f, stats, 640f)
 
-        if (reps.size >= 2) {
+        if (!look.style.details) {
+            // Distance and stats only.
+        } else if (reps.size >= 2) {
             c.text(repTitle.uppercase(), 80f, 1290f, f.xbold, 22f, DIM, spacing = 4f)
             val fastest = reps.minOf { it.seconds }
             val slowest = reps.maxOf { it.seconds }
@@ -353,11 +408,11 @@ object ShareCard {
                 val h = 110f + if (slowest - fastest < 0.01) 60f else ((slowest - r.seconds) / (slowest - fastest) * 120).toFloat()
                 val x = 80f + i * (bw + gap)
                 val rect = RectF(x, bottom - h, x + bw, bottom)
-                c.drawRoundRect(rect, 12f, 12f, paint().apply { shader = LinearGradient(0f, rect.top, 0f, rect.bottom, CYAN, 0xFF2563EB.toInt(), Shader.TileMode.CLAMP) })
+                c.drawRoundRect(rect, 12f, 12f, paint().apply { shader = LinearGradient(0f, rect.top, 0f, rect.bottom, look.a1, look.a2, Shader.TileMode.CLAMP) })
                 c.text(r.label, rect.centerX(), rect.top - 12f, f.xbold, if (reps.size > 10) 16f else 20f, TEXT, align = Paint.Align.CENTER)
                 c.text("${i + 1}", rect.centerX(), bottom + 36f, f.xbold, 22f, DIM, align = Paint.Align.CENTER)
             }
-        } else {
+        } else if (look.style.zones) {
             zones?.let {
                 c.text("TIME IN HEART-RATE ZONES", 80f, 1290f, f.xbold, 22f, DIM, spacing = 4f)
                 c.zoneBar(it, 1320f)

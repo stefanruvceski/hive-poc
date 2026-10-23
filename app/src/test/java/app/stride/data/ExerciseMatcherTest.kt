@@ -53,4 +53,27 @@ class ExerciseMatcherTest {
         assertTrue(r.all { "Press" in it.name })
         assertEquals(2, r.size)
     }
+
+    @Test
+    fun search_matchesWhileTyping() {
+        assertEquals("One-Arm_Kettlebell_Swings", ExerciseMatcher.search(lib, "swi").firstOrNull()?.id)
+        assertEquals("Goblet_Squat", ExerciseMatcher.search(lib, "gob sq").firstOrNull()?.id)
+    }
+
+    @Test
+    fun browse_filtersByEquipmentAndMuscle() {
+        val all = listOf(
+            LibraryExercise("KB_Halo", "Kettlebell Halo", listOf("shoulders"), "kettlebells", img = "Kettlebell_Pirate_Ships"),
+            LibraryExercise("Goblet_Squat", "Goblet Squat", listOf("quadriceps"), "kettlebells"),
+            LibraryExercise("Pushups", "Pushups", listOf("chest"), "body only"),
+            LibraryExercise("Side_Lateral_Raise", "Side Lateral Raise", listOf("shoulders"), "dumbbell"),
+        )
+        assertEquals(listOf("Goblet_Squat", "KB_Halo"), ExerciseMatcher.browse(all, "", "kettlebells", null).map { it.id })
+        assertEquals(listOf("KB_Halo", "Side_Lateral_Raise"), ExerciseMatcher.browse(all, "", null, "Shoulders").map { it.id }.sorted())
+        assertEquals(listOf("Pushups"), ExerciseMatcher.browse(all, "push", null, null).map { it.id })
+        // Kettlebell entries first when nothing is filtered.
+        assertTrue(ExerciseMatcher.browse(all, "", null, null).take(2).all { it.isKettlebell })
+        // Stride's own entries show another exercise's photos.
+        assertTrue(all[0].images.first().endsWith("/Kettlebell_Pirate_Ships/0.jpg"))
+    }
 }

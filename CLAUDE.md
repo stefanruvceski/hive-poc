@@ -24,17 +24,33 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Sunday from 18:00 a WorkManager check (`reminder/PlanReminder.kt`) notifies once if next week isn't approved;
   the tap opens `PlanReviewScreen` (shift ±1 day, change days, approve).
 - `AppData.manualDone`: days checked off by hand (no watch data); shown in `StrideColors.Manual` (blue).
-- Home-screen widgets (Glance, `widget/Widgets.kt`): Today and Weight, refreshed after every data change.
+- Home-screen widgets (Glance, `widget/Widgets.kt`, 15 of them, `SizeMode.Exact`, text scales with size): Today, Weight,
+  Week strip, Target rings, Recovery, Next workout, Month, Strength, Week totals, Weight trend, Week plan, Start workout,
+  Last run, Last swim, Streak. Bitmaps (rings, month grid, chart) come from `widget/WidgetArt.kt`. Each needs a receiver in
+  the manifest (with `android:label`), `res/xml/widget_*.xml` and a description string. Taps open the app via
+  `Widgets.EXTRA_OPEN` ("workout", a tab id, "day:YYYY-MM-DD"), refreshed after every data change.
+- Layout: users hide/reorder tabs and sections (`Settings.layout`, ids in `ui/Layouts.kt`, never rename them). Long-press
+  any tab → edit mode (`ui/Layout.kt`, `SectionHost`); Settings → Tabs and sections. New sections: add a `SectionDef`
+  and a `section("id") { ... }` block in the tab.
+- Notifications: `model.NotifType` (18 types, each switchable in Settings → Notifications, `Settings.notifyOn`), pure
+  rules in `domain/Notices.kt` (unit tested), posted by `reminder/PlanReminder.kt` (dedupe set in prefs). The worker
+  also syncs intervals.icu every ~2 h (`data/Sync.kt`, shared with the app; `Store.update` under `Store.LOCK`) and
+  checks for updates twice a day.
 - Strength: `domain/Progression.kt` suggests the next bell after 10+ reps (program: failure at 6-10); rest timer in the editor.
 - Workout mode (`ui/screens/Workout.kt`): exercises with per-set kg/reps/done (`SetEntry`), pictures and steps from
   Free Exercise DB (public domain; index in `assets/exercises.json`, photos from raw.githubusercontent via Coil).
   Presets carry exact `dbId`s; custom names are matched by `data/ExerciseMatcher.kt`. Sessions save on every change.
+  `assets/exercises.json` also has ~50 Stride kettlebell entries (`KB_*` ids, `img` = the DB exercise whose photos they
+  reuse). The picker is a full-screen browser: search as you type (prefix match), equipment and muscle-group chips.
 - `domain/Training.kt`: records (history per exercise), warm-ups (~40%/70% bells, `SetEntry.warmup`, excluded
   from volume/records/progression), deload (suggested after 5 steady weeks or an HRV drop; `AppData.deloadWeeks`,
   ~70% bells), weekly targets (Zone 2 = HR zone 2 minutes, sauna minutes, plan), weight trend/ETA, day swaps.
 - Reminders (`reminder/PlanReminder.kt`, WorkManager every 15 min): Sunday 18:00 plan review, 06:00 today + recovery,
   19:00 if a planned workout isn't done; each once per day/week.
-- Share images (`share/`): 1080x1920 bitmaps drawn with android.graphics (fonts in `res/font`, OFL): run/walk with
+- Share images (`share/`): the preview (`ui/screens/ShareSheet.kt`) lets the user pick colors, map (dark/streets/
+  satellite/none), background and what to show (`Settings.share`, `ShareStyle`). Maps need no API key: Esri dark gray
+  canvas + World Imagery and tile.openstreetmap.org (darkened), with fallbacks; CARTO was dropped (it now wants a key).
+  1080x1920 bitmaps drawn with android.graphics (fonts in `res/font`, OFL): run/walk with
   the GPS route (`/activity/{id}/streams?types=latlng`, lat in `data`, lng in `data2`), strength, swim. Day screen → Share.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.

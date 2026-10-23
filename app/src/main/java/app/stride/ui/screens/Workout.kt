@@ -1,5 +1,13 @@
 package app.stride.ui.screens
 
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Search
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
@@ -644,7 +652,11 @@ fun ExercisePicture(lib: LibraryExercise?, modifier: Modifier, animate: Boolean,
     }
 }
 
-/** Search the exercise library; optionally add a custom name without a picture. */
+/**
+ * Full-screen exercise browser: search as you type, filter by equipment and muscle group
+ * (kettlebell exercises first). Optionally adds a custom name without a picture.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExercisePickerDialog(
     title: String,
@@ -655,55 +667,83 @@ private fun ExercisePickerDialog(
     onPick: (String, LibraryExercise?) -> Unit,
 ) {
     var query by remember { mutableStateOf(initialQuery) }
-    val results = remember(query, library) { if (query.isBlank()) emptyList() else ExerciseMatcher.search(library, query, 25) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = StrideColors.Elev,
-        title = { Text(title) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text("Search exercises") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    if (allowCustom && query.isNotBlank()) {
-                        item {
+    var equipment by remember { mutableStateOf(if (initialQuery.isBlank()) "kettlebells" else null) }
+    var group by remember { mutableStateOf<String?>(null) }
+    val results = remember(query, library, equipment, group) { ExerciseMatcher.browse(library, query, equipment, group) }
+    val equipmentChips = listOf("kettlebells" to "Kettlebell", null to "All", "body only" to "Bodyweight", "dumbbell" to "Dumbbell", "bands" to "Bands")
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Column(Modifier.fillMaxSize().background(StrideColors.Bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Close") }
+                Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.weight(1f))
+            }
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Search ${library.size} exercises") },
+                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, "Clear") } },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                equipmentChips.forEach { (value, label) ->
+                    FilterChip(selected = equipment == value, onClick = { equipment = value }, label = { Text(label) })
+                }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = group == null, onClick = { group = null }, label = { Text("All muscles") })
+                ExerciseMatcher.GROUPS.forEach { (g, _) ->
+                    FilterChip(selected = group == g, onClick = { group = if (group == g) null else g }, label = { Text(g) })
+                }
+            }
+            Text(
+                "${results.size} exercise${if (results.size == 1) "" else "s"}",
+                style = MaterialTheme.typography.labelMedium,
+                color = StrideColors.Faint,
+                modifier = Modifier.padding(start = 20.dp, top = 6.dp, bottom = 2.dp),
+            )
+            LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+                if (allowCustom && query.isNotBlank()) {
+                    item {
+                        Text(
+                            "+ Add \"${query.trim()}\" as typed",
+                            color = StrideColors.Accent,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.fillMaxWidth().clickable { onPick(query.trim(), ExerciseMatcher.best(library, query)) }.padding(vertical = 12.dp),
+                        )
+                    }
+                }
+                itemsIndexed(results, key = { _, ex -> ex.id }) { _, ex ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(ex.name, ex) }.padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ExercisePicture(ex, Modifier.size(56.dp), animate = false, corner = 12)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(ex.name, style = MaterialTheme.typography.bodyLarge, color = StrideColors.Text)
                             Text(
-                                "+ Add \"${query.trim()}\" as typed",
-                                color = StrideColors.Accent,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.fillMaxWidth().clickable { onPick(query.trim(), ExerciseMatcher.best(library, query)) }.padding(vertical = 10.dp),
+                                (ex.muscles.take(3) + ex.equipment).filter { it.isNotBlank() }.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = StrideColors.Faint,
                             )
                         }
                     }
-                    itemsIndexed(results) { _, ex ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable { onPick(ex.name, ex) }.padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            ExercisePicture(ex, Modifier.size(48.dp), animate = false, corner = 10)
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text(ex.name, style = MaterialTheme.typography.bodyMedium, color = StrideColors.Text)
-                                Text(
-                                    (ex.muscles + ex.equipment).filter { it.isNotBlank() }.joinToString(" · "),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = StrideColors.Faint,
-                                )
-                            }
-                        }
+                }
+                if (results.isEmpty()) {
+                    item {
+                        Text(
+                            "Nothing found. Try fewer words or another filter.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = StrideColors.Dim,
+                            modifier = Modifier.padding(vertical = 16.dp),
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-    )
+        }
+    }
 }
 
 // ------------------------------------------------------------------ progression hint

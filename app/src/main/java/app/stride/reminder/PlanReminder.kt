@@ -16,107 +16,116 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import app.stride.BuildConfig
 import app.stride.MainActivity
 import app.stride.R
+import app.stride.data.IntervalsApi
 import app.stride.data.Store
-import app.stride.domain.Analyzer
-import app.stride.domain.DayStatus
-import app.stride.domain.Recovery
-import app.stride.domain.fmtHours
-import app.stride.domain.fmtNum
-import app.stride.domain.weekRange
-import app.stride.model.DayKind
-import java.time.DayOfWeek
+import app.stride.data.Sync
+import app.stride.domain.Notice
+import app.stride.domain.Notices
+import app.stride.model.Activity
+import app.stride.model.NotifType
+import app.stride.update.UpdateLogic
+import app.stride.update.Updater
+import app.stride.widget.Widgets
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 /**
- * Background reminders, each posted at most once: Sunday 18:00+ to review next week's plan,
- * 06:00 with today's plan and recovery, 19:00 when a planned workout isn't done yet.
+ * Background work every 15 minutes: syncs watch data every ~2 hours (so workout and record
+ * notifications can fire), checks for app updates twice a day, and posts the notifications
+ * [Notices] says are due, each at most once.
  */
 object PlanReminder {
     const val EXTRA_REVIEW_PLAN = "app.stride.REVIEW_PLAN"
-    private const val CHANNEL = "plan_review"
     private const val WORK = "plan-reminder"
     private const val PREFS = "plan_reminder"
-    private const val KEY_LAST = "last_notified_week"
-
-    private const val DAILY = "daily"
-    private const val KEY_MORNING = "last_morning"
-    private const val KEY_EVENING = "last_evening"
+    private const val KEY_SENT = "sent"
+    private const val KEY_UPDATE_CHECK = "last_update_check"
+    private const val KEY_LATEST_BUILD = "latest_build"
 
     fun schedule(context: Context) {
-        // Every 15 minutes (WorkManager's minimum), so the 06:00 and 19:00 notes arrive on time.
+        // Every 15 minutes (WorkManager's minimum), so time-of-day notes arrive on time.
         val request = PeriodicWorkRequestBuilder<PlanReminderWorker>(15, TimeUnit.MINUTES).build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(WORK, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
 
-    fun check(context: Context, now: LocalDateTime = LocalDateTime.now()) {
-        val data = Store(context).load()
+    suspend fun check(context: Context, now: LocalDateTime = LocalDateTime.now()) {
+        val store = Store(context)
+        var data = store.load()
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val today = now.toLocalDate()
-        val key = today.toString()
 
-        // Sunday 18:00+: next week's plan not approved yet.
-        if (data.settings.planReminder && now.dayOfWeek == DayOfWeek.SUNDAY && now.hour >= 18) {
-            val nextMonday = today.plusDays(1).toString()
-            if (nextMonday !in data.weekPlans && prefs.getString(KEY_LAST, null) != nextMonday &&
-                notify(context, CHANNEL, "Weekly plan review", 1, "Plan for next week",
-                    "${weekRange(today.plusDays(1))}: keep it, move it or change days, then approve.", review = true)
-            ) prefs.edit().putString(KEY_LAST, nextMonday).apply()
-        }
-
-        val day = Analyzer.day(today, today, data)
-        val plan = day.plan ?: return
-        if (plan.kind == DayKind.REST) return
-
-        // 06:00-10:59: today's plan with last night's recovery.
-        if (data.settings.morningReminder && now.hour in 6..10 && prefs.getString(KEY_MORNING, null) != key && day.status != DayStatus.DONE) {
-            val r = Recovery.summary(data.wellness, today)
-            val recovery = r?.let { s ->
-                listOfNotNull(
-                    s.day.sleepSecs?.let { "sleep ${fmtHours(it)}" },
-                    s.day.hrv?.let { "HRV ${fmtNum(it)}" + (s.hrvBaseline?.let { b -> " (avg ${fmtNum(b)})" } ?: "") },
-                ).joinToString(", ").let { line -> if (line.isEmpty()) s.reason else "${line.replaceFirstChar { c -> c.uppercase() }}. ${s.reason}" }
-            } ?: "Have a good session."
-            if (notify(context, DAILY, "Daily plan", 2, "Today: ${plan.title}", recovery)) {
-                prefs.edit().putString(KEY_MORNING, key).apply()
+        // Background sync between 06:00 and 23:59 when the last one is 2+ hours old.
+        var fresh = emptyList<Activity>()
+        val last = data.lastSync?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+        if (data.settings.apiKey.isNotBlank() && now.hour >= 6 && (last == null || Duration.between(last, now).toHours() >= 2)) {
+            runCatching {
+                val result = Sync.fetch(IntervalsApi(data.settings.apiKey.trim(), data.settings.athleteId.trim()))
+                val before = data.activities.map { it.id }.toSet()
+                data = store.update { result.apply(it) }
+                // The first sync ever would report the whole history; only report when there was data before.
+                if (before.isNotEmpty()) fresh = data.activities.filter { it.id !in before }
+                Widgets.refresh(context)
             }
         }
 
-        // 19:00-21:59: a planned workout that isn't done yet.
-        if (data.settings.eveningReminder && now.hour in 19..21 && prefs.getString(KEY_EVENING, null) != key &&
-            !plan.kind.isRest && day.status != DayStatus.DONE
-        ) {
-            if (notify(context, DAILY, "Daily plan", 3, "Still time for ${plan.title}?",
-                    "Not done yet today. Did it without the watch? Open Stride and check it off.")
-            ) prefs.edit().putString(KEY_EVENING, key).apply()
+        // Update check twice a day.
+        var latest = prefs.getInt(KEY_LATEST_BUILD, 0).takeIf { it > 0 }
+        if (!BuildConfig.DEBUG && System.currentTimeMillis() - prefs.getLong(KEY_UPDATE_CHECK, 0) > TimeUnit.HOURS.toMillis(12)) {
+            Updater.fetchReleases()?.let { releases ->
+                latest = UpdateLogic.pickLatest(releases)?.build
+                prefs.edit().putLong(KEY_UPDATE_CHECK, System.currentTimeMillis()).putInt(KEY_LATEST_BUILD, latest ?: 0).apply()
+            }
         }
+
+        val sent = prefs.getStringSet(KEY_SENT, emptySet()).orEmpty().toMutableList()
+        val due = Notices.due(data, now, fresh, latest, BuildConfig.VERSION_CODE).filter { it.dedupe !in sent }
+        for (n in due) {
+            if (notify(context, n)) sent += n.dedupe
+        }
+        if (due.isNotEmpty()) prefs.edit().putStringSet(KEY_SENT, sent.takeLast(300).toSet()).apply()
+    }
+
+    private fun channel(t: NotifType): Pair<String, String> = when (t) {
+        NotifType.PLAN_REVIEW -> "plan_review" to "Weekly plan review"
+        NotifType.MORNING, NotifType.PRE_WORKOUT, NotifType.EVENING, NotifType.SAUNA, NotifType.REST_DAY, NotifType.MISSED -> "daily" to "Daily plan"
+        NotifType.WORKOUT_DONE, NotifType.PERSONAL_BEST, NotifType.TARGET_HIT, NotifType.WEEK_RECAP, NotifType.MONTH_RECAP -> "progress" to "Workouts and progress"
+        NotifType.LOW_RECOVERY, NotifType.BEDTIME, NotifType.DELOAD, NotifType.WEIGH_IN -> "health" to "Recovery and health"
+        NotifType.NO_DATA, NotifType.UPDATE -> "app" to "App and sync"
     }
 
     // Permission is checked right above the notify call (Android 13+ only needs it).
     @SuppressLint("MissingPermission")
-    private fun notify(context: Context, channel: String, channelName: String, id: Int, title: String, text: String, review: Boolean = false): Boolean {
+    private fun notify(context: Context, n: Notice): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return false
+        val (channel, channelName) = channel(n.type)
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(channel, channelName, NotificationManager.IMPORTANCE_DEFAULT))
+        // One slot per type; workout notes get their own so two workouts don't replace each other.
+        val id = 100 + n.type.ordinal * 10 + if (n.type == NotifType.WORKOUT_DONE || n.type == NotifType.PERSONAL_BEST) Math.floorMod(n.key.hashCode(), 10) else 0
         val open = Intent(context, MainActivity::class.java)
-            .putExtra(EXTRA_REVIEW_PLAN, review)
+            .putExtra(EXTRA_REVIEW_PLAN, n.type == NotifType.PLAN_REVIEW)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pending = PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_stat_stride)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentTitle(n.title)
+            .setContentText(n.text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(n.text))
             .setContentIntent(pending)
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(id, notification)
         return true
     }
+
+    /** A sample of [t] right now, for the test button in Settings. */
+    fun test(context: Context, t: NotifType): Boolean =
+        notify(context, Notice(t, "test-${System.currentTimeMillis()}", t.title, "${t.description}. This is how it will look."))
 }
 
 class PlanReminderWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {

@@ -46,12 +46,14 @@ import app.stride.ui.AppViewModel
 import app.stride.ui.FCard
 import app.stride.ui.LineChart
 import app.stride.ui.SectionLabel
+import app.stride.ui.SectionHost
+import app.stride.ui.longPressToEdit
 import app.stride.ui.theme.StrideColors
 import app.stride.ui.theme.NumberStyle
 import java.time.LocalDate
 
 @Composable
-fun WeightTab(vm: AppViewModel, data: AppData, today: LocalDate, padding: PaddingValues) {
+fun WeightTab(vm: AppViewModel, data: AppData, today: LocalDate, padding: PaddingValues, host: SectionHost) {
     val entries = remember(data.weights) { data.weights.sortedBy { it.date } }
     val recent = entries.filter { it.date >= today.minusDays(90).toString() }
     val latest = entries.lastOrNull()
@@ -63,120 +65,128 @@ fun WeightTab(vm: AppViewModel, data: AppData, today: LocalDate, padding: Paddin
     var push by remember { mutableStateOf(data.settings.apiKey.isNotBlank()) }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().imePadding(),
+        modifier = Modifier.fillMaxSize().imePadding().longPressToEdit(!host.editing, host.onLongPress),
         contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            FCard {
-                if (latest == null) {
-                    Text("No weight logged yet", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Log it below. With a Garmin scale, weight arrives automatically via intervals.icu.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(fmtKg(latest.kg), style = NumberStyle.copy(fontSize = 44.sp))
-                        Text(" kg", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
-                        Spacer(Modifier.weight(1f))
-                        Column(horizontalAlignment = Alignment.End) {
-                            weekAgo?.let {
-                                val d = latest.kg - it.kg
-                                Text(fmtSigned(d, " kg"), style = MaterialTheme.typography.titleMedium, color = if (d < 0) StrideColors.Good else if (d > 0) StrideColors.Warn else MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("in 7 days", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        with(host) {
+            sections {
+                section("current") {
+                item {
+                    FCard {
+                        if (latest == null) {
+                            Text("No weight logged yet", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Log it below. With a Garmin scale, weight arrives automatically via intervals.icu.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(fmtKg(latest.kg), style = NumberStyle.copy(fontSize = 44.sp))
+                                Text(" kg", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                                Spacer(Modifier.weight(1f))
+                                Column(horizontalAlignment = Alignment.End) {
+                                    weekAgo?.let {
+                                        val d = latest.kg - it.kg
+                                        Text(fmtSigned(d, " kg"), style = MaterialTheme.typography.titleMedium, color = if (d < 0) StrideColors.Good else if (d > 0) StrideColors.Warn else MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("in 7 days", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                            val ld = LocalDate.parse(latest.date)
+                            Text("${dayShort(ld)}, ${dateShort(ld)} · ${latest.source}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            goal?.let { g ->
+                                Spacer(Modifier.height(4.dp))
+                                Text("To goal (${fmtKg(g)} kg): ${fmtSigned(g - latest.kg, " kg")}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            val ma = remember(entries) { WeightTrend.movingAverage(entries) }
+                            val perWeek = WeightTrend.slopePerWeek(ma, today)
+                            if (perWeek != null) {
+                                val current = ma.last().avg
+                                val eta = goal?.let { WeightTrend.eta(current, it, perWeek, today) }
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    "Trend ${fmtSigned(perWeek, " kg")} per week" +
+                                        (eta?.let { " · goal around ${dateShort(it)}" + if (it.year != today.year) " ${it.year}" else "" } ?: ""),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (goal == null) StrideColors.Text else if (eta != null) StrideColors.Good else StrideColors.Warn,
+                                )
+                            }
+                            val recentMa = ma.filter { !it.date.isBefore(today.minusDays(90)) }
+                            if (recentMa.size >= 2) {
+                                Spacer(Modifier.height(14.dp))
+                                Text("7-day average", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                LineChart(
+                                    recentMa.map { it.avg },
+                                    recentMa.map { dateNum(it.date) },
+                                    MaterialTheme.colorScheme.primary,
+                                    { fmtKg(it) },
+                                    refLine = goal,
+                                )
                             }
                         }
                     }
-                    val ld = LocalDate.parse(latest.date)
-                    Text("${dayShort(ld)}, ${dateShort(ld)} · ${latest.source}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    goal?.let { g ->
-                        Spacer(Modifier.height(4.dp))
-                        Text("To goal (${fmtKg(g)} kg): ${fmtSigned(g - latest.kg, " kg")}", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    val ma = remember(entries) { WeightTrend.movingAverage(entries) }
-                    val perWeek = WeightTrend.slopePerWeek(ma, today)
-                    if (perWeek != null) {
-                        val current = ma.last().avg
-                        val eta = goal?.let { WeightTrend.eta(current, it, perWeek, today) }
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "Trend ${fmtSigned(perWeek, " kg")} per week" +
-                                (eta?.let { " · goal around ${dateShort(it)}" + if (it.year != today.year) " ${it.year}" else "" } ?: ""),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (goal == null) StrideColors.Text else if (eta != null) StrideColors.Good else StrideColors.Warn,
-                        )
-                    }
-                    val recentMa = ma.filter { !it.date.isBefore(today.minusDays(90)) }
-                    if (recentMa.size >= 2) {
-                        Spacer(Modifier.height(14.dp))
-                        Text("7-day average", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(4.dp))
-                        LineChart(
-                            recentMa.map { it.avg },
-                            recentMa.map { dateNum(it.date) },
-                            MaterialTheme.colorScheme.primary,
-                            { fmtKg(it) },
-                            refLine = goal,
-                        )
-                    }
                 }
-            }
-        }
-
-        item {
-            FCard {
-                Text("New entry", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { date = date.minusDays(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day") }
-                    Text(
-                        if (date == today) "Today" else "${dayShort(date)}, ${dateShort(date)}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = { date = date.plusDays(1) }, enabled = date.isBefore(today)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day") }
                 }
-                NumField("weight (kg)", kgText, decimal = true, modifier = Modifier.fillMaxWidth()) { kgText = it }
-                if (data.settings.apiKey.isNotBlank()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = push, onCheckedChange = { push = it })
-                        Text("Also send to intervals.icu", style = MaterialTheme.typography.bodyMedium)
-                    }
-                } else {
-                    Spacer(Modifier.height(10.dp))
-                }
-                val kg = parseNum(kgText)
-                Button(
-                    onClick = {
-                        if (kg != null) {
-                            vm.addWeight(date, kg, push && data.settings.apiKey.isNotBlank())
-                            kgText = ""
-                            date = today
+                section("entry") {
+                item {
+                    FCard {
+                        Text("New entry", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { date = date.minusDays(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day") }
+                            Text(
+                                if (date == today) "Today" else "${dayShort(date)}, ${dateShort(date)}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = { date = date.plusDays(1) }, enabled = date.isBefore(today)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day") }
                         }
-                    },
-                    enabled = kg != null && kg in 30.0..250.0,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Save") }
-            }
-        }
-
-        if (entries.isNotEmpty()) {
-            item { SectionLabel("Entries", Modifier.padding(start = 4.dp, top = 4.dp)) }
-            items(entries.reversed().take(60), key = { it.date }) { e ->
-                val d = LocalDate.parse(e.date)
-                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${dayShort(d)}, ${dateShort(d)}", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Text(e.source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(12.dp))
-                    Text("${fmtKg(e.kg)} kg", style = MaterialTheme.typography.bodyLarge)
-                    if (e.source == SRC_MANUAL) {
-                        IconButton(onClick = { vm.deleteWeight(e.date) }) { Icon(Icons.Filled.Delete, "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    } else {
-                        Spacer(Modifier.width(48.dp))
+                        NumField("weight (kg)", kgText, decimal = true, modifier = Modifier.fillMaxWidth()) { kgText = it }
+                        if (data.settings.apiKey.isNotBlank()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = push, onCheckedChange = { push = it })
+                                Text("Also send to intervals.icu", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        } else {
+                            Spacer(Modifier.height(10.dp))
+                        }
+                        val kg = parseNum(kgText)
+                        Button(
+                            onClick = {
+                                if (kg != null) {
+                                    vm.addWeight(date, kg, push && data.settings.apiKey.isNotBlank())
+                                    kgText = ""
+                                    date = today
+                                }
+                            },
+                            enabled = kg != null && kg in 30.0..250.0,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Save") }
                     }
+                }
+                }
+                section("entries") {
+                if (entries.isNotEmpty()) {
+                    item { SectionLabel("Entries", Modifier.padding(start = 4.dp, top = 4.dp)) }
+                    items(entries.reversed().take(60), key = { it.date }) { e ->
+                        val d = LocalDate.parse(e.date)
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${dayShort(d)}, ${dateShort(d)}", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Text(e.source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(12.dp))
+                            Text("${fmtKg(e.kg)} kg", style = MaterialTheme.typography.bodyLarge)
+                            if (e.source == SRC_MANUAL) {
+                                IconButton(onClick = { vm.deleteWeight(e.date) }) { Icon(Icons.Filled.Delete, "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            } else {
+                                Spacer(Modifier.width(48.dp))
+                            }
+                        }
+                    }
+                }
                 }
             }
         }
