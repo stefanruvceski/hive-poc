@@ -53,10 +53,18 @@ import app.stride.model.Targets
 import app.stride.ui.AppViewModel
 import app.stride.ui.FCard
 import app.stride.ui.SectionLabel
+import app.stride.ui.IconBubble
+import app.stride.ui.RowCard
+import app.stride.ui.theme.StrideColors
+import app.stride.model.NotifType
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Notifications
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
+fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout: () -> Unit, onNotifications: () -> Unit) {
     val s = data.settings
     var apiKey by remember { mutableStateOf(s.apiKey) }
     var athlete by remember { mutableStateOf(s.athleteId) }
@@ -72,14 +80,11 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
     var runCeil by remember { mutableStateOf(t.runHrCeiling.toString()) }
     var goal by remember { mutableStateOf(t.weightGoalKg?.let { fmtKg(it) } ?: "") }
     val plan = remember { mutableStateListOf(*s.plan.sortedBy { it.dow }.toTypedArray()) }
-    var reminder by remember { mutableStateOf(s.planReminder) }
-    var morning by remember { mutableStateOf(s.morningReminder) }
-    var evening by remember { mutableStateOf(s.eveningReminder) }
     var warmups by remember { mutableStateOf(s.warmups) }
     var zone2 by remember { mutableStateOf(t.zone2Minutes.toString()) }
     var saunaTarget by remember { mutableStateOf(t.saunaMinutes.toString()) }
 
-    fun save() {
+    fun save(close: Boolean = true) {
         val d = Targets()
         val targets = Targets(
             easySwimMeters = swimMeters.toIntOrNull() ?: d.easySwimMeters,
@@ -93,14 +98,13 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
             zone2Minutes = zone2.toIntOrNull() ?: d.zone2Minutes,
             saunaMinutes = saunaTarget.toIntOrNull() ?: d.saunaMinutes,
         )
-        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), planReminder = reminder,
-            morningReminder = morning, eveningReminder = evening, warmups = warmups,
+        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), warmups = warmups,
         )
         if (updated != s) {
             vm.saveSettings(updated)
-            vm.toast("Settings saved")
+            if (close) vm.toast("Settings saved")
         }
-        onBack()
+        if (close) onBack()
     }
 
     // Leaving Settings (back arrow or system back) keeps what was typed instead of silently dropping it.
@@ -122,7 +126,34 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
             contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { SectionLabel("intervals.icu", Modifier.padding(start = 4.dp)) }
+            item { SectionLabel("App", Modifier.padding(start = 4.dp)) }
+            item {
+                RowCard(onClick = { save(close = false); onNotifications() }) {
+                    IconBubble(Icons.Filled.Notifications, StrideColors.Accent)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Notifications", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "${NotifType.entries.count { s.notifyOn(it) }} of ${NotifType.entries.size} on · choose which ones you get",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = StrideColors.Dim,
+                        )
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = StrideColors.Dim)
+                }
+            }
+            item {
+                RowCard(onClick = { save(close = false); onLayout() }) {
+                    IconBubble(Icons.Filled.Dashboard, StrideColors.Accent2)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Tabs and sections", style = MaterialTheme.typography.titleMedium)
+                        Text("Show, hide and reorder · or long-press any tab", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = StrideColors.Dim)
+                }
+            }
+            item { SectionLabel("intervals.icu", Modifier.padding(start = 4.dp, top = 8.dp)) }
             item {
                 FCard {
                     Text(
@@ -202,31 +233,6 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     SectionLabel("Default weekly plan", Modifier.padding(start = 4.dp).weight(1f))
                     TextButton(onClick = { plan.clear(); plan.addAll(DefaultPlan.days) }) { Text("Reset to default") }
-                }
-            }
-            item {
-                FCard {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                            Text("Notifications", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Sunday 18:00 · review next week's plan. Weeks you don't review use the default plan below.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Switch(checked = reminder, onCheckedChange = { reminder = it })
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("06:00 · today's plan and recovery", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Switch(checked = morning, onCheckedChange = { morning = it })
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("19:00 · reminder if not trained yet", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Switch(checked = evening, onCheckedChange = { evening = it })
-                    }
                 }
             }
             items(plan.size) { i ->

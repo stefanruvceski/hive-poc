@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import app.stride.domain.mondayOf
+import app.stride.model.NotifType
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +51,13 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.stride.ui.screens.DayScreen
+import app.stride.ui.screens.LayoutScreen
+import app.stride.ui.screens.NotificationsScreen
+import app.stride.ui.theme.StrideColors
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import app.stride.ui.screens.ExerciseHistoryScreen
 import app.stride.ui.screens.PlanReviewScreen
 import app.stride.ui.screens.SettingsScreen
@@ -63,22 +71,25 @@ import app.stride.update.UpdateViewModel
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 
+/** A request from a widget to open a place in the app; [id] grows so the same target can be asked twice. */
+data class OpenRequest(val id: Int, val target: String)
+
 sealed interface Overlay {
     data object Settings : Overlay
     data class Day(val date: LocalDate) : Overlay
     data class Strength(val date: LocalDate, val sessionId: String?) : Overlay
     data class PlanReview(val monday: LocalDate) : Overlay
     data class ExerciseHistory(val name: String) : Overlay
+    data object Layout : Overlay
+    data object Notifications : Overlay
 }
 
-private data class Tab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-private val TABS = listOf(
-    Tab("Week", Icons.Filled.CalendarMonth),
-    Tab("Trends", Icons.Filled.Insights),
-    Tab("Strength", Icons.Filled.FitnessCenter),
-    Tab("Weight", Icons.Filled.MonitorWeight),
-)
+private fun tabIcon(id: String) = when (id) {
+    "trends" -> Icons.Filled.Insights
+    "strength" -> Icons.Filled.FitnessCenter
+    "weight" -> Icons.Filled.MonitorWeight
+    else -> Icons.Filled.CalendarMonth
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,16 +98,35 @@ fun StrideApp(
     updates: UpdateViewModel = viewModel(),
     /** Incremented each time the Sunday notification asks to open next week's plan. */
     planReviewRequest: Int = 0,
+    openRequest: OpenRequest = OpenRequest(0, ""),
 ) {
     val data by vm.data.collectAsStateWithLifecycle()
     val update by updates.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Runs on launch and every time the app comes back to the foreground.
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.onForeground(context) }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        updates.onForeground(context)
+        vm.reloadFromDisk()
+    }
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val intervals by vm.intervals.collectAsStateWithLifecycle()
 
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tabId by rememberSaveable { mutableStateOf("week") }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    val layout = data.settings.layout
+    val tabs = Layouts.visibleTabs(layout)
+    val tab = tabs.firstOrNull { it.id == tabId } ?: tabs.first()
+    val haptics = LocalHapticFeedback.current
+    val host = SectionHost(
+        tab = tab,
+        prefs = layout,
+        editing = editing,
+        onPrefs = vm::setLayout,
+        onLongPress = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            editing = true
+        },
+    )
     var weekOffset by rememberSaveable { mutableIntStateOf(0) }
     var overlays by remember { mutableStateOf(listOf<Overlay>()) }
     val snackbar = remember { SnackbarHostState() }
@@ -112,6 +142,21 @@ fun StrideApp(
     val push: (Overlay) -> Unit = { overlays = overlays + it }
     val pop: () -> Unit = { overlays = overlays.dropLast(1) }
     BackHandler(enabled = overlays.isNotEmpty()) { pop() }
+    BackHandler(enabled = overlays.isEmpty() && editing) { editing = false }
+
+    LaunchedEffect(openRequest.id) {
+        if (openRequest.id == 0) return@LaunchedEffect
+        val t = openRequest.target
+        editing = false
+        when {
+            t == "workout" -> overlays = listOf(Overlay.Strength(LocalDate.now(), null))
+            t.startsWith("day:") -> runCatching { LocalDate.parse(t.removePrefix("day:")) }.getOrNull()?.let { overlays = listOf(Overlay.Day(it)) }
+            else -> {
+                overlays = emptyList()
+                if (Layouts.visibleTabs(data.settings.layout).any { it.id == t }) tabId = t
+            }
+        }
+    }
 
     LaunchedEffect(planReviewRequest) {
         if (planReviewRequest > 0) overlays = listOf(Overlay.PlanReview(mondayOf(LocalDate.now()).plusWeeks(1)))
@@ -120,7 +165,7 @@ fun StrideApp(
     // Android 13+: the Sunday reminder needs notification permission; ask once per launch while it's on and missing.
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= 33 && data.settings.planReminder &&
+        if (Build.VERSION.SDK_INT >= 33 && NotifType.entries.any { data.settings.notifyOn(it) } &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -133,8 +178,21 @@ fun StrideApp(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = {
                     Column {
-                        TopAppBar(
-                            title = { Text(if (tab == 0) "Stride" else TABS[tab].title, style = MaterialTheme.typography.headlineSmall) },
+                        if (editing) TopAppBar(
+                            title = {
+                                Column {
+                                    Text("Edit ${tab.title}", style = MaterialTheme.typography.titleLarge)
+                                    Text("Hide or move sections", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                            actions = {
+                                TextButton(onClick = { push(Overlay.Layout) }) { Text("Tabs") }
+                                TextButton(onClick = { vm.setLayout(Layouts.resetTab(layout, tab)) }) { Text("Reset") }
+                                Button(onClick = { editing = false }, modifier = Modifier.padding(end = 8.dp)) { Text("Done") }
+                            },
+                        ) else TopAppBar(
+                            title = { Text(if (tab.id == "week") "Stride" else tab.title, style = MaterialTheme.typography.headlineSmall) },
                             colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                             actions = {
                                 if (syncing) {
@@ -155,11 +213,13 @@ fun StrideApp(
                     }
                 },
                 bottomBar = {
-                    StrideNavBar(TABS.map { NavItem(it.title, it.icon) }, selected = tab, onSelect = { tab = it })
+                    if (tabs.size > 1) {
+                        StrideNavBar(tabs.map { NavItem(it.title, tabIcon(it.id)) }, selected = tabs.indexOf(tab), onSelect = { tabId = tabs[it].id })
+                    }
                 },
             ) { padding ->
-                when (tab) {
-                    0 -> WeekTab(
+                when (tab.id) {
+                    "week" -> WeekTab(
                         data = data, today = today, weekOffset = weekOffset,
                         onWeekOffset = { weekOffset = it },
                         onDay = { push(Overlay.Day(it)) },
@@ -168,18 +228,26 @@ fun StrideApp(
                         onWorkout = { d, id -> push(Overlay.Strength(d, id)) },
                         onSwap = { d, dow -> vm.swapToday(d, dow) },
                         padding = padding,
+                        host = host,
                     )
-                    1 -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) })
-                    2 -> StrengthTab(
+                    "trends" -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) }, host = host)
+                    "strength" -> StrengthTab(
                         data = data, today = today, padding = padding,
                         onNew = { push(Overlay.Strength(today, null)) },
                         onOpen = { s -> push(Overlay.Strength(LocalDate.parse(s.date), s.id)) },
                         onExercise = { push(Overlay.ExerciseHistory(it)) },
+                        host = host,
                     )
-                    else -> WeightTab(vm = vm, data = data, today = today, padding = padding)
+                    else -> WeightTab(vm = vm, data = data, today = today, padding = padding, host = host)
                 }
             }
-            is Overlay.Settings -> SettingsScreen(vm = vm, data = data, onBack = pop)
+            is Overlay.Settings -> SettingsScreen(
+                vm = vm, data = data, onBack = pop,
+                onLayout = { push(Overlay.Layout) },
+                onNotifications = { push(Overlay.Notifications) },
+            )
+            is Overlay.Layout -> LayoutScreen(vm = vm, data = data, onBack = pop)
+            is Overlay.Notifications -> NotificationsScreen(vm = vm, data = data, onBack = pop)
             is Overlay.Day -> DayScreen(
                 vm = vm, data = data, date = top.date, today = today, intervals = intervals,
                 onBack = pop,

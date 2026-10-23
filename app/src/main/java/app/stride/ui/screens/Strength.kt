@@ -85,6 +85,8 @@ import app.stride.ui.FCard
 import app.stride.ui.IconBubble
 import app.stride.ui.RowCard
 import app.stride.ui.SectionLabel
+import app.stride.ui.SectionHost
+import app.stride.ui.longPressToEdit
 import app.stride.ui.kindIcon
 import app.stride.ui.theme.StrideColors
 import java.time.LocalDate
@@ -117,63 +119,72 @@ fun StrengthTab(
     onNew: () -> Unit,
     onOpen: (StrengthSession) -> Unit,
     onExercise: (String) -> Unit,
+    host: SectionHost,
 ) {
     val sessions = remember(data.strength) { data.strength.sortedByDescending { it.date } }
     val prog = remember(data.strength, today) { progress(data, today) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().longPressToEdit(!host.editing, host.onLongPress),
             contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 96.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            if (prog.isNotEmpty()) {
-                item { SectionLabel("Progress, 8 weeks · tap for history", Modifier.padding(start = 4.dp)) }
-                item {
-                    FCard {
-                        prog.forEachIndexed { i, p ->
-                            if (i > 0) Spacer(Modifier.height(8.dp))
-                            Row(Modifier.fillMaxWidth().clickable { onExercise(p.name) }.padding(vertical = 4.dp)) {
-                                Text(p.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Text("${fmtKg(p.to)} kg", style = MaterialTheme.typography.bodyLarge)
-                                val d = p.to - p.from
-                                Text(
-                                    if (d == 0.0) "  ±0" else "  ${fmtSigned(d)}",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (d > 0) StrideColors.Good else if (d < 0) StrideColors.Bad else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.width(52.dp),
-                                )
+            with(host) {
+                sections {
+                    section("progress") {
+                    if (prog.isNotEmpty()) {
+                        item { SectionLabel("Progress, 8 weeks · tap for history", Modifier.padding(start = 4.dp)) }
+                        item {
+                            FCard {
+                                prog.forEachIndexed { i, p ->
+                                    if (i > 0) Spacer(Modifier.height(8.dp))
+                                    Row(Modifier.fillMaxWidth().clickable { onExercise(p.name) }.padding(vertical = 4.dp)) {
+                                        Text(p.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                        Text("${fmtKg(p.to)} kg", style = MaterialTheme.typography.bodyLarge)
+                                        val d = p.to - p.from
+                                        Text(
+                                            if (d == 0.0) "  ±0" else "  ${fmtSigned(d)}",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if (d > 0) StrideColors.Good else if (d < 0) StrideColors.Bad else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.width(52.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
-            item { SectionLabel("Workouts", Modifier.padding(start = 4.dp, top = 8.dp)) }
-            if (sessions.isEmpty()) {
-                item {
-                    Text(
-                        "No strength workouts yet. After a kettlebell session, log your exercises, weights and sauna.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(4.dp),
-                    )
-                }
-            }
-            items(sessions, key = { it.id }) { s ->
-                val d = LocalDate.parse(s.date)
-                RowCard(onClick = { onOpen(s) }) {
-                    IconBubble(kindIcon(s.kind), MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("${dayShort(d)}, ${dateShort(d)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(shortKind(s.kind), style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            (if (!s.finished) "In progress · ${s.exercises.count { it.done }}/${s.exercises.size} done · " else "${s.exercises.size} exercises · ") +
-                                "${fmtKg(s.volume)} kg volume",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
-                    if (s.sauna) Icon(Icons.Filled.HotTub, "Sauna", tint = MaterialTheme.colorScheme.primary)
+                    section("workouts") {
+                    item { SectionLabel("Workouts", Modifier.padding(start = 4.dp, top = 8.dp)) }
+                    if (sessions.isEmpty()) {
+                        item {
+                            Text(
+                                "No strength workouts yet. After a kettlebell session, log your exercises, weights and sauna.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(4.dp),
+                            )
+                        }
+                    }
+                    items(sessions, key = { it.id }) { s ->
+                        val d = LocalDate.parse(s.date)
+                        RowCard(onClick = { onOpen(s) }) {
+                            IconBubble(kindIcon(s.kind), MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("${dayShort(d)}, ${dateShort(d)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(shortKind(s.kind), style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    (if (!s.finished) "In progress · ${s.exercises.count { it.done }}/${s.exercises.size} done · " else "${s.exercises.size} exercises · ") +
+                                        "${fmtKg(s.volume)} kg volume",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (s.sauna) Icon(Icons.Filled.HotTub, "Sauna", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    }
                 }
             }
         }

@@ -2,4 +2,17 @@
 <resources>
     <string name="widget_today_description">Today\'s plan, and once it\'s done, the key numbers of the workout.</string>
     <string name="widget_weight_description">Latest weight, change over 7 days and recent trend.</string>
+    <string name="widget_week_strip_description">The seven days of this week with what\'s done.</string>
+    <string name="widget_rings_description">Plan, Zone 2 and sauna rings for this week.</string>
+    <string name="widget_recovery_description">Readiness from last night\'s HRV, sleep and resting heart rate.</string>
+    <string name="widget_next_description">Your next planned workout and when it is.</string>
+    <string name="widget_month_description">This month as a calendar of done and missed days.</string>
+    <string name="widget_strength_description">Last strength workout: kg lifted and change from last time.</string>
+    <string name="widget_totals_description">Minutes, swim, run and sauna so far this week.</string>
+    <string name="widget_weight_chart_description">60-day weight trend with goal line and expected date.</string>
+    <string name="widget_week_list_description">The whole week\'s plan with status per day.</string>
+    <string name="widget_start_description">One tap opens today\'s strength workout.</string>
+    <string name="widget_last_run_description">Distance, pace and heart rate of your last run.</string>
+    <string name="widget_last_swim_description">Distance, pace per 100 m and heart rate of your last swim.</string>
+    <string name="widget_streak_description">Planned workouts done in a row, plus this week\'s progress.</string>
 </resources>

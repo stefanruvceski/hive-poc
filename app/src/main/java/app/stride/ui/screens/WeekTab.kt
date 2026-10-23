@@ -8,6 +8,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import app.stride.ui.RowCard
+import app.stride.ui.SectionHost
+import app.stride.ui.longPressToEdit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -93,6 +95,7 @@ fun WeekTab(
     onWorkout: (LocalDate, String?) -> Unit,
     onSwap: (LocalDate, Int) -> Unit,
     padding: PaddingValues,
+    host: SectionHost,
 ) {
     val nextMonday = mondayOf(today).plusWeeks(1)
     // From Friday on, until next week's plan is approved.
@@ -101,7 +104,7 @@ fun WeekTab(
     val week = remember(data, monday, today) { Analyzer.week(monday, today, data) }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().longPressToEdit(!host.editing, host.onLongPress),
         contentPadding = PaddingValues(
             start = 16.dp, end = 16.dp,
             top = padding.calculateTopPadding() + 4.dp,
@@ -134,43 +137,50 @@ fun WeekTab(
                 NavButton(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next week", enabled = weekOffset < 0) { onWeekOffset(weekOffset + 1) }
             }
         }
-        if (weekOffset == 0) {
-            val todayResult = week.days.firstOrNull { it.date == today }
-            val recovery = Recovery.summary(data.wellness, today)
-            val restDow = restDayToSwap(data.weekPlan(today), today)
-            if (recovery != null && recovery.readiness == Recovery.Readiness.LOW && restDow != null && todayResult?.status != DayStatus.DONE) {
-                item {
-                    SwapCard(
-                        recovery.reason,
-                        todayResult?.plan?.title ?: "today's workout",
-                        dayLong(today.plusDays((restDow - today.dayOfWeek.value).toLong())),
-                    ) { onSwap(today, restDow) }
-                }
-            }
-            val todayPlan = data.planFor(today)
-            val todaySession = data.strength.lastOrNull { it.date == today.toString() }
-            if (todayPlan != null && todayPlan.kind.isStrength && todaySession?.finished != true) {
-                item { TodayWorkoutCard(todayPlan.title, todaySession) { onWorkout(today, todaySession?.id) } }
-            }
-        }
-        item { SummaryCard(week, today, onDay) }
-        item { TargetsCard(remember(data, monday, today) { weeklyTargets(data, monday, today) }) }
-        if (weekOffset == 0) {
-            Recovery.summary(data.wellness, today)?.let { r ->
-                item { SectionLabel("Recovery", Modifier.padding(top = 8.dp, start = 4.dp)) }
-                item { RecoveryCard(r, "Last night", full = false) }
-            }
-        }
-        item { SectionLabel("Daily plan", Modifier.padding(top = 8.dp, start = 4.dp)) }
-        items(week.days, key = { it.date.toString() }) { d -> DayRow(d, isToday = d.date == today, onClick = { onDay(d.date) }) }
-        if (week.summary.bullets.isNotEmpty()) {
-            item { SectionLabel("Summary", Modifier.padding(top = 8.dp, start = 4.dp)) }
-            items(week.summary.bullets) { b -> SummaryItem(b) }
-        }
+        val todayResult = week.days.firstOrNull { it.date == today }
+        val recovery = Recovery.summary(data.wellness, today)
         val comparison = workoutComparison(data, monday, today)
-        if (comparison.isNotEmpty()) {
-            if (week.summary.bullets.isEmpty()) item { SectionLabel("Summary", Modifier.padding(top = 8.dp, start = 4.dp)) }
-            item { WorkoutComparisonCard(comparison) }
+        with(host) {
+            sections {
+                    section("today") {
+                        val todayPlan = data.planFor(today)
+                        val todaySession = data.strength.lastOrNull { it.date == today.toString() }
+                        if (weekOffset == 0 && todayPlan != null && todayPlan.kind.isStrength && todaySession?.finished != true) {
+                            item { TodayWorkoutCard(todayPlan.title, todaySession) { onWorkout(today, todaySession?.id) } }
+                        }
+                    }
+                    section("swap") {
+                        val restDow = restDayToSwap(data.weekPlan(today), today)
+                        if (weekOffset == 0 && recovery != null && recovery.readiness == Recovery.Readiness.LOW && restDow != null && todayResult?.status != DayStatus.DONE) {
+                            item {
+                                SwapCard(
+                                    recovery.reason,
+                                    todayResult?.plan?.title ?: "today's workout",
+                                    dayLong(today.plusDays((restDow - today.dayOfWeek.value).toLong())),
+                                ) { onSwap(today, restDow) }
+                            }
+                        }
+                    }
+                    section("progress") { item { SummaryCard(week, today, onDay) } }
+                    section("targets") { item { TargetsCard(weeklyTargets(data, monday, today)) } }
+                    section("recovery") {
+                        if (weekOffset == 0 && recovery != null) {
+                            item { SectionLabel("Recovery", Modifier.padding(top = 8.dp, start = 4.dp)) }
+                            item { RecoveryCard(recovery, "Last night", full = false) }
+                        }
+                    }
+                    section("plan") {
+                        item { SectionLabel("Daily plan", Modifier.padding(top = 8.dp, start = 4.dp)) }
+                        items(week.days, key = { it.date.toString() }) { d -> DayRow(d, isToday = d.date == today, onClick = { onDay(d.date) }) }
+                    }
+                    section("insights") {
+                        if (week.summary.bullets.isNotEmpty()) {
+                            item { SectionLabel("Summary", Modifier.padding(top = 8.dp, start = 4.dp)) }
+                            items(week.summary.bullets) { b -> SummaryItem(b) }
+                        }
+                    }
+                    section("compare") { if (comparison.isNotEmpty()) item { WorkoutComparisonCard(comparison) } }
+            }
         }
     }
 }

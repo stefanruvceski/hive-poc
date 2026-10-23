@@ -20,6 +20,8 @@ import app.stride.model.Activity
 import app.stride.model.AppData
 import app.stride.model.DayKind
 import app.stride.model.Interval
+import app.stride.model.ShareMap
+import app.stride.model.ShareStyle
 import app.stride.model.StrengthSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,12 +59,27 @@ object ShareContent {
         else -> (a.type ?: "workout").lowercase()
     }
 
-    /** Renders the card for [d]; [route] fetches a GPS track for an activity id (may return null). */
+    /** Which options in [ShareStyle] change the card for [d] (the preview only offers those). */
+    enum class Kind { ROUTE, STRENGTH, SWIM }
+
+    fun kind(d: DayResult): Kind? {
+        val act = d.matched.firstOrNull() ?: d.extra.firstOrNull()
+        val strength = d.strength
+        if (strength != null && strength.logged && (d.plan?.kind?.isStrength == true || act == null)) return Kind.STRENGTH
+        act ?: return null
+        return if (DayKind.SWIM_EASY.matches(act.type)) Kind.SWIM else Kind.ROUTE
+    }
+
+    /**
+     * Renders the card for [d] in [style]; [route] fetches a GPS track for an activity id (may return null).
+     * Tracks are cached per activity so switching styles in the preview doesn't refetch.
+     */
     suspend fun render(
         context: Context,
         data: AppData,
         d: DayResult,
         intervals: Map<String, List<Interval>>,
+        style: ShareStyle,
         route: suspend (String) -> List<Pair<Double, Double>>?,
     ): Bitmap? {
         val footer = footer(data, d.date)
@@ -71,7 +88,7 @@ object ShareContent {
         val subtitleDate = "${dayLong(d.date)}, ${dateShort(d.date)}"
 
         if (strength != null && strength.logged && (d.plan?.kind?.isStrength == true || act == null)) {
-            return withContext(Dispatchers.Default) { strengthCard(context, data, d, strength, d.matched.firstOrNull(), subtitleDate, footer) }
+            return withContext(Dispatchers.Default) { strengthCard(context, ShareCard.look(style, ShareCard.STRENGTH_AUTO), data, d, strength, d.matched.firstOrNull(), subtitleDate, footer) }
         }
         act ?: return null
 
@@ -80,6 +97,7 @@ object ShareContent {
             return withContext(Dispatchers.Default) {
                 ShareCard.swim(
                     context,
+                    ShareCard.look(style, ShareCard.SWIM_AUTO),
                     kicker = d.plan?.kind?.takeIf { it == DayKind.SWIM_EASY || it == DayKind.SWIM_INTENSE }?.label ?: "Swim",
                     subtitle = subtitleDate + (act.clock().takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""),
                     distance = String.format(Locale.US, "%,d", (act.distance ?: 0.0).toInt()),
@@ -100,15 +118,16 @@ object ShareContent {
             }
         }
 
-        val track = route(act.id)
-        // Dark OpenStreetMap-based map behind the route; null offline, then the plain background is used.
-        val mapView = track?.let { MapTiles.fit(it, ShareCard.ROUTE_BOX) }
-        val map = mapView?.let { runCatching { MapTiles.render(context, it, ShareCard.W, ShareCard.H) }.getOrNull() }
+        val track = tracks[act.id] ?: route(act.id)?.also { tracks[act.id] = it }
+        // Map behind the route; null offline or when switched off, then the plain background is used.
+        val mapView = track?.takeIf { style.map != ShareMap.NONE && it.size >= 2 }?.let { MapTiles.fit(it, ShareCard.ROUTE_BOX) }
+        val map = mapView?.let { runCatching { MapTiles.render(context, it, ShareCard.W, ShareCard.H, style.map) }.getOrNull() }
         val km = (act.distance ?: 0.0) / 1000
         val run = DayKind.RUN.matches(act.type)
         return withContext(Dispatchers.Default) {
             ShareCard.run(
                 context,
+                ShareCard.look(style, ShareCard.RUN_AUTO),
                 kicker = listOf(dayLong(d.date), partOfDay(act), typeName(act)).filter { it.isNotEmpty() }.joinToString(" "),
                 subtitle = dateShort(d.date) + (act.clock().takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""),
                 distance = if (km > 0) String.format(Locale.US, "%.2f", km) else fmtDur(act.movingTime),
@@ -129,7 +148,9 @@ object ShareContent {
         }
     }
 
-    private fun strengthCard(context: Context, data: AppData, d: DayResult, s: StrengthSession, act: Activity?, subtitleDate: String, footer: String): Bitmap {
+    private val tracks = java.util.concurrent.ConcurrentHashMap<String, List<Pair<Double, Double>>>()
+
+    private fun strengthCard(context: Context, look: ShareCard.Look, data: AppData, d: DayResult, s: StrengthSession, act: Activity?, subtitleDate: String, footer: String): Bitmap {
         val earlier = data.strength.filter { it.id != s.id && it.date < s.date }
         val done = s.exercises.filter { it.done || s.finished }
         val records = done.mapNotNull { e -> Records.record(e, Records.history(earlier, e.name))?.let { e.name to it } }
@@ -149,6 +170,7 @@ object ShareContent {
         val time = act?.movingTime?.let { fmtDur(it) }
         return ShareCard.strength(
             context,
+            look,
             kicker = (d.plan?.title?.substringBefore(" +") ?: s.kind.label) + " · kettlebell",
             subtitle = subtitleDate + (time?.let { " · $it" } ?: ""),
             lifted = String.format(Locale.US, "%,d", s.volume.toInt()),

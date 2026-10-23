@@ -203,39 +203,7 @@ fun DayScreen(
             }
         }
     }
-    if (sharing) ShareDialog(vm, data, result, intervals) { sharing = false }
-}
-
-/** Preview of the share image with a Share button (opens Android's share sheet). */
-@Composable
-private fun ShareDialog(vm: AppViewModel, data: AppData, result: DayResult, intervals: Map<String, List<Interval>>, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val bitmap by produceState<Bitmap?>(null, result) {
-        value = runCatching { ShareContent.render(context, data, result, intervals) { vm.route(it) } }.getOrNull()
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = StrideColors.Elev,
-        title = { Text("Share workout") },
-        text = {
-            Box(Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(16.dp)).background(StrideColors.Bg), contentAlignment = Alignment.Center) {
-                val b = bitmap
-                if (b == null) CircularProgressIndicator() else Image(b.asImageBitmap(), "Share image preview", Modifier.fillMaxSize())
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                val b = bitmap ?: return@Button
-                scope.launch { runCatching { ShareContent.share(context, b, result.date) } }
-            }, enabled = bitmap != null) {
-                Icon(Icons.Filled.Share, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Share")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-    )
+    if (sharing) ShareSheet(vm, data, result, intervals) { sharing = false }
 }
 
 /** Lets the user check a day off when the watch wasn't on (shown in blue, not watch-verified green). */

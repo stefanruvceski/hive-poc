@@ -135,6 +135,73 @@ data class Settings(
     val eveningReminder: Boolean = true,
     /** Add warm-up sets (~40% and ~70%) before working sets in workout mode. */
     val warmups: Boolean = true,
+    /** On/off per notification type ([NotifType.id]); missing keys use the type's default. */
+    val notifications: Map<String, Boolean> = emptyMap(),
+    /** Which tabs and sections are shown, and in what order. */
+    val layout: LayoutPrefs = LayoutPrefs(),
+    /** Last look picked for share images. */
+    val share: ShareStyle = ShareStyle(),
+) {
+    fun notifyOn(t: NotifType): Boolean = notifications[t.id] ?: when (t) {
+        NotifType.PLAN_REVIEW -> planReminder
+        NotifType.MORNING -> morningReminder
+        NotifType.EVENING -> eveningReminder
+        else -> t.defaultOn
+    }
+}
+
+/** Every reason Stride may post a notification; each can be switched off in Settings. */
+enum class NotifType(val id: String, val title: String, val description: String, val defaultOn: Boolean = true) {
+    PLAN_REVIEW("plan_review", "Plan review", "Sunday 18:00 · approve next week's plan"),
+    MORNING("morning", "Morning plan", "06:00 · today's workout with last night's recovery"),
+    PRE_WORKOUT("pre_workout", "Before the workout", "30 min before the planned time"),
+    EVENING("evening", "Not trained yet", "19:00 · if today's workout isn't done"),
+    SAUNA("sauna", "Sauna reminder", "20:00 on sauna days without sauna logged"),
+    REST_DAY("rest_day", "Rest day", "08:00 on rest days · walk and recover", defaultOn = false),
+    LOW_RECOVERY("low_recovery", "Low recovery", "Morning · HRV or sleep well below your average"),
+    MISSED("missed", "Missed yesterday", "Morning · yesterday's workout wasn't done"),
+    WORKOUT_DONE("workout_done", "Workout analyzed", "After the watch syncs · verdict for the workout"),
+    PERSONAL_BEST("personal_best", "Personal bests", "Fastest run or swim pace of the last 90 days"),
+    TARGET_HIT("target_hit", "Weekly target reached", "Plan, Zone 2 or sauna target done for the week"),
+    WEEK_RECAP("week_recap", "Week recap", "Sunday 20:00 · workouts, minutes and targets"),
+    MONTH_RECAP("month_recap", "Month recap", "1st of the month · days done and totals"),
+    WEIGH_IN("weigh_in", "Weigh-in", "08:00 · when there's no weight for 3 days", defaultOn = false),
+    BEDTIME("bedtime", "Bedtime", "22:00 · after a short night (under 7 h)", defaultOn = false),
+    DELOAD("deload", "Deload suggestion", "Monday · when a lighter week is due"),
+    NO_DATA("no_data", "Watch not syncing", "No watch workouts for 3 days while workouts were planned"),
+    UPDATE("update", "App update", "A new Stride version is out"),
+}
+
+/** Visible tabs and sections; ids come from ui/Layout.kt. Empty lists mean the default order. */
+@Serializable
+data class LayoutPrefs(
+    val hiddenTabs: List<String> = emptyList(),
+    val tabOrder: List<String> = emptyList(),
+    /** Section order per tab id. */
+    val order: Map<String, List<String>> = emptyMap(),
+    /** Hidden section ids ("tab.section"). */
+    val hidden: List<String> = emptyList(),
+)
+
+@Serializable
+enum class SharePalette { AUTO, EMERALD, CYAN, PINK, AMBER, VIOLET, MONO }
+
+@Serializable
+enum class ShareMap { DARK, STREETS, SATELLITE, NONE }
+
+@Serializable
+enum class ShareBackground { GLOW, GRADIENT, PLAIN }
+
+/** Look of the share image, picked in the preview before sharing. */
+@Serializable
+data class ShareStyle(
+    val palette: SharePalette = SharePalette.AUTO,
+    val map: ShareMap = ShareMap.DARK,
+    val background: ShareBackground = ShareBackground.GLOW,
+    val zones: Boolean = true,
+    val kmMarkers: Boolean = true,
+    val stats: Boolean = true,
+    val details: Boolean = true,
 )
 
 /** Activity from intervals.icu (GET /api/v1/athlete/{id}/activities). */
