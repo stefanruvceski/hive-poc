@@ -14,7 +14,10 @@ import app.stride.model.Settings
 import app.stride.model.StrengthSession
 import app.stride.model.WeightEntry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -34,8 +37,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _syncing = MutableStateFlow(false)
     val syncing: StateFlow<Boolean> = _syncing.asStateFlow()
 
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    // One-shot snackbar messages; a StateFlow would drop repeats and race with "consume".
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val messages: SharedFlow<String> = _messages.asSharedFlow()
 
     private val _intervals = MutableStateFlow<Map<String, List<Interval>>>(emptyMap())
     val intervals: StateFlow<Map<String, List<Interval>>> = _intervals.asStateFlow()
@@ -48,12 +52,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun consumeMessage() {
-        _message.value = null
-    }
-
     fun toast(text: String) {
-        _message.value = text
+        _messages.tryEmit(text)
     }
 
     private fun update(f: (AppData) -> AppData) {
@@ -72,7 +72,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sync(silent: Boolean = false) {
         val api = api()
         if (api == null) {
-            if (!silent) _message.value = "Add your intervals.icu API key in Settings first."
+            if (!silent) toast("Add your intervals.icu API key in Settings first.")
             return
         }
         if (_syncing.value) return
@@ -97,9 +97,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         lastSync = LocalDateTime.now().toString(),
                     )
                 }
-                if (!silent) _message.value = "Synced ${acts.size} workouts from the last 12 weeks"
+                if (!silent) toast("Synced ${acts.size} workouts from the last 12 weeks")
             } catch (e: Exception) {
-                _message.value = e.toUserMessage()
+                toast(e.toUserMessage())
             } finally {
                 _syncing.value = false
             }
@@ -107,12 +107,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun testConnection(apiKey: String, athleteId: String) {
+        toast("Testing connection…")
         viewModelScope.launch {
             try {
                 val name = IntervalsApi(apiKey.trim(), athleteId.trim()).athleteName()
-                _message.value = "Connected: $name"
+                toast("Connected: $name")
             } catch (e: Exception) {
-                _message.value = e.toUserMessage()
+                toast(e.toUserMessage())
             }
         }
     }
@@ -153,13 +154,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch {
                 try {
                     api.putWeight(date, kg)
-                    _message.value = "Weight saved and sent to intervals.icu"
+                    toast("Weight saved and sent to intervals.icu")
                 } catch (e: Exception) {
-                    _message.value = "Saved in the app, but not sent: " + e.toUserMessage()
+                    toast("Saved in the app, but not sent: " + e.toUserMessage())
                 }
             }
         } else {
-            _message.value = "Weight saved"
+            toast("Weight saved")
         }
     }
 

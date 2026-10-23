@@ -1,5 +1,6 @@
 package app.stride.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -84,17 +85,23 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
             runHrCeiling = runCeil.toIntOrNull() ?: d.runHrCeiling,
             weightGoalKg = parseNum(goal),
         )
-        vm.saveSettings(s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList()))
-        vm.toast("Settings saved")
+        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList())
+        if (updated != s) {
+            vm.saveSettings(updated)
+            vm.toast("Settings saved")
+        }
         onBack()
     }
+
+    // Leaving Settings (back arrow or system back) keeps what was typed instead of silently dropping it.
+    BackHandler { save() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                navigationIcon = { IconButton(onClick = { save() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = { TextButton(onClick = { save() }) { Text("Save") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
