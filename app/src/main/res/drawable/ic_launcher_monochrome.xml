@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single-color version for Android 13+ themed icons (only alpha is used). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M27,49 L34,49 M24,57 L33,57 M28,65 L34,65"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeColor="#99FFFFFF" />
+    <path
+        android:pathData="M71,38 C67,32.5 61,30.5 54.5,31 C46,31.6 40.5,36.5 41.5,43 C42.6,50 51,52 58,54.5 C65.5,57 70.5,60.5 69.5,67.5 C68.5,74.5 61.5,78.5 53,78 C46,77.6 41,74.5 38,70"
+        android:strokeWidth="9.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFFFF"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M76.5,31.5 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0"
+        android:fillColor="#FFFFFFFF" />
+</vector>

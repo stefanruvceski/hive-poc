@@ -52,3 +52,27 @@ fun fmtSigned(v: Double, unit: String = ""): String {
 }
 
 fun parseNum(s: String): Double? = s.trim().replace(',', '.').toDoubleOrNull()
+
+fun fmtNum(v: Double, decimals: Int = 0): String =
+    if (decimals == 0) "${v.roundToInt()}" else String.format(Locale.US, "%.${decimals}f", v)
+
+/** m/s → km/h */
+fun fmtKmh(mps: Double): String = String.format(Locale.US, "%.1f", mps * 3.6)
+
+/** Splits a duration into value + unit for tiles: "42:10" + "min" or "1:02:10" + "h". */
+fun durParts(sec: Double): Pair<String, String> = fmtDur(sec) to if (sec >= 3600) "h:mm:ss" else "min:sec"
+
+/** Distance for tiles: meters below 1 km for swims, km otherwise. */
+fun distParts(meters: Double, swim: Boolean): Pair<String, String> =
+    if (swim || meters < 1000) "${meters.roundToInt()}" to "m"
+    else String.format(Locale.US, "%.2f", meters / 1000) to "km"
+
+/** intervals.icu "feel": 1 strong … 5 weak. */
+fun feelLabel(feel: Double): String = when (feel.roundToInt()) {
+    1 -> "Strong"
+    2 -> "Good"
+    3 -> "Normal"
+    4 -> "Poor"
+    5 -> "Weak"
+    else -> "–"
+}

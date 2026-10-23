@@ -6,10 +6,14 @@ import androidx.lifecycle.viewModelScope
 import app.stride.data.IntervalsApi
 import app.stride.data.Store
 import app.stride.data.toUserMessage
+import app.stride.domain.dateShort
+import app.stride.domain.mondayOf
+import app.stride.widget.Widgets
 import app.stride.model.AppData
 import app.stride.model.Interval
 import app.stride.model.SRC_GARMIN
 import app.stride.model.SRC_MANUAL
+import app.stride.model.PlanDay
 import app.stride.model.Settings
 import app.stride.model.StrengthSession
 import app.stride.model.WeightEntry
@@ -60,6 +64,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _data.value = f(_data.value)
         viewModelScope.launch(Dispatchers.IO) {
             saveLock.withLock { store.save(_data.value) }
+            Widgets.refresh(getApplication<Application>())
         }
     }
 
@@ -148,8 +153,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveSettings(s: Settings) {
         val keyChanged = s.apiKey != _data.value.settings.apiKey || s.athleteId != _data.value.settings.athleteId
-        update { it.copy(settings = s) }
+        update { d -> withDefaultPlan(d, s.plan, from = mondayOf(LocalDate.now())).copy(settings = s) }
         if (keyChanged && s.apiKey.isNotBlank()) sync()
+    }
+
+    /**
+     * Sets the default plan from week [from] on. Earlier weeks without their own plan get the
+     * old default pinned first, so past weeks and trends keep the plan they were done against.
+     */
+    private fun withDefaultPlan(d: AppData, plan: List<PlanDay>, from: LocalDate): AppData {
+        if (plan == d.settings.plan) return d
+        val pinned = d.weekPlans.toMutableMap()
+        for (back in 1..12) {
+            val mon = from.minusWeeks(back.toLong()).toString()
+            if (mon !in pinned) pinned[mon] = d.settings.plan
+        }
+        return d.copy(weekPlans = pinned, settings = d.settings.copy(plan = plan))
+    }
+
+    /** Approves the plan for the week starting [monday]; [keep] also makes it the plan for the weeks after. */
+    fun approveWeek(monday: LocalDate, plan: List<PlanDay>, keep: Boolean) {
+        update { d ->
+            val base = if (keep) withDefaultPlan(d, plan, from = monday) else d
+            base.copy(weekPlans = base.weekPlans + (monday.toString() to plan))
+        }
+        toast("Plan for the week of ${dateShort(monday)} approved")
+    }
+
+    fun setManualDone(date: LocalDate, done: Boolean) {
+        val key = date.toString()
+        update { d -> d.copy(manualDone = if (done) (d.manualDone + key).distinct() else d.manualDone - key) }
     }
 
     fun saveStrength(s: StrengthSession) {

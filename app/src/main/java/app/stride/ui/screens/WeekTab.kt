@@ -26,9 +26,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,8 +73,12 @@ fun WeekTab(
     onWeekOffset: (Int) -> Unit,
     onDay: (LocalDate) -> Unit,
     onSettings: () -> Unit,
+    onReviewPlan: (LocalDate) -> Unit,
     padding: PaddingValues,
 ) {
+    val nextMonday = mondayOf(today).plusWeeks(1)
+    // From Friday on, until next week's plan is approved.
+    val askReview = today.dayOfWeek.value >= 5 && nextMonday.toString() !in data.weekPlans
     val monday = mondayOf(today).plusWeeks(weekOffset.toLong())
     val week = remember(data, monday, today) { Analyzer.week(monday, today, data) }
 
@@ -87,6 +93,9 @@ fun WeekTab(
     ) {
         if (data.settings.apiKey.isBlank()) {
             item { ConnectCard(onSettings) }
+        }
+        if (askReview && weekOffset == 0) {
+            item { ReviewPlanCard(nextMonday) { onReviewPlan(nextMonday) } }
         }
         item {
             // Header like Streakli's day navigator: bordered square buttons, faint kicker, 18sp title.
@@ -144,6 +153,19 @@ private fun NavButton(icon: ImageVector, description: String, enabled: Boolean =
 }
 
 @Composable
+private fun ReviewPlanCard(monday: LocalDate, onClick: () -> Unit) {
+    RowCard(onClick = onClick) {
+        IconBubble(Icons.Filled.EditCalendar, StrideColors.Accent)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Plan for next week", style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text)
+            Text("${weekRange(monday)} · review and approve", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = StrideColors.Accent)
+    }
+}
+
+@Composable
 private fun ConnectCard(onSettings: () -> Unit) {
     FCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -196,7 +218,7 @@ private fun SummaryCard(week: WeekResult, today: LocalDate, onDay: (LocalDate) -
             dotColor = { d ->
                 val r = week.days.first { it.date == d }
                 when (r.status) {
-                    DayStatus.DONE -> r.verdict?.let { levelColor(it.level) } ?: StrideColors.Good
+                    DayStatus.DONE -> if (r.manualOnly) StrideColors.Manual else r.verdict?.let { levelColor(it.level) } ?: StrideColors.Good
                     DayStatus.MISSED -> StrideColors.Bad
                     else -> StrideColors.Accent
                 }
@@ -219,7 +241,7 @@ private fun DayRow(d: DayResult, isToday: Boolean, onClick: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val color: Color = when (d.status) {
-        DayStatus.DONE -> d.verdict?.let { levelColor(it.level) } ?: StrideColors.Good
+        DayStatus.DONE -> if (d.manualOnly) StrideColors.Manual else d.verdict?.let { levelColor(it.level) } ?: StrideColors.Good
         DayStatus.MISSED -> StrideColors.Bad
         DayStatus.TODAY -> primary
         DayStatus.UPCOMING, DayStatus.REST -> muted
@@ -245,7 +267,7 @@ private fun DayRow(d: DayResult, isToday: Boolean, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(8.dp))
             val statusIcon = when (d.status) {
-                DayStatus.DONE -> Icons.Filled.CheckCircle
+                DayStatus.DONE -> if (d.manualOnly) Icons.Filled.TaskAlt else Icons.Filled.CheckCircle
                 DayStatus.MISSED -> Icons.Filled.Cancel
                 DayStatus.TODAY -> Icons.Filled.Schedule
                 DayStatus.UPCOMING, DayStatus.REST -> Icons.Filled.RadioButtonUnchecked

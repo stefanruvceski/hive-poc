@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.stride.domain.dateShort
+import app.stride.domain.planFor
 import app.stride.domain.dayLong
 import app.stride.domain.dayShort
 import app.stride.domain.fmtKg
@@ -162,15 +163,20 @@ fun StrengthTab(
     }
 }
 
-private data class RowState(val name: String, val kg: String, val sets: String, val reps: String)
+private data class RowState(val name: String, val kg: String, val sets: String, val reps: String, val group: String = "")
+
+private fun ExerciseEntry.toRow() =
+    RowState(name, if (weightKg > 0) fmtKg(weightKg) else "", sets.toString(), reps.toString(), group)
 
 private fun lastWeight(data: AppData, name: String): Double? =
     data.strength.sortedBy { it.date }.flatMap { it.exercises }.lastOrNull { it.name == name }?.weightKg
 
 private fun rowsFor(kind: DayKind, data: AppData, exclude: String?): List<RowState> {
     val last = data.strength.filter { it.kind == kind && it.id != exclude }.maxByOrNull { it.date }
-    val source = last?.exercises ?: DefaultPlan.presets(kind).map { ExerciseEntry(it, lastWeight(data, it) ?: 16.0, 3, 10) }
-    return source.map { RowState(it.name, if (it.weightKg > 0) fmtKg(it.weightKg) else "", it.sets.toString(), it.reps.toString()) }
+    // Program default: usually 2 working sets, to failure at 6-10 reps.
+    val source = last?.exercises
+        ?: DefaultPlan.presets(kind).map { ExerciseEntry(it.name, it.group, lastWeight(data, it.name) ?: 16.0, 2, 8) }
+    return source.map { it.toRow() }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,16 +189,16 @@ fun StrengthEditor(
     onBack: () -> Unit,
 ) {
     val existing = remember(sessionId) { data.strength.firstOrNull { it.id == sessionId } }
-    val planKind = { d: LocalDate -> data.settings.plan.firstOrNull { it.dow == d.dayOfWeek.value }?.kind?.takeIf { it.isStrength } }
+    val planKind = { d: LocalDate -> data.planFor(d)?.kind?.takeIf { it.isStrength } }
 
     var date by remember { mutableStateOf(existing?.date?.let { LocalDate.parse(it) } ?: initialDate) }
     var kind by remember { mutableStateOf(existing?.kind ?: planKind(initialDate) ?: DayKind.STRENGTH_LEGS) }
     val rows = remember {
         mutableStateListOf<RowState>().apply {
-            addAll(existing?.exercises?.map { RowState(it.name, if (it.weightKg > 0) fmtKg(it.weightKg) else "", it.sets.toString(), it.reps.toString()) } ?: rowsFor(kind, data, null))
+            addAll(existing?.exercises?.map { it.toRow() } ?: rowsFor(kind, data, null))
         }
     }
-    var sauna by remember { mutableStateOf(existing?.sauna ?: (data.settings.plan.firstOrNull { it.dow == initialDate.dayOfWeek.value }?.sauna ?: true)) }
+    var sauna by remember { mutableStateOf(existing?.sauna ?: (data.planFor(initialDate)?.sauna ?: true)) }
     var saunaMin by remember { mutableStateOf(existing?.saunaMinutes?.takeIf { it > 0 }?.toString() ?: "15") }
     var note by remember { mutableStateOf(existing?.note ?: "") }
     val today = LocalDate.now()
@@ -201,6 +207,7 @@ fun StrengthEditor(
         val ex = rows.filter { it.name.isNotBlank() }.map {
             ExerciseEntry(
                 name = it.name.trim(),
+                group = it.group,
                 weightKg = parseNum(it.kg) ?: 0.0,
                 sets = it.sets.trim().toIntOrNull() ?: 0,
                 reps = it.reps.trim().toIntOrNull() ?: 0,
@@ -271,10 +278,25 @@ fun StrengthEditor(
                 }
             }
 
+            item {
+                FCard {
+                    Text("Program", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(DefaultPlan.STRENGTH_RULES, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    DefaultPlan.alternatives(kind)?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             item { SectionLabel("Exercises", Modifier.padding(start = 4.dp, top = 4.dp)) }
             items(rows.size) { i ->
                 val r = rows[i]
                 FCard {
+                    if (r.group.isNotEmpty()) {
+                        Text(r.group.uppercase(), style = MaterialTheme.typography.labelSmall, color = StrideColors.Accent)
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = r.name,

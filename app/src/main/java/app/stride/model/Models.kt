@@ -72,13 +72,50 @@ object DefaultPlan {
         PlanDay(7, DayKind.STRENGTH_SHOULDERS_CORE, "Shoulders, arms, core + sauna", "06:00", sauna = true),
     )
 
-    fun presets(kind: DayKind): List<String> = when (kind) {
-        DayKind.STRENGTH_LEGS -> listOf("Goblet squat", "Kettlebell swing", "Romanian deadlift", "Lunge")
-        DayKind.STRENGTH_UPPER -> listOf("Overhead press", "Single-arm row", "Floor press", "Push-ups")
-        DayKind.STRENGTH_SHOULDERS_CORE -> listOf("Kettlebell halo", "Biceps curl", "Turkish get-up", "Plank")
+    fun presets(kind: DayKind): List<Preset> = when (kind) {
+        DayKind.STRENGTH_LEGS -> listOf(
+            Preset("Goblet or front squat", "Quads"),
+            Preset("Bulgarian split squat", "Quads"),
+            Preset("Single-leg Romanian deadlift", "Hamstrings"),
+            Preset("Kettlebell swing", "Hamstrings"),
+            Preset("Single-leg calf raise (step, KB in hand)", "Calves"),
+        )
+        DayKind.STRENGTH_UPPER -> listOf(
+            Preset("Kettlebell floor press", "Chest"),
+            Preset("Push-ups on kettlebells", "Chest"),
+            Preset("Kettlebell floor fly", "Chest"),
+            Preset("Single-arm row", "Back"),
+            Preset("Kettlebell pullover", "Back"),
+            Preset("Turkish get-up", "Core"),
+            Preset("Windmill or suitcase carry", "Core"),
+        )
+        DayKind.STRENGTH_SHOULDERS_CORE -> listOf(
+            Preset("Single-arm overhead press", "Shoulders"),
+            Preset("Lateral raise", "Shoulders"),
+            Preset("Bent-over rear delt raise", "Shoulders"),
+            Preset("Kettlebell curl", "Biceps"),
+            Preset("Hammer curl (KB by the horns)", "Biceps"),
+            Preset("Close-grip floor press", "Triceps"),
+            Preset("Overhead triceps extension", "Triceps"),
+            Preset("Windmill or Turkish get-up", "Core"),
+        )
         else -> emptyList()
     }
+
+    /** Rules of the user's kettlebell program, shown in the strength editor. */
+    const val STRENGTH_RULES =
+        "Warm up 5 min, then 1–3 warm-up sets per exercise (first at ~40% of working weight). " +
+            "4–9 working sets per muscle group over 2–3 exercises; 2–3 working sets per exercise (usually 2), " +
+            "controlled, to failure at 6–10 reps. About 60 min in total."
+
+    fun alternatives(kind: DayKind): String? = when (kind) {
+        DayKind.STRENGTH_UPPER ->
+            "Barbell/machines instead: bench press, pec deck, pull-ups or lat pulldown, row, hanging leg raise, cable crunch."
+        else -> null
+    }
 }
+
+data class Preset(val name: String, val group: String)
 
 @Serializable
 data class Settings(
@@ -86,6 +123,8 @@ data class Settings(
     val athleteId: String = "0",
     val plan: List<PlanDay> = DefaultPlan.days,
     val targets: Targets = Targets(),
+    /** Sunday-evening notification to review next week's plan. */
+    val planReminder: Boolean = true,
 )
 
 /** Activity from intervals.icu (GET /api/v1/athlete/{id}/activities). */
@@ -103,6 +142,32 @@ data class Activity(
     @SerialName("icu_hr_zone_times") val hrZoneTimes: List<Double>? = null,
     @SerialName("icu_hr_zones") val hrZones: List<Double>? = null,
     @SerialName("icu_training_load") val load: Double? = null,
+    val description: String? = null,
+    val calories: Double? = null,
+    @SerialName("total_elevation_gain") val elevationGain: Double? = null,
+    @SerialName("average_speed") val avgSpeed: Double? = null,
+    @SerialName("max_speed") val maxSpeed: Double? = null,
+    @SerialName("average_cadence") val avgCadence: Double? = null,
+    @SerialName("average_stride") val avgStride: Double? = null,
+    @SerialName("icu_average_watts") val avgWatts: Double? = null,
+    @SerialName("icu_weighted_avg_watts") val normWatts: Double? = null,
+    val trimp: Double? = null,
+    @SerialName("icu_intensity") val intensity: Double? = null,
+    @SerialName("icu_efficiency_factor") val efficiency: Double? = null,
+    val decoupling: Double? = null,
+    @SerialName("icu_ctl") val fitness: Double? = null,
+    @SerialName("icu_atl") val fatigue: Double? = null,
+    @SerialName("athlete_max_hr") val athleteMaxHr: Double? = null,
+    @SerialName("icu_resting_hr") val restingHr: Double? = null,
+    val lthr: Double? = null,
+    @SerialName("pool_length") val poolLength: Double? = null,
+    val lengths: Double? = null,
+    @SerialName("icu_rpe") val rpe: Double? = null,
+    val feel: Double? = null,
+    @SerialName("average_temp") val avgTemp: Double? = null,
+    @SerialName("icu_lap_count") val laps: Double? = null,
+    @SerialName("device_name") val device: String? = null,
+    @SerialName("interval_summary") val intervalSummary: List<String>? = null,
     /** GARMIN_CONNECT, STRAVA, UPLOAD, ... */
     val source: String? = null,
     /** Set by intervals.icu on placeholder entries it may not share (Strava activities). */
@@ -141,6 +206,8 @@ data class Wellness(
 @Serializable
 data class ExerciseEntry(
     val name: String,
+    /** Muscle group from the program (Quads, Chest, ...), empty for custom exercises. */
+    val group: String = "",
     val weightKg: Double = 0.0,
     val sets: Int = 3,
     val reps: Int = 10,
@@ -176,4 +243,8 @@ data class AppData(
     val strength: List<StrengthSession> = emptyList(),
     val weights: List<WeightEntry> = emptyList(),
     val lastSync: String? = null,
+    /** Days (ISO dates) the user checked off by hand, e.g. a walk without the watch. */
+    val manualDone: List<String> = emptyList(),
+    /** Plan per week, keyed by the week's Monday (ISO date); weeks without an entry use settings.plan. */
+    val weekPlans: Map<String, List<PlanDay>> = emptyMap(),
 )

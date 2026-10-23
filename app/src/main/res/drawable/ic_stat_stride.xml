@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: the Stride "S", white on transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M74,30 C69,22 60,19 52,19.5 C40,20.3 32,27.5 33.5,37 C35,47 47,50 57,53.5 C67.5,57 74.5,62 73,72 C71.5,82 61.5,88 49.5,87.5 C40,87 33,83 29,77"
+        android:strokeWidth="14"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFFFF"
+        android:fillColor="#00000000" />
+</vector>

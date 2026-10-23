@@ -18,6 +18,14 @@ highest non-draft `android-b<N>` release with an `.apk` asset and show a banner 
 Pure logic in `UpdateLogic.kt` (unit tested); download + FileProvider + installer in `Updater.kt`. Disabled in debug.
 Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new workflow and versionCode must keep increasing.
 
+## Plans, check-offs, widgets
+- Plans are per week: `AppData.weekPlans[monday]`, else `settings.plan` (the default). Always look days up with
+  `AppData.planFor(date)`. Changing the default pins the old plan on earlier weeks so history and trends don't change.
+- Sunday from 18:00 a WorkManager check (`reminder/PlanReminder.kt`) notifies once if next week isn't approved;
+  the tap opens `PlanReviewScreen` (shift ±1 day, change days, approve).
+- `AppData.manualDone`: days checked off by hand (no watch data); shown in `StrideColors.Manual` (blue).
+- Home-screen widgets (Glance, `widget/Widgets.kt`): Today and Weight, refreshed after every data change.
+
 ## Design
 Match Streakli, the user's habit tracker: repo `stefanruvceski/habit-tracker`, folder `apps/mobile/src`
 (`lib/theme.ts`, `components/ui.tsx`, `components/WeekStrip.tsx`, `components/Charts.tsx`, `screens/TodayScreen.tsx`).
