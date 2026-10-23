@@ -52,6 +52,7 @@ import app.stride.ui.screens.WeekTab
 import app.stride.ui.screens.WeightTab
 import app.stride.update.UpdateBanner
 import app.stride.update.UpdateViewModel
+import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 
 sealed interface Overlay {
@@ -78,7 +79,6 @@ fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewMod
     // Runs on launch and every time the app comes back to the foreground.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.onForeground(context) }
     val syncing by vm.syncing.collectAsStateWithLifecycle()
-    val message by vm.message.collectAsStateWithLifecycle()
     val intervals by vm.intervals.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -87,12 +87,9 @@ fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewMod
     val snackbar = remember { SnackbarHostState() }
     val today = LocalDate.now()
 
-    LaunchedEffect(message) {
-        val m = message
-        if (m != null) {
-            vm.consumeMessage()
-            snackbar.showSnackbar(m)
-        }
+    // collectLatest: a new message replaces the one on screen instead of queueing behind it.
+    LaunchedEffect(Unit) {
+        vm.messages.collectLatest { snackbar.showSnackbar(it) }
     }
 
     val push: (Overlay) -> Unit = { overlays = overlays + it }
