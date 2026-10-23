@@ -26,8 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -155,16 +153,7 @@ fun StrideApp(
                     }
                 },
                 bottomBar = {
-                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                        TABS.forEachIndexed { i, t ->
-                            NavigationBarItem(
-                                selected = tab == i,
-                                onClick = { tab = i },
-                                icon = { Icon(t.icon, null) },
-                                label = { Text(t.title) },
-                            )
-                        }
-                    }
+                    StrideNavBar(TABS.map { NavItem(it.title, it.icon) }, selected = tab, onSelect = { tab = it })
                 },
             ) { padding ->
                 when (tab) {

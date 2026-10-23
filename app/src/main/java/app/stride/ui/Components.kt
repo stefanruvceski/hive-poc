@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,10 +31,12 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Pool
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -127,8 +130,53 @@ fun GlassCard(
                 shape,
             )
             .padding(contentPadding.dp),
-        content = content,
-    )
+    ) {
+        // Glass isn't a Surface, so set the text color here; otherwise uncolored Text falls back to black.
+        CompositionLocalProvider(LocalContentColor provides StrideColors.Text) { content() }
+    }
+}
+
+class NavItem(val title: String, val icon: ImageVector)
+
+/**
+ * Bottom navigation in Streakli style: elevated navy bar with a top border; the active tab
+ * gets an accent icon on a regular rounded pill and an accent label.
+ */
+@Composable
+fun StrideNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().background(StrideColors.Elev)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(StrideColors.Border))
+        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp)) {
+            items.forEachIndexed { i, item ->
+                val active = i == selected
+                val color = if (active) StrideColors.Accent else StrideColors.Faint
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onSelect(i) }
+                        .padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        Modifier
+                            .size(width = 56.dp, height = 30.dp)
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(if (active) StrideColors.Accent.copy(alpha = 0.16f) else Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(item.icon, item.title, tint = color, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        item.title,
+                        style = TextStyle(fontSize = 12.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium),
+                        color = if (active) StrideColors.Text else StrideColors.Faint,
+                    )
+                }
+            }
+        }
+    }
 }
 
 /** Small square key-metric tile (Apple Health style): colored icon + label, big value, small unit. */
