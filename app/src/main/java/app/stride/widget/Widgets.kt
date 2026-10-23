@@ -474,12 +474,13 @@ class MonthWidget : GlanceAppWidget() {
         val colors = days.map { d ->
             when (d.status) {
                 DayStatus.DONE -> statusColor(d).toArgb()
-                DayStatus.MISSED -> 0xCCF87171.toInt()
+                DayStatus.MISSED -> 0xFFE06C6C.toInt()
                 DayStatus.REST -> 0xFF1F2B47.toInt()
-                DayStatus.TODAY, DayStatus.UPCOMING -> 0xFF111A30.toInt()
+                DayStatus.TODAY, DayStatus.UPCOMING -> 0xFF19233F.toInt()
             }
         }
-        val bmp = WidgetArt.month(colors, month.atDay(1).dayOfWeek.value - 1, today.dayOfMonth, (220 * density(context)).toInt())
+        val filled = days.map { it.status == DayStatus.DONE || it.status == DayStatus.MISSED }
+        val bmp = WidgetArt.month(colors, filled, month.atDay(1).dayOfWeek.value - 1, today.dayOfMonth, (260 * density(context)).toInt())
         val done = days.count { it.status == DayStatus.DONE }
         val title = month.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.US)
         provideContent { MonthContent(bmp, title, done) }

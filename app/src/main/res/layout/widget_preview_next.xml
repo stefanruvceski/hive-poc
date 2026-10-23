@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picker preview with sample data (the real widget is drawn by Glance). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:background="@drawable/wp_bg" android:padding="12dp">
+<LinearLayout android:layout_width="44dp" android:layout_height="44dp" android:gravity="center" android:background="@drawable/wp_accent_soft"><TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏋️" android:textColor="#EEF2FF" android:textSize="22sp" android:maxLines="1" /></LinearLayout><LinearLayout android:layout_width="12dp" android:layout_height="1dp" /><LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical"><TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NEXT · TOMORROW · 06:00" android:textColor="#34D399" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" android:letterSpacing="0.06" /><TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Shoulders, arms, core + sauna" android:textColor="#EEF2FF" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" /></LinearLayout>
+</LinearLayout>
