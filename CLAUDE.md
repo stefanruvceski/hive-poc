@@ -34,6 +34,8 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   ~70% bells), weekly targets (Zone 2 = HR zone 2 minutes, sauna minutes, plan), weight trend/ETA, day swaps.
 - Reminders (`reminder/PlanReminder.kt`, WorkManager every 15 min): Sunday 18:00 plan review, 06:00 today + recovery,
   19:00 if a planned workout isn't done; each once per day/week.
+- Share images (`share/`): 1080x1920 bitmaps drawn with android.graphics (fonts in `res/font`, OFL): run/walk with
+  the GPS route (`/activity/{id}/streams?types=latlng`, lat in `data`, lng in `data2`), strength, swim. Day screen → Share.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 

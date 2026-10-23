@@ -2,4 +2,6 @@
 <!-- Downloaded update APKs (cache/updates) shared with the package installer. -->
 <paths>
     <cache-path name="updates" path="updates/" />
+    <!-- Share images handed to other apps. -->
+    <cache-path name="share" path="share/" />
 </paths>

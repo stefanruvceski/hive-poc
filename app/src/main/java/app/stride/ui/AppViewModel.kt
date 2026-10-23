@@ -147,6 +147,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** GPS route for the share image; null when offline, no key, or no GPS. */
+    suspend fun route(activityId: String): List<Pair<Double, Double>>? = api()?.let { a -> runCatching { a.route(activityId) }.getOrNull() }
+
     fun loadIntervals(activityId: String) {
         if (_intervals.value.containsKey(activityId)) return
         val api = api() ?: return
