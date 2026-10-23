@@ -1,5 +1,25 @@
 package app.stride.ui.screens
 
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import app.stride.domain.Progression
+import app.stride.domain.fmtDur
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -244,6 +264,7 @@ fun StrengthEditor(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
+        bottomBar = { RestTimerBar() },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().imePadding(),
@@ -313,10 +334,12 @@ fun StrengthEditor(
                         NumField("sets", r.sets, modifier = Modifier.weight(1f)) { v -> rows[i] = rows[i].copy(sets = v) }
                         NumField("reps", r.reps, modifier = Modifier.weight(1f)) { v -> rows[i] = rows[i].copy(reps = v) }
                     }
+                    val hint = Progression.hint(Progression.lastEntry(data.strength, r.name, date.toString(), existing?.id))
+                    hint?.let { h -> ProgressionHint(h) { kg -> rows[i] = rows[i].copy(kg = fmtKg(kg)) } }
                 }
             }
             item {
-                TextButton(onClick = { rows.add(RowState("", "", "3", "10")) }) {
+                TextButton(onClick = { rows.add(RowState("", "", "2", "8")) }) {
                     Icon(Icons.Filled.Add, null)
                     Spacer(Modifier.width(6.dp))
                     Text("Add exercise")
@@ -349,6 +372,104 @@ fun StrengthEditor(
                 Button(onClick = { save() }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Save") }
             }
         }
+    }
+}
+
+/** "Last time" line under an exercise with the progressive-overload suggestion. */
+@Composable
+private fun ProgressionHint(h: Progression.Hint, onUse: (Double) -> Unit) {
+    val (text, color, useKg) = when (h) {
+        is Progression.Hint.GoHeavier -> Triple(
+            "Last: ${fmtKg(h.lastKg)} kg × ${h.lastReps}. Top of the range, go ${fmtKg(h.nextKg)} kg",
+            StrideColors.Accent, h.nextKg,
+        )
+        is Progression.Hint.AddRep -> Triple(
+            "Last: ${fmtKg(h.lastKg)} kg × ${h.lastReps}. Same bell, aim for ${h.lastReps + 1}+",
+            StrideColors.Dim, null,
+        )
+        is Progression.Hint.GoLighter -> Triple(
+            "Last: ${fmtKg(h.lastKg)} kg × ${h.lastReps}. Below 6 reps, try ${fmtKg(h.lighterKg)} kg",
+            StrideColors.Warn, h.lighterKg,
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = color, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = color, modifier = Modifier.weight(1f))
+        if (useKg != null) TextButton(onClick = { onUse(useKg) }) { Text("Use") }
+    }
+}
+
+/**
+ * Rest timer pinned under the strength editor: pick 1:30 / 2:00 / 3:00, it counts down,
+ * vibrates at zero, and keeps the screen on while running.
+ */
+@Composable
+private fun RestTimerBar() {
+    val context = LocalContext.current
+    val view = LocalView.current
+    var length by remember { mutableIntStateOf(120) }
+    var endAt by remember { mutableLongStateOf(0L) }
+    var left by remember { mutableIntStateOf(0) }
+    val running = endAt > 0L
+
+    LaunchedEffect(endAt) {
+        if (endAt == 0L) return@LaunchedEffect
+        while (true) {
+            val ms = endAt - System.currentTimeMillis()
+            left = ((ms + 999) / 1000).toInt().coerceAtLeast(0)
+            if (ms <= 0) {
+                vibrate(context)
+                endAt = 0L
+                break
+            }
+            delay(200)
+        }
+    }
+    DisposableEffect(running) {
+        view.keepScreenOn = running
+        onDispose { view.keepScreenOn = false }
+    }
+
+    Surface(color = StrideColors.Elev, tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Timer, null, tint = if (running) StrideColors.Accent else StrideColors.Dim)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (running) fmtDur(left.toDouble()) else "Rest",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (running) StrideColors.Accent else StrideColors.Text,
+                modifier = Modifier.width(56.dp),
+            )
+            if (running) {
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { endAt += 30_000 }) { Text("+30 s") }
+                OutlinedButton(onClick = { endAt = 0L }) { Text("Stop") }
+            } else {
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(90, 120, 180).forEach { sec ->
+                        FilterChip(selected = length == sec, onClick = { length = sec }, label = { Text(fmtDur(sec.toDouble())) })
+                    }
+                }
+                Button(onClick = { endAt = System.currentTimeMillis() + length * 1000L }) { Text("Start") }
+            }
+        }
+    }
+}
+
+private fun vibrate(context: Context) {
+    runCatching {
+        val vibrator = if (Build.VERSION.SDK_INT >= 31) {
+            context.getSystemService(VibratorManager::class.java).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Vibrator::class.java)
+        }
+        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400, 200, 600), -1))
     }
 }
 

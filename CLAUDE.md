@@ -25,6 +25,9 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   the tap opens `PlanReviewScreen` (shift ±1 day, change days, approve).
 - `AppData.manualDone`: days checked off by hand (no watch data); shown in `StrideColors.Manual` (blue).
 - Home-screen widgets (Glance, `widget/Widgets.kt`): Today and Weight, refreshed after every data change.
+- Strength: `domain/Progression.kt` suggests the next bell after 10+ reps (program: failure at 6-10); rest timer in the editor.
+- Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
+  compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
 ## Design
 Match Streakli, the user's habit tracker: repo `stefanruvceski/habit-tracker`, folder `apps/mobile/src`
