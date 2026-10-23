@@ -17,6 +17,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.HotTub
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import app.stride.domain.DayStatus
+import app.stride.ui.GlassCard
+import app.stride.ui.glowBackground
+import app.stride.ui.levelColor
+import app.stride.ui.theme.StrideColors
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -38,10 +47,6 @@ import app.stride.domain.dayLong
 import app.stride.domain.fmtDur
 import app.stride.domain.fmtHr
 import app.stride.domain.fmtKg
-import app.stride.domain.fmtMeters
-import app.stride.domain.pace100
-import app.stride.domain.paceKm
-import app.stride.model.Activity
 import app.stride.model.AppData
 import app.stride.model.DayKind
 import app.stride.model.Interval
@@ -50,9 +55,7 @@ import app.stride.ui.AppViewModel
 import app.stride.ui.FCard
 import app.stride.ui.IconBubble
 import app.stride.ui.SectionLabel
-import app.stride.ui.StatGrid
 import app.stride.ui.VerdictCard
-import app.stride.ui.ZoneBar
 import app.stride.ui.kindIcon
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -75,13 +78,22 @@ fun DayScreen(
         result.matched.firstOrNull()?.let { a -> LaunchedEffect(a.id) { vm.loadIntervals(a.id) } }
     }
 
+    val primary = result.matched.firstOrNull()
+    val canCheck = plan != null && !date.isAfter(today) && result.matched.isEmpty() && result.strength == null
+    val headerTint = when {
+        result.manualOnly -> StrideColors.Manual
+        result.verdict != null && result.status == DayStatus.DONE -> levelColor(result.verdict.level)
+        else -> StrideColors.Accent
+    }
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxSize().glowBackground(headerTint, StrideColors.Accent2),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("${dayLong(date)}, ${dateShort(date)}") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
     ) { padding ->
@@ -91,11 +103,11 @@ fun DayScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                FCard {
+                GlassCard(Modifier.fillMaxWidth(), tint = headerTint) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconBubble(kindIcon(plan?.kind), MaterialTheme.colorScheme.primary, 44)
-                        Spacer(Modifier.width(12.dp))
-                        Column {
+                        IconBubble(kindIcon(plan?.kind), headerTint, 48)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
                             Text(plan?.title ?: "No plan", style = MaterialTheme.typography.titleLarge)
                             val sub = listOfNotNull(plan?.time, plan?.note?.takeIf { it.isNotBlank() }, if (plan?.sauna == true) "sauna" else null)
                             if (sub.isNotEmpty()) Text(sub.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -104,29 +116,47 @@ fun DayScreen(
                 }
             }
 
+            // Top: only the most important numbers, as small tiles.
+            primary?.let { a -> item(key = "key-" + a.id) { KeyStats(a) } }
+
             result.verdict?.let { v -> item { VerdictCard(v) } }
 
+            if (canCheck && plan != null) {
+                val kind = plan.kind
+                item { CheckOffCard(result.manualOnly, kind) { vm.setManualDone(date, it) } }
+            }
+
             if (plan?.kind == DayKind.SWIM_INTENSE) {
-                result.matched.firstOrNull()?.let { a ->
+                primary?.let { a ->
                     val reps = Analyzer.workReps(intervals[a.id])
                     if (reps.size >= 2) item { RepsCard(reps) }
                 }
             }
 
-            if (result.matched.isNotEmpty()) item { SectionLabel("Workout", Modifier.padding(start = 4.dp, top = 4.dp)) }
-            result.matched.forEach { a -> item(key = a.id) { ActivityCard(a) } }
+            // Below: everything else intervals.icu knows, grouped into cards.
+            result.matched.forEachIndexed { i, a ->
+                item(key = "h-" + a.id) {
+                    SectionLabel(
+                        if (result.matched.size > 1) "Workout ${i + 1} · ${a.name ?: a.type ?: ""}" else "Workout details",
+                        Modifier.padding(start = 4.dp, top = 6.dp),
+                    )
+                }
+                if (i > 0) item(key = "k-" + a.id) { KeyStats(a) }
+                item(key = a.id) { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { ActivityDetails(a) } }
+            }
 
             if (plan?.kind?.isStrength == true) {
-                item { SectionLabel("Strength", Modifier.padding(start = 4.dp, top = 4.dp)) }
+                item { SectionLabel("Strength", Modifier.padding(start = 4.dp, top = 6.dp)) }
                 item { StrengthCard(result.strength, onEdit = { onStrength(date, result.strength?.id) }, canAdd = !date.isAfter(today)) }
             }
 
-            if (result.extra.isNotEmpty()) {
-                item { SectionLabel("Extra", Modifier.padding(start = 4.dp, top = 4.dp)) }
-                result.extra.forEach { a -> item(key = "x" + a.id) { ActivityCard(a) } }
+            result.extra.forEach { a ->
+                item(key = "xh-" + a.id) { SectionLabel("Extra · ${a.name ?: a.type ?: "workout"}", Modifier.padding(start = 4.dp, top = 6.dp)) }
+                item(key = "xk-" + a.id) { KeyStats(a) }
+                item(key = "x-" + a.id) { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { ActivityDetails(a) } }
             }
 
-            if (result.matched.isEmpty() && result.extra.isEmpty() && plan?.kind?.isStrength != true && !date.isAfter(today)) {
+            if (result.matched.isEmpty() && result.extra.isEmpty() && plan?.kind?.isStrength != true && !date.isAfter(today) && !result.manualOnly) {
                 item {
                     Text(
                         if (data.settings.apiKey.isBlank()) "Connect intervals.icu to see your watch workouts." else "No watch workout for this day. Tap sync if you just finished.",
@@ -140,32 +170,30 @@ fun DayScreen(
     }
 }
 
+/** Lets the user check a day off when the watch wasn't on (shown in blue, not watch-verified green). */
 @Composable
-private fun ActivityCard(a: Activity) {
-    val swim = DayKind.SWIM_EASY.matches(a.type)
-    val run = DayKind.RUN.matches(a.type)
-    FCard {
+private fun CheckOffCard(checked: Boolean, kind: DayKind, onChange: (Boolean) -> Unit) {
+    GlassCard(Modifier.fillMaxWidth(), tint = StrideColors.Manual) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(a.name ?: a.type ?: "Workout", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(a.clock(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Spacer(Modifier.height(14.dp))
-        val stats = mutableListOf(
-            "duration" to fmtDur(a.movingTime),
-            "distance" to fmtMeters(a.distance),
-        )
-        when {
-            swim -> stats += "/100 m" to (a.pace100()?.let { fmtDur(it) } ?: "–")
-            run -> stats += "/km" to (a.paceKm()?.let { fmtDur(it) } ?: "–")
-            else -> stats += "load" to (a.load?.roundToInt()?.toString() ?: "–")
-        }
-        stats += "avg HR" to fmtHr(a.avgHr)
-        stats += "max HR" to fmtHr(a.maxHr)
-        if (swim || run) stats += "load" to (a.load?.roundToInt()?.toString() ?: "–")
-        StatGrid(stats)
-        a.hrZoneTimes?.takeIf { it.sum() > 0 }?.let {
-            Spacer(Modifier.height(16.dp))
-            ZoneBar(it)
+            Icon(if (checked) Icons.Filled.TaskAlt else Icons.Filled.RadioButtonUnchecked, null, tint = StrideColors.Manual)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (checked) "Checked off by you" else if (kind.isRest) "Did it without the watch?" else "Trained without the watch?",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    if (checked) "Counts as done. Shown in blue because there is no watch data." else "Check it off. It counts as done and shows in blue.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = StrideColors.Dim,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            if (checked) {
+                TextButton(onClick = { onChange(false) }) { Text("Undo") }
+            } else {
+                FilledTonalButton(onClick = { onChange(true) }) { Text("Done") }
+            }
         }
     }
 }

@@ -31,6 +31,8 @@ data class DayResult(
     val strength: StrengthSession?,
     val status: DayStatus,
     val verdict: Verdict?,
+    /** Checked off by hand, with no watch workout or strength log to back it up. */
+    val manualOnly: Boolean = false,
 )
 
 data class WeekSummary(
@@ -59,6 +61,15 @@ data class WeekPoint(
 
 fun mondayOf(d: LocalDate): LocalDate = d.with(DayOfWeek.MONDAY)
 
+/** The plan of the week containing [date]: its own approved plan, else the default plan. */
+fun AppData.weekPlan(date: LocalDate): List<PlanDay> = weekPlans[mondayOf(date).toString()] ?: settings.plan
+
+fun AppData.planFor(date: LocalDate): PlanDay? = weekPlan(date).firstOrNull { it.dow == date.dayOfWeek.value }
+
+/** Moves every day of the plan by [days] (+1 = Monday's workout on Tuesday, Sunday's on Monday). */
+fun shiftPlan(plan: List<PlanDay>, days: Int): List<PlanDay> =
+    plan.map { it.copy(dow = Math.floorMod(it.dow - 1 + days, 7) + 1) }.sortedBy { it.dow }
+
 fun Activity.pace100(): Double? {
     val d = distance ?: return null
     val t = movingTime ?: return null
@@ -79,13 +90,15 @@ object Analyzer {
         data: AppData,
         intervals: Map<String, List<Interval>> = emptyMap(),
     ): DayResult {
-        val plan = data.settings.plan.firstOrNull { it.dow == date.dayOfWeek.value }
+        val plan = data.planFor(date)
         val acts = data.activities.filter { it.date() == date }.sortedBy { it.startLocal }
         val matched = if (plan == null) emptyList() else acts.filter { plan.kind.matches(it.type) }
         val extra = acts.filter { a -> matched.none { it.id == a.id } }
         val strength = data.strength.lastOrNull { it.date == date.toString() }
         val kind = plan?.kind ?: DayKind.REST
-        val did = matched.isNotEmpty() || (kind.isStrength && strength != null)
+        val logged = matched.isNotEmpty() || (kind.isStrength && strength != null)
+        val manual = plan != null && date.toString() in data.manualDone
+        val did = logged || manual
 
         val status = when {
             date.isAfter(today) -> DayStatus.UPCOMING
@@ -96,7 +109,9 @@ object Analyzer {
         }
 
         val t = data.settings.targets
-        val verdict: Verdict? = if (status == DayStatus.UPCOMING || plan == null) null else when (kind) {
+        val verdict: Verdict? = if (status == DayStatus.UPCOMING || plan == null) null
+        else if (manual && !logged) manualVerdict(kind)
+        else when (kind) {
             DayKind.SWIM_EASY -> matched.firstOrNull()?.let { easySwim(it, t) }
             DayKind.RUN -> matched.firstOrNull()?.let { run(it, t) }
             DayKind.SWIM_INTENSE -> matched.firstOrNull()?.let { intenseSwim(it, intervals[it.id]) }
@@ -104,7 +119,14 @@ object Analyzer {
                 if (did) strengthVerdict(plan, strength, matched.firstOrNull()) else null
             DayKind.REST_WALK, DayKind.REST -> restVerdict(kind, matched, extra, status)
         }
-        return DayResult(date, plan, matched, extra, strength, status, verdict)
+        return DayResult(date, plan, matched, extra, strength, status, verdict, manualOnly = manual && !logged)
+    }
+
+    private fun manualVerdict(kind: DayKind): Verdict = when {
+        kind.isStrength -> Verdict(Level.GOOD, "Done · checked by you", tip = "Log weights and sets to track progress.")
+        kind == DayKind.REST_WALK -> Verdict(Level.GOOD, "Walk done · checked by you")
+        kind == DayKind.REST -> Verdict(Level.GOOD, "Rested · checked by you")
+        else -> Verdict(Level.GOOD, "Done · checked by you", listOf("No watch data, so no analysis for this one."))
     }
 
     private fun easySwim(a: Activity, t: Targets): Verdict {

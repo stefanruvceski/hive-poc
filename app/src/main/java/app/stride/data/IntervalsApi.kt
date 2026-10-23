@@ -8,6 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Credentials
@@ -46,7 +48,17 @@ class IntervalsApi(apiKey: String, athleteId: String) {
     /** Everything intervals.icu returns, including Strava placeholders; callers filter. */
     suspend fun activities(oldest: LocalDate, newest: LocalDate): List<Activity> = withContext(Dispatchers.IO) {
         val text = request("$BASE/athlete/$athlete/activities?oldest=$oldest&newest=$newest")
-        StrideJson.decodeFromString(ListSerializer(Activity.serializer()), text)
+        StrideJson.decodeFromString(JsonArray.serializer(), text).mapNotNull { decodeActivity(it) }
+    }
+
+    /**
+     * One activity at a time, so a field with an unexpected type only costs the extra
+     * details of that activity (retried with the core fields), never the whole sync.
+     */
+    private fun decodeActivity(e: JsonElement): Activity? {
+        val obj = e as? JsonObject ?: return null
+        return runCatching { StrideJson.decodeFromJsonElement(Activity.serializer(), obj) }.getOrNull()
+            ?: runCatching { StrideJson.decodeFromJsonElement(Activity.serializer(), JsonObject(obj.filterKeys { it in CORE_KEYS })) }.getOrNull()
     }
 
     suspend fun wellness(oldest: LocalDate, newest: LocalDate): List<Wellness> = withContext(Dispatchers.IO) {
@@ -67,6 +79,10 @@ class IntervalsApi(apiKey: String, athleteId: String) {
 
     companion object {
         private const val BASE = "https://intervals.icu/api/v1"
+        private val CORE_KEYS = setOf(
+            "id", "start_date_local", "type", "name", "moving_time", "elapsed_time", "distance",
+            "average_heartrate", "max_heartrate", "icu_hr_zone_times", "icu_hr_zones", "icu_training_load", "source", "_note",
+        )
         private val client = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(40, TimeUnit.SECONDS)

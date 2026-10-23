@@ -26,6 +26,9 @@ object StrideColors {
     val Danger = Color(0xFFF87171)
     val Amber = Color(0xFFF59E0B)
 
+    /** Days the user checked off by hand (no watch data), distinct from watch-verified green. */
+    val Manual = Color(0xFF60A5FA)
+
     val Good = Accent
     val Warn = Amber
     val Bad = Danger

@@ -9,6 +9,7 @@ val StrideJson = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
     coerceInputValues = true
+    isLenient = true
 }
 
 class Store(context: Context) {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: the three rings, white on transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54.00,10.00 A44,44 0 1,1 12.15,40.40" android:strokeWidth="12" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,25.00 A29,29 0 1,1 29.51,69.54" android:strokeWidth="12" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,40.00 A14,14 0 1,1 44.42,43.79" android:strokeWidth="12" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+</vector>

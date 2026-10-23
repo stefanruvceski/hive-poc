@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon version: rings only, single color (alpha is what counts). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54,26 a28,28 0 1,1 0,56 a28,28 0 1,1 0,-56" android:strokeWidth="7.6" android:strokeColor="#40FFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,26.00 A28,28 0 1,1 27.37,45.35" android:strokeWidth="7.6" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54,35.5 a18.5,18.5 0 1,1 0,37.0 a18.5,18.5 0 1,1 0,-37.0" android:strokeWidth="7.6" android:strokeColor="#40FFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,35.50 A18.5,18.5 0 1,1 38.38,63.91" android:strokeWidth="7.6" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54,45 a9,9 0 1,1 0,18 a9,9 0 1,1 0,-18" android:strokeWidth="7.6" android:strokeColor="#40FFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,45.00 A9,9 0 1,1 47.84,47.44" android:strokeWidth="7.6" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+</vector>

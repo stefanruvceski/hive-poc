@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -95,6 +96,135 @@ fun RowCard(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Compos
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, content = content)
     }
+}
+
+/**
+ * Glass card: translucent fill with a light top edge, in the spirit of iOS "Liquid Glass",
+ * on top of the app's navy. [tint] colors the glass slightly.
+ */
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    tint: Color = Color.White,
+    shape: RoundedCornerShape = RoundedCornerShape(22.dp),
+    contentPadding: Int = 16,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(tint.copy(alpha = 0.13f), Color.White.copy(alpha = 0.035f)),
+                    start = Offset.Zero,
+                    end = Offset.Infinite,
+                ),
+            )
+            .background(StrideColors.Elev.copy(alpha = 0.55f))
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.04f))),
+                shape,
+            )
+            .padding(contentPadding.dp),
+        content = content,
+    )
+}
+
+/** Small square key-metric tile (Apple Health style): colored icon + label, big value, small unit. */
+@Composable
+fun MetricTile(icon: ImageVector, label: String, value: String, unit: String, tint: Color, modifier: Modifier = Modifier) {
+    GlassCard(modifier.aspectRatio(1f), tint = tint, shape = RoundedCornerShape(20.dp), contentPadding = 12) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(
+                label.uppercase(),
+                style = TextStyle(fontSize = 10.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold),
+                color = tint,
+                maxLines = 1,
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Text(value, style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp), color = StrideColors.Text, maxLines = 1)
+        if (unit.isNotEmpty()) Text(unit, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold), color = StrideColors.Dim, maxLines = 1)
+    }
+}
+
+/** Rows of up to [columns] square tiles; short last row keeps the tile size. */
+@Composable
+fun <T> MetricTileGrid(items: List<T>, columns: Int = 3, tile: @Composable (T, Modifier) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items.chunked(columns).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { item -> tile(item, Modifier.weight(1f)) }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+/** Label/value pair inside a detail card. */
+data class Metric(val label: String, val value: String, val unit: String = "", val color: Color = StrideColors.Text)
+
+/** Detail section: glass card with an icon title and a two-column grid of metric cells. */
+@Composable
+fun DetailCard(title: String, icon: ImageVector, tint: Color, metrics: List<Metric>, extra: (@Composable ColumnScope.() -> Unit)? = null) {
+    if (metrics.isEmpty() && extra == null) return
+    GlassCard(Modifier.fillMaxWidth(), tint = tint) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(28.dp).clip(RoundedCornerShape(9.dp)).background(tint.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = tint, modifier = Modifier.size(17.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(title, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text)
+        }
+        if (metrics.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                metrics.chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { m -> MetricCell(m, Modifier.weight(1f)) }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+        extra?.let {
+            Spacer(Modifier.height(12.dp))
+            it()
+        }
+    }
+}
+
+@Composable
+private fun MetricCell(m: Metric, modifier: Modifier) {
+    Column(modifier.clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.05f)).padding(horizontal = 12.dp, vertical = 9.dp)) {
+        Text(m.label.uppercase(), style = TextStyle(fontSize = 10.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.SemiBold), color = StrideColors.Faint, maxLines = 1)
+        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(m.value, style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.ExtraBold), color = m.color, maxLines = 1)
+            if (m.unit.isNotEmpty()) {
+                Spacer(Modifier.width(3.dp))
+                Text(m.unit, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold), color = StrideColors.Dim, maxLines = 1, modifier = Modifier.padding(bottom = 2.dp))
+            }
+        }
+    }
+}
+
+/** Soft colored glows behind glass content, so the translucency has something to show. */
+fun Modifier.glowBackground(primary: Color, secondary: Color): Modifier = drawBehind {
+    drawRect(StrideColors.Bg)
+    drawCircle(
+        Brush.radialGradient(listOf(primary.copy(alpha = 0.22f), Color.Transparent), center = Offset(size.width * 0.15f, size.height * 0.05f), radius = size.width * 0.9f),
+        radius = size.width * 0.9f,
+        center = Offset(size.width * 0.15f, size.height * 0.05f),
+    )
+    drawCircle(
+        Brush.radialGradient(listOf(secondary.copy(alpha = 0.14f), Color.Transparent), center = Offset(size.width * 0.95f, size.height * 0.35f), radius = size.width * 0.8f),
+        radius = size.width * 0.8f,
+        center = Offset(size.width * 0.95f, size.height * 0.35f),
+    )
 }
 
 @Composable

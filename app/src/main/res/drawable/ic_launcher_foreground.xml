@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Three activity rings (inspired by Apple Fitness), in Stride colors:
+     outer pink = strength, middle green = cardio (swim + run), inner cyan = recovery (rest, walks).
+     Outer edge stays inside the 66dp adaptive-icon safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- wave + pulse line -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#34D399"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M30,58 L42,58 L48,44 L56,70 L62,52 L66,58 L78,58" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#F472B6"
-        android:strokeWidth="3.5"
-        android:strokeLineCap="round"
-        android:pathData="M32,72 Q38,67 44,72 T56,72 T68,72 T78,72" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54,26 a28,28 0 1,1 0,56 a28,28 0 1,1 0,-56" android:strokeWidth="7.6" android:strokeColor="#38F472B6" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,26.00 A28,28 0 1,1 27.37,45.35" android:strokeWidth="7.6" android:strokeLineCap="round" android:fillColor="#00000000">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="26" android:startY="26" android:endX="82" android:endY="82"
+                android:startColor="#FFF472B6" android:endColor="#FFFB7185" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,35.5 a18.5,18.5 0 1,1 0,37.0 a18.5,18.5 0 1,1 0,-37.0" android:strokeWidth="7.6" android:strokeColor="#3834D399" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,35.50 A18.5,18.5 0 1,1 38.38,63.91" android:strokeWidth="7.6" android:strokeLineCap="round" android:fillColor="#00000000">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="35.5" android:startY="35.5" android:endX="72.5" android:endY="72.5"
+                android:startColor="#FF34D399" android:endColor="#FFA3E635" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,45 a9,9 0 1,1 0,18 a9,9 0 1,1 0,-18" android:strokeWidth="7.6" android:strokeColor="#3822D3EE" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,45.00 A9,9 0 1,1 47.84,47.44" android:strokeWidth="7.6" android:strokeLineCap="round" android:fillColor="#00000000">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="45" android:startY="45" android:endX="63" android:endY="63"
+                android:startColor="#FF22D3EE" android:endColor="#FF60A5FA" />
+        </aapt:attr>
+    </path>
 </vector>

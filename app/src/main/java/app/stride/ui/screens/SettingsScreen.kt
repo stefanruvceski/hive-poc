@@ -72,6 +72,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
     var runCeil by remember { mutableStateOf(t.runHrCeiling.toString()) }
     var goal by remember { mutableStateOf(t.weightGoalKg?.let { fmtKg(it) } ?: "") }
     val plan = remember { mutableStateListOf(*s.plan.sortedBy { it.dow }.toTypedArray()) }
+    var reminder by remember { mutableStateOf(s.planReminder) }
 
     fun save() {
         val d = Targets()
@@ -85,7 +86,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
             runHrCeiling = runCeil.toIntOrNull() ?: d.runHrCeiling,
             weightGoalKg = parseNum(goal),
         )
-        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList())
+        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), planReminder = reminder)
         if (updated != s) {
             vm.saveSettings(updated)
             vm.toast("Settings saved")
@@ -178,8 +179,24 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
 
             item {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    SectionLabel("Weekly plan", Modifier.padding(start = 4.dp).weight(1f))
+                    SectionLabel("Default weekly plan", Modifier.padding(start = 4.dp).weight(1f))
                     TextButton(onClick = { plan.clear(); plan.addAll(DefaultPlan.days) }) { Text("Reset to default") }
+                }
+            }
+            item {
+                FCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                            Text("Sunday plan review", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "A reminder on Sunday evening to approve or change next week's plan. Weeks you don't review use this default plan.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(checked = reminder, onCheckedChange = { reminder = it })
+                    }
                 }
             }
             items(plan.size) { i ->

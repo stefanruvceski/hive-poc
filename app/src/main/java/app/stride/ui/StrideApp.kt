@@ -1,6 +1,13 @@
 package app.stride.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import app.stride.domain.mondayOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +52,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.stride.ui.screens.DayScreen
+import app.stride.ui.screens.PlanReviewScreen
 import app.stride.ui.screens.SettingsScreen
 import app.stride.ui.screens.StrengthEditor
 import app.stride.ui.screens.StrengthTab
@@ -60,6 +68,7 @@ sealed interface Overlay {
     data object Settings : Overlay
     data class Day(val date: LocalDate) : Overlay
     data class Strength(val date: LocalDate, val sessionId: String?) : Overlay
+    data class PlanReview(val monday: LocalDate) : Overlay
 }
 
 private data class Tab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
@@ -73,7 +82,12 @@ private val TABS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewModel()) {
+fun StrideApp(
+    vm: AppViewModel = viewModel(),
+    updates: UpdateViewModel = viewModel(),
+    /** Incremented each time the Sunday notification asks to open next week's plan. */
+    planReviewRequest: Int = 0,
+) {
     val data by vm.data.collectAsStateWithLifecycle()
     val update by updates.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -98,6 +112,20 @@ fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewMod
     val push: (Overlay) -> Unit = { overlays = overlays + it }
     val pop: () -> Unit = { overlays = overlays.dropLast(1) }
     BackHandler(enabled = overlays.isNotEmpty()) { pop() }
+
+    LaunchedEffect(planReviewRequest) {
+        if (planReviewRequest > 0) overlays = listOf(Overlay.PlanReview(mondayOf(LocalDate.now()).plusWeeks(1)))
+    }
+
+    // Android 13+: the Sunday reminder needs notification permission; ask once per launch while it's on and missing.
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 && data.settings.planReminder &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         when (val top = overlays.lastOrNull()) {
@@ -145,6 +173,7 @@ fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewMod
                         onWeekOffset = { weekOffset = it },
                         onDay = { push(Overlay.Day(it)) },
                         onSettings = { push(Overlay.Settings) },
+                        onReviewPlan = { push(Overlay.PlanReview(it)) },
                         padding = padding,
                     )
                     1 -> TrendsTab(data = data, today = today, padding = padding)
@@ -162,6 +191,7 @@ fun StrideApp(vm: AppViewModel = viewModel(), updates: UpdateViewModel = viewMod
                 onBack = pop,
                 onStrength = { d, id -> push(Overlay.Strength(d, id)) },
             )
+            is Overlay.PlanReview -> PlanReviewScreen(vm = vm, data = data, monday = top.monday, onBack = pop)
             is Overlay.Strength -> StrengthEditor(
                 vm = vm, data = data, initialDate = top.date, sessionId = top.sessionId, onBack = pop,
             )
