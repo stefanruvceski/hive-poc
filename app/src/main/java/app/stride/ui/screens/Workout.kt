@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -573,9 +574,23 @@ fun ExercisePicture(lib: LibraryExercise?, modifier: Modifier, animate: Boolean,
             frame = 1 - frame
         }
     }
-    Box(modifier.clip(shape).background(Color.White)) {
+    Box(modifier.clip(shape).background(StrideColors.Elev2)) {
+        if (!animate) {
+            // Thumbnails: fill the square, no bars.
+            AsyncImage(model = lib.images.first(), contentDescription = lib.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            return@Box
+        }
         lib.images.forEachIndexed { i, url ->
             val a by animateFloatAsState(if (i == frame) 1f else 0f, label = "frame")
+            // Behind: the same photo cropped, blurred and dimmed, so there are no empty bars beside it.
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().alpha(a).blur(28.dp),
+            )
+            Box(Modifier.fillMaxSize().alpha(a).background(StrideColors.Bg.copy(alpha = 0.45f)))
+            // Front: the whole photo.
             AsyncImage(
                 model = url,
                 contentDescription = if (i == 0) "${lib.name}, start position" else "${lib.name}, end position",
