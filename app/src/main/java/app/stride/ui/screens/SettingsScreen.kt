@@ -73,6 +73,11 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
     var goal by remember { mutableStateOf(t.weightGoalKg?.let { fmtKg(it) } ?: "") }
     val plan = remember { mutableStateListOf(*s.plan.sortedBy { it.dow }.toTypedArray()) }
     var reminder by remember { mutableStateOf(s.planReminder) }
+    var morning by remember { mutableStateOf(s.morningReminder) }
+    var evening by remember { mutableStateOf(s.eveningReminder) }
+    var warmups by remember { mutableStateOf(s.warmups) }
+    var zone2 by remember { mutableStateOf(t.zone2Minutes.toString()) }
+    var saunaTarget by remember { mutableStateOf(t.saunaMinutes.toString()) }
 
     fun save() {
         val d = Targets()
@@ -85,8 +90,12 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
             runHrHigh = runHigh.toIntOrNull() ?: d.runHrHigh,
             runHrCeiling = runCeil.toIntOrNull() ?: d.runHrCeiling,
             weightGoalKg = parseNum(goal),
+            zone2Minutes = zone2.toIntOrNull() ?: d.zone2Minutes,
+            saunaMinutes = saunaTarget.toIntOrNull() ?: d.saunaMinutes,
         )
-        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), planReminder = reminder)
+        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), planReminder = reminder,
+            morningReminder = morning, eveningReminder = evening, warmups = warmups,
+        )
         if (updated != s) {
             vm.saveSettings(updated)
             vm.toast("Settings saved")
@@ -174,6 +183,18 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
                     Text("Weight", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
                     NumField("goal in kg (optional)", goal, Modifier.fillMaxWidth(), decimal = true) { goal = it }
+                    Spacer(Modifier.height(14.dp))
+                    Text("Weekly targets", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NumField("Zone 2 min", zone2, Modifier.weight(1f)) { zone2 = it }
+                        NumField("sauna min", saunaTarget, Modifier.weight(1f)) { saunaTarget = it }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Warm-up sets in workouts", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Switch(checked = warmups, onCheckedChange = { warmups = it })
+                    }
                 }
             }
 
@@ -187,15 +208,24 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
                 FCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                            Text("Sunday plan review", style = MaterialTheme.typography.titleMedium)
+                            Text("Notifications", style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "A reminder on Sunday evening to approve or change next week's plan. Weeks you don't review use this default plan.",
+                                "Sunday 18:00 · review next week's plan. Weeks you don't review use the default plan below.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         Spacer(Modifier.width(12.dp))
                         Switch(checked = reminder, onCheckedChange = { reminder = it })
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("06:00 · today's plan and recovery", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Switch(checked = morning, onCheckedChange = { morning = it })
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("19:00 · reminder if not trained yet", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Switch(checked = evening, onCheckedChange = { evening = it })
                     }
                 }
             }

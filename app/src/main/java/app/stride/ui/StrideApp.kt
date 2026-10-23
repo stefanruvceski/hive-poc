@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.stride.ui.screens.DayScreen
+import app.stride.ui.screens.ExerciseHistoryScreen
 import app.stride.ui.screens.PlanReviewScreen
 import app.stride.ui.screens.SettingsScreen
 import app.stride.ui.screens.WorkoutScreen
@@ -67,6 +68,7 @@ sealed interface Overlay {
     data class Day(val date: LocalDate) : Overlay
     data class Strength(val date: LocalDate, val sessionId: String?) : Overlay
     data class PlanReview(val monday: LocalDate) : Overlay
+    data class ExerciseHistory(val name: String) : Overlay
 }
 
 private data class Tab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
@@ -164,6 +166,7 @@ fun StrideApp(
                         onSettings = { push(Overlay.Settings) },
                         onReviewPlan = { push(Overlay.PlanReview(it)) },
                         onWorkout = { d, id -> push(Overlay.Strength(d, id)) },
+                        onSwap = { d, dow -> vm.swapToday(d, dow) },
                         padding = padding,
                     )
                     1 -> TrendsTab(data = data, today = today, padding = padding)
@@ -171,6 +174,7 @@ fun StrideApp(
                         data = data, today = today, padding = padding,
                         onNew = { push(Overlay.Strength(today, null)) },
                         onOpen = { s -> push(Overlay.Strength(LocalDate.parse(s.date), s.id)) },
+                        onExercise = { push(Overlay.ExerciseHistory(it)) },
                     )
                     else -> WeightTab(vm = vm, data = data, today = today, padding = padding)
                 }
@@ -182,7 +186,11 @@ fun StrideApp(
                 onStrength = { d, id -> push(Overlay.Strength(d, id)) },
             )
             is Overlay.PlanReview -> PlanReviewScreen(vm = vm, data = data, monday = top.monday, onBack = pop)
-            is Overlay.Strength -> WorkoutScreen(vm = vm, data = data, date = top.date, sessionId = top.sessionId, onBack = pop)
+            is Overlay.Strength -> WorkoutScreen(
+                vm = vm, data = data, date = top.date, sessionId = top.sessionId, onBack = pop,
+                onHistory = { push(Overlay.ExerciseHistory(it)) },
+            )
+            is Overlay.ExerciseHistory -> ExerciseHistoryScreen(data = data, name = top.name, onBack = pop)
         }
         SnackbarHost(
             snackbar,

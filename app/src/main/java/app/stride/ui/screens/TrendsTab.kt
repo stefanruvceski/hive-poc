@@ -1,6 +1,34 @@
 package app.stride.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import app.stride.domain.DayResult
+import app.stride.domain.DayStatus
+import app.stride.ui.levelColor
+import java.time.YearMonth
+import java.util.Locale
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +65,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues) {
         contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { MonthCard(data, today) }
         item {
             ChartCard("Easy swim", "pace per 100 m, lower is better") {
                 LineChart(points.map { it.easySwimPace100 }, labels, accent, { fmtDur(it) })
@@ -102,5 +131,75 @@ private fun ChartCard(title: String, subtitle: String, content: @Composable () -
         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
         content()
+    }
+}
+
+/** Calendar heatmap of a month, like Streakli's: one tile per day colored by how the day went. */
+@Composable
+private fun MonthCard(data: AppData, today: LocalDate) {
+    var month by remember { mutableStateOf(YearMonth.from(today)) }
+    val results = remember(data, month, today) { (1..month.lengthOfMonth()).map { Analyzer.day(month.atDay(it), today, data) } }
+    val lead = month.atDay(1).dayOfWeek.value - 1
+    val done = results.count { it.status == DayStatus.DONE }
+    val planned = results.count { it.plan != null && !it.plan.kind.isRest && !it.date.isAfter(today) }
+    FCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { month = month.minusMonths(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month") }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    month.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.US) + " " + month.year,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text("$done days done · $planned workouts planned so far", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+            }
+            IconButton(onClick = { month = month.plusMonths(1) }, enabled = month < YearMonth.from(today)) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth()) {
+            listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su").forEach {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        (List<DayResult?>(lead) { null } + results).chunked(7).forEach { week ->
+            Row(Modifier.fillMaxWidth()) {
+                week.forEach { d -> DayTile(d, today, Modifier.weight(1f)) }
+                repeat(7 - week.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(StrideColors.Good to "done", StrideColors.Manual to "by you", StrideColors.Bad to "missed", StrideColors.Elev2 to "rest").forEach { (c, l) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(c))
+                    Spacer(Modifier.width(4.dp))
+                    Text(l, style = MaterialTheme.typography.labelSmall, color = StrideColors.Dim)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayTile(d: DayResult?, today: LocalDate, modifier: Modifier) {
+    Box(modifier.aspectRatio(1f).padding(2.dp)) {
+        if (d == null) return@Box
+        val (bg, fg) = when (d.status) {
+            DayStatus.DONE -> (if (d.manualOnly) StrideColors.Manual else d.verdict?.let { levelColor(it.level) } ?: StrideColors.Good) to StrideColors.Bg
+            DayStatus.MISSED -> StrideColors.Bad.copy(alpha = 0.55f) to StrideColors.Text
+            DayStatus.TODAY -> StrideColors.Elev2 to StrideColors.Accent
+            DayStatus.UPCOMING -> StrideColors.Elev2.copy(alpha = 0.4f) to StrideColors.Faint
+            DayStatus.REST -> StrideColors.Elev2 to StrideColors.Dim
+        }
+        val shape = RoundedCornerShape(9.dp)
+        Box(
+            Modifier.fillMaxSize().clip(shape).background(bg)
+                .border(if (d.date == today) 1.5.dp else 0.dp, if (d.date == today) StrideColors.Accent else Color.Transparent, shape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("${d.date.dayOfMonth}", style = MaterialTheme.typography.labelMedium, color = fg)
+        }
     }
 }
