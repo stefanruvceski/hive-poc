@@ -81,7 +81,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val today = LocalDate.now()
                 val oldest = today.minusDays(84)
-                val acts = api.activities(oldest, today.plusDays(1))
+                val all = api.activities(oldest, today.plusDays(1))
+                val strava = all.count { it.isRestrictedStub }
+                val acts = all.filter { !it.isRestrictedStub && it.type != null && it.startLocal != null }
                 val well = runCatching { api.wellness(today.minusDays(180), today) }.getOrDefault(emptyList())
                 update { d ->
                     val kept = d.activities.filter { a -> a.date()?.isBefore(oldest) ?: false }
@@ -97,7 +99,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         lastSync = LocalDateTime.now().toString(),
                     )
                 }
-                if (!silent) toast("Synced ${acts.size} workouts from the last 12 weeks")
+                if (!silent) when {
+                    acts.isEmpty() && strava > 0 -> toast(
+                        "intervals.icu has $strava workouts from Strava, but doesn't share Strava data with other apps. " +
+                            "In intervals.icu → Settings, connect Garmin Connect directly.",
+                    )
+                    acts.isEmpty() -> toast(
+                        "intervals.icu has no workouts from the last 12 weeks. " +
+                            "Check that Garmin Connect is connected in intervals.icu → Settings.",
+                    )
+                    else -> toast(
+                        "Synced ${acts.size} workouts from the last 12 weeks" +
+                            if (strava > 0) " ($strava from Strava skipped)" else "",
+                    )
+                }
             } catch (e: Exception) {
                 toast(e.toUserMessage())
             } finally {

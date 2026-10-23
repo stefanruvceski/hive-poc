@@ -43,10 +43,10 @@ class IntervalsApi(apiKey: String, athleteId: String) {
         obj["name"]?.jsonPrimitive?.content ?: obj["firstname"]?.jsonPrimitive?.content ?: "?"
     }
 
+    /** Everything intervals.icu returns, including Strava placeholders; callers filter. */
     suspend fun activities(oldest: LocalDate, newest: LocalDate): List<Activity> = withContext(Dispatchers.IO) {
         val text = request("$BASE/athlete/$athlete/activities?oldest=$oldest&newest=$newest")
         StrideJson.decodeFromString(ListSerializer(Activity.serializer()), text)
-            .filter { it.type != null && it.startLocal != null }
     }
 
     suspend fun wellness(oldest: LocalDate, newest: LocalDate): List<Wellness> = withContext(Dispatchers.IO) {

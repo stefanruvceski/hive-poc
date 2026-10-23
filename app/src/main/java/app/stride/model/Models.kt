@@ -103,7 +103,15 @@ data class Activity(
     @SerialName("icu_hr_zone_times") val hrZoneTimes: List<Double>? = null,
     @SerialName("icu_hr_zones") val hrZones: List<Double>? = null,
     @SerialName("icu_training_load") val load: Double? = null,
+    /** GARMIN_CONNECT, STRAVA, UPLOAD, ... */
+    val source: String? = null,
+    /** Set by intervals.icu on placeholder entries it may not share (Strava activities). */
+    @SerialName("_note") val apiNote: String? = null,
 ) {
+    /** intervals.icu returns Strava-synced activities as empty placeholders over the API. */
+    val isRestrictedStub: Boolean
+        get() = apiNote != null || source.equals("STRAVA", ignoreCase = true)
+
     fun date(): LocalDate? = startLocal?.take(10)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     fun clock(): String = startLocal?.let { if (it.length >= 16) it.substring(11, 16) else "" } ?: ""
 }
