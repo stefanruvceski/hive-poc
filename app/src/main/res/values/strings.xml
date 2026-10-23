@@ -15,4 +15,10 @@
     <string name="widget_last_run_description">Distance, pace and heart rate of your last run.</string>
     <string name="widget_last_swim_description">Distance, pace per 100 m and heart rate of your last swim.</string>
     <string name="widget_streak_description">Planned workouts done in a row, plus this week\'s progress.</string>
+    <string name="shortcut_workout_short">Start workout</string>
+    <string name="shortcut_workout_long">Start today\'s workout</string>
+    <string name="shortcut_weight_short">Log weight</string>
+    <string name="shortcut_weight_long">Log your weight</string>
+    <string name="shortcut_today_short">Today</string>
+    <string name="shortcut_today_long">Open today</string>
 </resources>

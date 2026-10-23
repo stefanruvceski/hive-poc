@@ -15,6 +15,7 @@ object Layouts {
             SectionDef("today", "Today's workout"),
             SectionDef("swap", "Recovery swap"),
             SectionDef("progress", "Week progress"),
+            SectionDef("coach", "AI coach"),
             SectionDef("targets", "Weekly targets"),
             SectionDef("recovery", "Recovery"),
             SectionDef("plan", "Daily plan"),
@@ -26,6 +27,9 @@ object Layouts {
         "trends", "Trends",
         listOf(
             SectionDef("month", "Month calendar"),
+            SectionDef("badges", "Challenges and badges"),
+            SectionDef("insights", "Sleep and HRV insights"),
+            SectionDef("year", "Year in review"),
             SectionDef("swim_pace", "Easy swim pace"),
             SectionDef("run_hr", "Run heart rate"),
             SectionDef("run_pace", "Run pace"),

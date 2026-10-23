@@ -5,6 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.stride.data.IntervalsApi
 import app.stride.data.Store
+import app.stride.data.DataEvents
+import app.stride.data.Backup
+import app.stride.data.HealthSync
+import app.stride.coach.CoachClient
+import app.stride.coach.CoachPrompt
 import app.stride.data.Sync
 import app.stride.data.toUserMessage
 import app.stride.domain.dateShort
@@ -56,10 +61,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val intervals: StateFlow<Map<String, List<Interval>>> = _intervals.asStateFlow()
 
     init {
+        // Notification actions (tick off a set from the lock screen) write the store directly.
+        viewModelScope.launch {
+            DataEvents.changed.collect { _data.value = kotlinx.coroutines.withContext(Dispatchers.IO) { store.load() } }
+        }
         val d = _data.value
         val last = d.lastSync?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
         if (d.settings.apiKey.isNotBlank() && (last == null || Duration.between(last, LocalDateTime.now()).toMinutes() > 10)) {
             sync(silent = true)
+        } else {
+            syncHealth()
         }
     }
 
@@ -82,9 +93,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sync(silent: Boolean = false) {
+        syncHealth(silent)
         val api = api()
         if (api == null) {
-            if (!silent) toast("Add your intervals.icu API key in Settings first.")
+            if (!silent && !_data.value.settings.healthConnect) toast("Add your intervals.icu API key in Settings first.")
             return
         }
         if (_syncing.value) return
@@ -154,6 +166,90 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 _data.value = mine.copy(activities = disk.activities, wellness = disk.wellness, weights = disk.weights, lastSync = disk.lastSync)
             }
         }
+    }
+
+    private val _coachBusy = MutableStateFlow(false)
+    val coachBusy: StateFlow<Boolean> = _coachBusy.asStateFlow()
+
+    /** Asks Claude for a review of the week starting [monday] with the user's own key. */
+    fun askCoach(monday: LocalDate) {
+        val key = _data.value.settings.anthropicKey
+        if (key.isBlank()) {
+            toast("Add your Anthropic API key in Settings → AI coach first.")
+            return
+        }
+        if (_coachBusy.value) return
+        viewModelScope.launch {
+            _coachBusy.value = true
+            try {
+                val text = CoachClient.review(key, CoachPrompt.user(_data.value, monday, LocalDate.now()))
+                update { d -> d.copy(coach = d.coach + (monday.toString() to text)) }
+            } catch (e: Exception) {
+                toast(e.message ?: "The coach is unavailable right now.")
+            } finally {
+                _coachBusy.value = false
+            }
+        }
+    }
+
+    /** Health Connect: fill sleep/HRV/steps/weight gaps and write finished strength workouts. */
+    fun syncHealth(silent: Boolean = true) {
+        if (!_data.value.settings.healthConnect) return
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            try {
+                if (!HealthSync.available(app)) {
+                    if (!silent) toast("Health Connect isn't available on this phone.")
+                    return@launch
+                }
+                val days = HealthSync.read(app)
+                update { d -> HealthSync.merge(d, days) }
+                val written = HealthSync.writeStrength(app, _data.value)
+                if (written.isNotEmpty()) update { d -> d.copy(hcExported = (d.hcExported + written).takeLast(500)) }
+                if (!silent) toast("Health Connect synced" + if (written.isNotEmpty()) " · ${written.size} workouts written" else "")
+            } catch (e: Exception) {
+                if (!silent) toast("Health Connect: " + (e.message ?: "sync failed"))
+            }
+        }
+    }
+
+    fun exportBackup(uri: android.net.Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            runCatching { kotlinx.coroutines.withContext(Dispatchers.IO) { Backup.write(app, uri, _data.value) } }
+                .onSuccess { toast("Backup saved") }
+                .onFailure { toast("Backup failed: ${it.message}") }
+        }
+    }
+
+    fun restoreBackup(uri: android.net.Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            runCatching { kotlinx.coroutines.withContext(Dispatchers.IO) { Backup.restore(Backup.read(app, uri), _data.value) } }
+                .onSuccess { restored ->
+                    update { restored }
+                    toast("Restored: ${restored.strength.size} strength workouts, ${restored.weights.size} weights")
+                }
+                .onFailure { toast(it.message ?: "Restore failed") }
+        }
+    }
+
+    fun setBackupFolder(uri: android.net.Uri?) {
+        update { d -> d.copy(settings = d.settings.copy(backupFolder = uri?.toString(), lastBackup = null)) }
+        if (uri != null) {
+            val app = getApplication<Application>()
+            viewModelScope.launch(Dispatchers.IO) {
+                // Write the first one right away so the user sees it in the folder.
+                saveLock.withLock { store.save(_data.value) }
+                runCatching { Backup.autoBackupIfDue(app, store) }
+                    .onSuccess { if (it) toast("Weekly backup on · first backup saved") }
+                    .onFailure { toast("Can't write to that folder: ${it.message}") }
+            }
+        }
+    }
+
+    fun updateSettings(f: (Settings) -> Settings) {
+        update { d -> d.copy(settings = f(d.settings)) }
     }
 
     fun setShareStyle(s: ShareStyle) {

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon. Each opens MainActivity with Widgets.EXTRA_OPEN. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="start_workout"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_workout"
+        android:shortcutShortLabel="@string/shortcut_workout_short"
+        android:shortcutLongLabel="@string/shortcut_workout_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.stride"
+            android:targetClass="app.stride.MainActivity">
+            <extra android:name="app.stride.OPEN" android:value="workout" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="log_weight"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_weight"
+        android:shortcutShortLabel="@string/shortcut_weight_short"
+        android:shortcutLongLabel="@string/shortcut_weight_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.stride"
+            android:targetClass="app.stride.MainActivity">
+            <extra android:name="app.stride.OPEN" android:value="weight" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="today"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_today"
+        android:shortcutShortLabel="@string/shortcut_today_short"
+        android:shortcutLongLabel="@string/shortcut_today_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.stride"
+            android:targetClass="app.stride.MainActivity">
+            <extra android:name="app.stride.OPEN" android:value="today" />
+        </intent>
+    </shortcut>
+</shortcuts>

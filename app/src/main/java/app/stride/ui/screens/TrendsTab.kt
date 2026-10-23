@@ -29,6 +29,11 @@ import app.stride.domain.DayResult
 import app.stride.domain.DayStatus
 import app.stride.ui.levelColor
 import app.stride.ui.SectionHost
+import app.stride.domain.Badges
+import app.stride.domain.Insights
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.stride.ui.longPressToEdit
 import java.time.YearMonth
 import java.util.Locale
@@ -57,7 +62,13 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @Composable
-fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (LocalDate) -> Unit, host: SectionHost) {
+fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (LocalDate) -> Unit, host: SectionHost, onYear: (Int) -> Unit = {}) {
+    val insights by produceState(emptyList<Insights.Insight>(), data, today) {
+        value = withContext(Dispatchers.Default) { Insights.compute(data, today) }
+    }
+    val badges by produceState<Pair<List<Badges.Challenge>, List<Badges.Badge>>?>(null, data, today) {
+        value = withContext(Dispatchers.Default) { Badges.challenges(data, today) to Badges.badges(data, today) }
+    }
     val points = remember(data, today) { Analyzer.trends(data, today, 8) }
     val labels = points.map { dateNum(it.monday) }
     val t = data.settings.targets
@@ -71,6 +82,13 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
         with(host) {
             sections {
                 section("month") { item { MonthCard(data, today, onDay) } }
+                section("badges") {
+                    badges?.let { (c, b) ->
+                        item { BadgesCard(c, b, today.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.US)) }
+                    }
+                }
+                section("insights") { if (data.wellness.isNotEmpty()) item { InsightsCard(insights) } }
+                section("year") { item { YearCard(today.year) { onYear(today.year) } } }
                 section("swim_pace") {
                     item {
                         ChartCard("Easy swim", "pace per 100 m, lower is better") {

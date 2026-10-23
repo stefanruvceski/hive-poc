@@ -1,0 +1,176 @@
+package app.stride.ui.screens
+
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
+import app.stride.data.Backup
+import app.stride.data.HealthSync
+import app.stride.model.AppData
+import app.stride.ui.AppViewModel
+import app.stride.ui.FCard
+import app.stride.ui.theme.StrideColors
+import java.time.LocalDateTime
+
+@Composable
+private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/** Anthropic API key for the weekly coach; the key is the user's own and stays on this phone. */
+@Composable
+fun CoachKeyCard(key: String, onKey: (String) -> Unit) {
+    var show by remember { mutableStateOf(false) }
+    FCard {
+        Text("AI coach", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Weekly review by Claude (Anthropic). Create a key at console.anthropic.com → API keys; usage is billed to your " +
+                "Anthropic account (a review costs about a cent). The key stays on this phone and is never in backups.",
+            style = MaterialTheme.typography.bodySmall,
+            color = StrideColors.Dim,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = key,
+            onValueChange = onKey,
+            label = { Text("Anthropic API key") },
+            singleLine = true,
+            visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = { IconButton(onClick = { show = !show }) { Icon(if (show) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "Show") } },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+fun LiveWorkoutCard(vm: AppViewModel, data: AppData) {
+    FCard {
+        SwitchRow(
+            "Workout on the lock screen",
+            "While a workout is open: current set, rest countdown and a button to tick off the set without unlocking.",
+            data.settings.liveWorkout,
+        ) { on -> vm.updateSettings { it.copy(liveWorkout = on) } }
+    }
+}
+
+@Composable
+fun HealthConnectCard(vm: AppViewModel, data: AppData) {
+    val context = LocalContext.current
+    val available = remember { HealthSync.available(context) }
+    var granted by remember { mutableStateOf(emptySet<String>()) }
+    LaunchedEffect(data.settings.healthConnect) { granted = runCatching { HealthSync.granted(context) }.getOrDefault(emptySet()) }
+    val request = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { result ->
+        granted = result
+        if (result.isNotEmpty()) {
+            vm.updateSettings { it.copy(healthConnect = true) }
+            vm.syncHealth(silent = false)
+        }
+    }
+    FCard {
+        SwitchRow(
+            "Health Connect",
+            if (!available) "Not available on this phone." else
+                "Steps, sleep, weight, HRV and resting HR from your phone fill what intervals.icu doesn't have. " +
+                    "Strength workouts are written back so Google Fit and other apps see them.",
+            data.settings.healthConnect && granted.isNotEmpty(),
+        ) { on ->
+            if (!on) vm.updateSettings { it.copy(healthConnect = false) }
+            else if (available) request.launch(HealthSync.PERMISSIONS)
+        }
+        if (data.settings.healthConnect && granted.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${granted.size} of ${HealthSync.PERMISSIONS.size} permissions", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim, modifier = Modifier.weight(1f))
+                if (granted.size < HealthSync.PERMISSIONS.size) TextButton(onClick = { request.launch(HealthSync.PERMISSIONS) }) { Text("Allow all") }
+                TextButton(onClick = { vm.syncHealth(silent = false) }) { Text("Sync now") }
+            }
+        }
+    }
+}
+
+@Composable
+fun BackupCard(vm: AppViewModel, data: AppData) {
+    val context = LocalContext.current
+    var confirm by remember { mutableStateOf<android.net.Uri?>(null) }
+    val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::exportBackup) }
+    val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> confirm = uri }
+    val folder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            vm.setBackupFolder(uri)
+        }
+    }
+    FCard {
+        Text("Backup", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Everything (workouts, sets, weights, plans, settings) in one file. Save it to Google Drive from the file picker. API keys are left out.",
+            style = MaterialTheme.typography.bodySmall,
+            color = StrideColors.Dim,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { export.launch(Backup.fileName()) }, modifier = Modifier.weight(1f)) { Text("Export") }
+            OutlinedButton(onClick = { open.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }, modifier = Modifier.weight(1f)) { Text("Restore") }
+        }
+        Spacer(Modifier.height(10.dp))
+        val on = data.settings.backupFolder != null
+        SwitchRow(
+            "Weekly automatic backup",
+            if (on) "Last: " + (data.settings.lastBackup?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }?.let { "${it.toLocalDate()}" } ?: "not yet") +
+                " · pick a Google Drive folder to keep it off the phone"
+            else "Pick a folder (Google Drive works); a new file is saved there every week.",
+            on,
+        ) { checked -> if (checked) folder.launch(null) else vm.setBackupFolder(null) }
+    }
+    confirm?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { confirm = null },
+            containerColor = StrideColors.Elev,
+            title = { Text("Restore this backup?") },
+            text = { Text("Everything in the app is replaced by the backup. Your API keys stay as they are.") },
+            confirmButton = { Button(onClick = { vm.restoreBackup(uri); confirm = null }) { Text("Restore") } },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
+        )
+    }
+}

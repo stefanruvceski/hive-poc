@@ -96,6 +96,8 @@ fun WeekTab(
     onSwap: (LocalDate, Int) -> Unit,
     padding: PaddingValues,
     host: SectionHost,
+    coachBusy: Boolean = false,
+    onAskCoach: (LocalDate) -> Unit = {},
 ) {
     val nextMonday = mondayOf(today).plusWeeks(1)
     // From Friday on, until next week's plan is approved.
@@ -162,6 +164,20 @@ fun WeekTab(
                         }
                     }
                     section("progress") { item { SummaryCard(week, today, onDay) } }
+                    section("coach") {
+                        // Mon-Sat of this week: last week's review; Sunday and past weeks: that week.
+                        val reviewMonday = if (weekOffset == 0 && today.dayOfWeek != java.time.DayOfWeek.SUNDAY) monday.minusWeeks(1) else monday
+                        item {
+                            CoachCard(
+                                monday = reviewMonday,
+                                review = data.coach[reviewMonday.toString()],
+                                busy = coachBusy,
+                                hasKey = data.settings.anthropicKey.isNotBlank(),
+                                onAsk = { onAskCoach(reviewMonday) },
+                                onSettings = onSettings,
+                            )
+                        }
+                    }
                     section("targets") { item { TargetsCard(weeklyTargets(data, monday, today)) } }
                     section("recovery") {
                         if (weekOffset == 0 && recovery != null) {

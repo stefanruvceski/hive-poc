@@ -53,6 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.stride.ui.screens.DayScreen
 import app.stride.ui.screens.LayoutScreen
 import app.stride.ui.screens.NotificationsScreen
+import app.stride.ui.screens.YearReviewScreen
 import app.stride.ui.theme.StrideColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
@@ -82,6 +83,7 @@ sealed interface Overlay {
     data class ExerciseHistory(val name: String) : Overlay
     data object Layout : Overlay
     data object Notifications : Overlay
+    data class Year(val year: Int) : Overlay
 }
 
 private fun tabIcon(id: String) = when (id) {
@@ -110,6 +112,7 @@ fun StrideApp(
     }
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val intervals by vm.intervals.collectAsStateWithLifecycle()
+    val coachBusy by vm.coachBusy.collectAsStateWithLifecycle()
 
     var tabId by rememberSaveable { mutableStateOf("week") }
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -150,6 +153,7 @@ fun StrideApp(
         editing = false
         when {
             t == "workout" -> overlays = listOf(Overlay.Strength(LocalDate.now(), null))
+            t == "today" -> overlays = listOf(Overlay.Day(LocalDate.now()))
             t.startsWith("day:") -> runCatching { LocalDate.parse(t.removePrefix("day:")) }.getOrNull()?.let { overlays = listOf(Overlay.Day(it)) }
             else -> {
                 overlays = emptyList()
@@ -229,8 +233,10 @@ fun StrideApp(
                         onSwap = { d, dow -> vm.swapToday(d, dow) },
                         padding = padding,
                         host = host,
+                        coachBusy = coachBusy,
+                        onAskCoach = { vm.askCoach(it) },
                     )
-                    "trends" -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) }, host = host)
+                    "trends" -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) }, host = host, onYear = { push(Overlay.Year(it)) })
                     "strength" -> StrengthTab(
                         data = data, today = today, padding = padding,
                         onNew = { push(Overlay.Strength(today, null)) },
@@ -248,6 +254,7 @@ fun StrideApp(
             )
             is Overlay.Layout -> LayoutScreen(vm = vm, data = data, onBack = pop)
             is Overlay.Notifications -> NotificationsScreen(vm = vm, data = data, onBack = pop)
+            is Overlay.Year -> YearReviewScreen(data = data, year = top.year, onClose = pop)
             is Overlay.Day -> DayScreen(
                 vm = vm, data = data, date = top.date, today = today, intervals = intervals,
                 onBack = pop,

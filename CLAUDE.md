@@ -55,6 +55,22 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
+## Coach, live workout, Health Connect, backup, extras
+- AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (official Anthropic Java SDK, `claude-opus-5-5`,
+  server-side refusal fallback). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
+  Reviews in `AppData.coach[monday]`; Week tab section "coach"; Sunday 19:00 the worker writes one and notifies.
+  R8 keeps for the SDK (Jackson) are in `proguard-rules.pro`.
+- Live workout (`live/LiveWorkout.kt`): ongoing lock-screen notification while a stored, unfinished session is open:
+  current set (`domain/LiveSet.kt`, tested), rest countdown, "Set done" / "+30 s" actions handled by
+  `LiveWorkoutReceiver` (writes the store, `DataEvents.notifyChanged()` makes the app reload).
+- Health Connect (`data/HealthSync.kt`, connect-client): fills missing steps/sleep/HRV/resting HR/weight, writes
+  finished strength sessions without a watch workout (`AppData.hcExported`). Foreground only (no background read).
+- Backup (`data/Backup.kt`): export/restore JSON via the system file picker (Drive works), weekly auto backup into a
+  picked folder (SAF tree, `Settings.backupFolder`). Keys are stripped.
+- Trends: Challenges and badges (`domain/Badges.kt`), Sleep and HRV insights (`domain/Insights.kt`), Year in review
+  (`domain/YearReview.kt` + `share/YearCards.kt`, 4 story cards, share all).
+- Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).
+
 ## Design
 Match Streakli, the user's habit tracker: repo `stefanruvceski/habit-tracker`, folder `apps/mobile/src`
 (`lib/theme.ts`, `components/ui.tsx`, `components/WeekStrip.tsx`, `components/Charts.tsx`, `screens/TodayScreen.tsx`).

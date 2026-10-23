@@ -54,6 +54,12 @@ android {
         // BuildConfig.DEBUG / VERSION_CODE drive the in-app update check.
         buildConfig = true
     }
+    packaging {
+        // Duplicate license/metadata files from the Anthropic SDK's dependencies (Jackson, Kotlin).
+        resources {
+            excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+        }
+    }
 }
 
 dependencies {
@@ -73,6 +79,10 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    // Weekly AI coach (Claude API, the user's own key).
+    implementation("com.anthropic:anthropic-java:2.34.0")
+    // Steps, sleep, weight, HRV and resting HR from Health Connect; strength workouts written back.
+    implementation("androidx.health.connect:connect-client:1.1.0")
 
     testImplementation("junit:junit:4.13.2")
 }
