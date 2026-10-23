@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.domain.WeightTrend
 import app.stride.domain.dateNum
 import app.stride.domain.dateShort
 import app.stride.domain.dayShort
@@ -94,11 +95,27 @@ fun WeightTab(vm: AppViewModel, data: AppData, today: LocalDate, padding: Paddin
                         Spacer(Modifier.height(4.dp))
                         Text("To goal (${fmtKg(g)} kg): ${fmtSigned(g - latest.kg, " kg")}", style = MaterialTheme.typography.bodyMedium)
                     }
-                    if (recent.size >= 2) {
+                    val ma = remember(entries) { WeightTrend.movingAverage(entries) }
+                    val perWeek = WeightTrend.slopePerWeek(ma, today)
+                    if (perWeek != null) {
+                        val current = ma.last().avg
+                        val eta = goal?.let { WeightTrend.eta(current, it, perWeek, today) }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "Trend ${fmtSigned(perWeek, " kg")} per week" +
+                                (eta?.let { " · goal around ${dateShort(it)}" + if (it.year != today.year) " ${it.year}" else "" } ?: ""),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (goal == null) StrideColors.Text else if (eta != null) StrideColors.Good else StrideColors.Warn,
+                        )
+                    }
+                    val recentMa = ma.filter { !it.date.isBefore(today.minusDays(90)) }
+                    if (recentMa.size >= 2) {
                         Spacer(Modifier.height(14.dp))
+                        Text("7-day average", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(4.dp))
                         LineChart(
-                            recent.map { it.kg },
-                            recent.map { dateNum(LocalDate.parse(it.date)) },
+                            recentMa.map { it.avg },
+                            recentMa.map { dateNum(it.date) },
                             MaterialTheme.colorScheme.primary,
                             { fmtKg(it) },
                             refLine = goal,

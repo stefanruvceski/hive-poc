@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.stride.domain.Deload
 import app.stride.domain.dateNum
 import app.stride.domain.dowShort
 import app.stride.domain.shiftPlan
@@ -59,6 +60,8 @@ fun PlanReviewScreen(vm: AppViewModel, data: AppData, monday: LocalDate, onBack:
     val start = remember(monday) { (data.weekPlans[monday.toString()] ?: data.weekPlan(monday.minusWeeks(1))).sortedBy { it.dow } }
     val plan = remember(monday) { mutableStateListOf(*start.toTypedArray()) }
     var keep by remember { mutableStateOf(true) }
+    val deloadReason = remember(monday) { Deload.suggest(data, monday) }
+    var deload by remember(monday) { mutableStateOf(monday.toString() in data.deloadWeeks) }
     val approved = data.weekPlans.containsKey(monday.toString())
 
     fun shift(days: Int) {
@@ -145,6 +148,22 @@ fun PlanReviewScreen(vm: AppViewModel, data: AppData, monday: LocalDate, onBack:
                 FCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
+                            Text("Deload week", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                deloadReason?.let { "Suggested: $it" } ?: "Same exercises with bells at about 70%, no sets to failure.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (deloadReason != null) StrideColors.Manual else StrideColors.Dim,
+                            )
+                        }
+                        Switch(checked = deload, onCheckedChange = { deload = it })
+                    }
+                }
+            }
+
+            item {
+                FCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
                             Text("Keep for the following weeks", style = MaterialTheme.typography.titleSmall)
                             Text(
                                 if (keep) "Becomes the default plan from this week on." else "Only this week; later weeks use the default plan.",
@@ -161,6 +180,7 @@ fun PlanReviewScreen(vm: AppViewModel, data: AppData, monday: LocalDate, onBack:
                 Button(
                     onClick = {
                         vm.approveWeek(monday, plan.toList(), keep)
+                        vm.setDeload(monday, deload)
                         onBack()
                     },
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(52.dp),

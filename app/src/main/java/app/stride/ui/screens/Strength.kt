@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalView
 import app.stride.domain.Progression
 import app.stride.domain.fmtDur
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,6 +116,7 @@ fun StrengthTab(
     padding: PaddingValues,
     onNew: () -> Unit,
     onOpen: (StrengthSession) -> Unit,
+    onExercise: (String) -> Unit,
 ) {
     val sessions = remember(data.strength) { data.strength.sortedByDescending { it.date } }
     val prog = remember(data.strength, today) { progress(data, today) }
@@ -125,12 +127,12 @@ fun StrengthTab(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (prog.isNotEmpty()) {
-                item { SectionLabel("Progress, 8 weeks", Modifier.padding(start = 4.dp)) }
+                item { SectionLabel("Progress, 8 weeks · tap for history", Modifier.padding(start = 4.dp)) }
                 item {
                     FCard {
                         prog.forEachIndexed { i, p ->
                             if (i > 0) Spacer(Modifier.height(8.dp))
-                            Row(Modifier.fillMaxWidth()) {
+                            Row(Modifier.fillMaxWidth().clickable { onExercise(p.name) }.padding(vertical = 4.dp)) {
                                 Text(p.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                                 Text("${fmtKg(p.to)} kg", style = MaterialTheme.typography.bodyLarge)
                                 val d = p.to - p.from

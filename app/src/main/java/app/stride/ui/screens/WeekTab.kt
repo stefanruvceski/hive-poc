@@ -55,6 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.domain.Analyzer
 import app.stride.domain.Recovery
+import app.stride.domain.dayLong
+import app.stride.domain.restDayToSwap
+import app.stride.domain.weekPlan
+import app.stride.domain.weeklyTargets
 import app.stride.domain.DayResult
 import app.stride.domain.DayStatus
 import app.stride.domain.WeekResult
@@ -86,6 +90,7 @@ fun WeekTab(
     onSettings: () -> Unit,
     onReviewPlan: (LocalDate) -> Unit,
     onWorkout: (LocalDate, String?) -> Unit,
+    onSwap: (LocalDate, Int) -> Unit,
     padding: PaddingValues,
 ) {
     val nextMonday = mondayOf(today).plusWeeks(1)
@@ -129,6 +134,18 @@ fun WeekTab(
             }
         }
         if (weekOffset == 0) {
+            val todayResult = week.days.firstOrNull { it.date == today }
+            val recovery = Recovery.summary(data.wellness, today)
+            val restDow = restDayToSwap(data.weekPlan(today), today)
+            if (recovery != null && recovery.readiness == Recovery.Readiness.LOW && restDow != null && todayResult?.status != DayStatus.DONE) {
+                item {
+                    SwapCard(
+                        recovery.reason,
+                        todayResult?.plan?.title ?: "today's workout",
+                        dayLong(today.plusDays((restDow - today.dayOfWeek.value).toLong())),
+                    ) { onSwap(today, restDow) }
+                }
+            }
             val todayPlan = data.planFor(today)
             val todaySession = data.strength.lastOrNull { it.date == today.toString() }
             if (todayPlan != null && todayPlan.kind.isStrength && todaySession?.finished != true) {
@@ -136,6 +153,7 @@ fun WeekTab(
             }
         }
         item { SummaryCard(week, today, onDay) }
+        item { TargetsCard(remember(data, monday, today) { weeklyTargets(data, monday, today) }) }
         if (weekOffset == 0) {
             Recovery.summary(data.wellness, today)?.let { r ->
                 item { SectionLabel("Recovery", Modifier.padding(top = 8.dp, start = 4.dp)) }

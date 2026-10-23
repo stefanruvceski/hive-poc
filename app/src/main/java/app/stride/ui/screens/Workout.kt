@@ -88,7 +88,11 @@ import androidx.compose.ui.unit.sp
 import app.stride.data.ExerciseLibrary
 import app.stride.data.ExerciseMatcher
 import app.stride.data.LibraryExercise
+import app.stride.domain.Deload
 import app.stride.domain.Progression
+import app.stride.domain.Records
+import app.stride.domain.Warmups
+import app.stride.domain.mondayOf
 import app.stride.domain.dateShort
 import app.stride.domain.dayLong
 import app.stride.domain.fmtDur
@@ -122,11 +126,16 @@ private fun lastWeight(data: AppData, name: String): Double? =
  */
 private fun newSession(data: AppData, date: LocalDate, kind: DayKind): StrengthSession {
     val last = data.strength.filter { it.kind == kind && it.logged && it.date < date.toString() }.maxByOrNull { it.date }
-    val exercises = last?.exercises?.map { e -> e.withSets(e.expandedSets().map { it.copy(done = false) }).copy(done = false) }
+    val deload = isDeload(data, date)
+    val base = last?.exercises?.map { e -> e.copy(done = false) to e.workingSets.map { it.copy(done = false) } }
         ?: DefaultPlan.presets(kind).map { p ->
             val kg = lastWeight(data, p.name) ?: 16.0
-            ExerciseEntry(p.name, p.group, dbId = p.dbId, done = false).withSets(List(2) { SetEntry(kg, 8) })
+            ExerciseEntry(p.name, p.group, dbId = p.dbId, done = false) to List(2) { SetEntry(kg, 8) }
         }
+    val exercises = base.map { (e, work) ->
+        val sets = if (deload) work.map { it.copy(kg = Deload.lighter(it.kg)) } else work
+        e.withSets(if (data.settings.warmups) Warmups.apply(sets) else sets)
+    }
     val plan = data.planFor(date)
     return StrengthSession(
         id = UUID.randomUUID().toString(),
@@ -139,6 +148,8 @@ private fun newSession(data: AppData, date: LocalDate, kind: DayKind): StrengthS
     )
 }
 
+internal fun isDeload(data: AppData, date: LocalDate) = mondayOf(date).toString() in data.deloadWeeks
+
 // ------------------------------------------------------------------ screen
 
 /**
@@ -148,7 +159,7 @@ private fun newSession(data: AppData, date: LocalDate, kind: DayKind): StrengthS
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: String?, onBack: () -> Unit) {
+fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: String?, onBack: () -> Unit, onHistory: (String) -> Unit) {
     val context = LocalContext.current
     val library by produceState(emptyList<LibraryExercise>()) { value = ExerciseLibrary.load(context) }
     val planKind = data.planFor(date)?.kind?.takeIf { it.isStrength }
@@ -171,6 +182,10 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
 
     fun libFor(e: ExerciseEntry): LibraryExercise? =
         e.dbId?.let { id -> library.firstOrNull { it.id == id } } ?: ExerciseMatcher.best(library, e.name)
+
+    /** A record this exercise sets against all earlier sessions, if any. */
+    fun recordFor(e: ExerciseEntry): Records.Record? =
+        if (!e.done) null else Records.record(e, Records.history(data.strength.filter { it.id != session.id && it.date < session.date }, e.name))
 
     fun updateExercise(i: Int, f: (ExerciseEntry) -> ExerciseEntry) {
         commit(session.copy(exercises = session.exercises.mapIndexed { j, e -> if (j == i) f(e) else e }))
@@ -225,8 +240,11 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
                 onChange = { f -> updateExercise(i, f) },
                 onSetDone = { timer.start() },
                 onPickPicture = { pickingPicture = true },
+                onHistory = { onHistory(current.name) },
                 onDone = {
-                    updateExercise(i) { e -> e.withSets(e.expandedSets().map { it.copy(done = true) }).copy(done = true) }
+                    val finished = current.withSets(current.expandedSets().map { it.copy(done = true) }).copy(done = true)
+                    updateExercise(i) { finished }
+                    recordFor(finished)?.let { vm.toast("🏆 New record: ${Records.describe(finished.name, it)}") }
                     open = next?.index // null = all done, back to the list
                 },
             )
@@ -236,6 +254,8 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
                 isStored = stored != null,
                 padding = padding,
                 libFor = ::libFor,
+                recordFor = ::recordFor,
+                deload = isDeload(data, date),
                 onOpen = { open = it },
                 onKind = { k ->
                     if (stored == null) {
@@ -296,6 +316,8 @@ private fun WorkoutList(
     isStored: Boolean,
     padding: PaddingValues,
     libFor: (ExerciseEntry) -> LibraryExercise?,
+    recordFor: (ExerciseEntry) -> Records.Record?,
+    deload: Boolean,
     onOpen: (Int) -> Unit,
     onKind: (DayKind) -> Unit,
     onAdd: () -> Unit,
@@ -330,13 +352,21 @@ private fun WorkoutList(
                         }
                     }
                 }
+                if (deload) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Deload week: bells at about 70% of usual. Same exercises, easier sets, no failure.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StrideColors.Manual,
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(DefaultPlan.STRENGTH_RULES, style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
             }
         }
 
         itemsIndexed(session.exercises) { i, e ->
-            ExerciseRow(e, libFor(e)) { onOpen(i) }
+            ExerciseRow(e, libFor(e), recordFor(e) != null) { onOpen(i) }
         }
 
         item {
@@ -379,8 +409,8 @@ private fun WorkoutList(
 }
 
 @Composable
-private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, onClick: () -> Unit) {
-    val sets = e.expandedSets()
+private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, record: Boolean, onClick: () -> Unit) {
+    val sets = e.workingSets.ifEmpty { e.expandedSets() }
     val kgs = sets.map { it.kg }.distinct()
     val summary = "${sets.size} × ${sets.map { it.reps }.distinct().joinToString("/")}" +
         if (kgs.any { it > 0 }) " · ${kgs.joinToString("/") { fmtKg(it) }} kg" else ""
@@ -396,7 +426,12 @@ private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, onClick: () -> 
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 if (e.group.isNotEmpty()) Text(e.group.uppercase(), style = MaterialTheme.typography.labelSmall, color = StrideColors.Accent)
-                Text(e.name, style = MaterialTheme.typography.titleMedium, color = StrideColors.Text, maxLines = 2)
+                Text(
+                    e.name + if (record) "  🏆" else "",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = StrideColors.Text,
+                    maxLines = 2,
+                )
                 Text(summary, style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
             }
             Icon(
@@ -417,6 +452,7 @@ private fun ExerciseDetail(
     last: ExerciseEntry?,
     padding: PaddingValues,
     nextName: String?,
+    onHistory: () -> Unit,
     onChange: ((ExerciseEntry) -> ExerciseEntry) -> Unit,
     onSetDone: () -> Unit,
     onPickPicture: () -> Unit,
@@ -441,6 +477,7 @@ private fun ExerciseDetail(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     lib?.let { Text("Picture: ${it.name}", style = MaterialTheme.typography.bodySmall, color = StrideColors.Faint, modifier = Modifier.weight(1f)) }
                         ?: Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onHistory) { Text("History") }
                     TextButton(onClick = onPickPicture) {
                         Icon(Icons.Filled.ImageSearch, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
@@ -464,7 +501,7 @@ private fun ExerciseDetail(
             }
         }
         Progression.hint(last)?.let { h ->
-            item { ProgressionHint(h) { kg -> setSets(sets.map { it.copy(kg = kg) }) } }
+            item { ProgressionHint(h) { kg -> setSets(Warmups.apply(sets.filter { !it.warmup }.map { it.copy(kg = kg) }).let { if (sets.any { it.warmup }) it else it.filter { s -> !s.warmup } }) } }
         }
         item {
             FCard {
@@ -475,9 +512,15 @@ private fun ExerciseDetail(
                     Text("REPS", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(56.dp))
                 }
+                val warmCount = sets.count { it.warmup }
                 sets.forEachIndexed { n, set ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${n + 1}", style = MaterialTheme.typography.titleMedium, color = if (set.done) StrideColors.Accent else StrideColors.Text, modifier = Modifier.width(36.dp))
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).alpha(if (set.warmup && !set.done) 0.75f else 1f), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            if (set.warmup) "W" else "${n - warmCount + 1}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (set.done) StrideColors.Accent else if (set.warmup) StrideColors.Amber else StrideColors.Text,
+                            modifier = Modifier.width(36.dp),
+                        )
                         NumCell("kg", set.kg, decimal = true, modifier = Modifier.weight(1f)) { v -> setSets(sets.mapIndexed { k, s -> if (k == n) s.copy(kg = v) else s }) }
                         Spacer(Modifier.width(8.dp))
                         NumCell("reps", set.reps.toDouble(), decimal = false, modifier = Modifier.weight(1f)) { v -> setSets(sets.mapIndexed { k, s -> if (k == n) s.copy(reps = v.toInt()) else s }) }
@@ -496,12 +539,12 @@ private fun ExerciseDetail(
                     }
                 }
                 Row {
-                    TextButton(onClick = { setSets(sets + (sets.lastOrNull()?.copy(done = false) ?: SetEntry(16.0, 8))) }) {
+                    TextButton(onClick = { setSets(sets + (sets.lastOrNull { !it.warmup }?.copy(done = false) ?: SetEntry(16.0, 8))) }) {
                         Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Add set")
                     }
-                    if (sets.size > 1) {
+                    if (sets.count { !it.warmup } > 1) {
                         TextButton(onClick = { setSets(sets.dropLast(1)) }) {
                             Icon(Icons.Filled.Remove, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))

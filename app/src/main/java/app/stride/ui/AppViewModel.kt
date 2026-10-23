@@ -7,7 +7,10 @@ import app.stride.data.IntervalsApi
 import app.stride.data.Store
 import app.stride.data.toUserMessage
 import app.stride.domain.dateShort
+import app.stride.domain.dayLong
 import app.stride.domain.mondayOf
+import app.stride.domain.swapDays
+import app.stride.domain.weekPlan
 import app.stride.widget.Widgets
 import app.stride.model.AppData
 import app.stride.model.Interval
@@ -184,6 +187,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             base.copy(weekPlans = base.weekPlans + (monday.toString() to plan))
         }
         toast("Plan for the week of ${dateShort(monday)} approved")
+    }
+
+    /** Swaps today's planned workout with a rest day later this week (this week only). */
+    fun swapToday(today: LocalDate, restDow: Int) {
+        val monday = mondayOf(today)
+        update { d -> d.copy(weekPlans = d.weekPlans + (monday.toString() to swapDays(d.weekPlan(today), today.dayOfWeek.value, restDow))) }
+        toast("Swapped. Today is a rest day; the workout moved to ${dayLong(today.plusDays((restDow - today.dayOfWeek.value).toLong()))}")
+    }
+
+    fun setDeload(monday: LocalDate, on: Boolean) {
+        val key = monday.toString()
+        update { d -> d.copy(deloadWeeks = if (on) (d.deloadWeeks + key).distinct() else d.deloadWeeks - key) }
     }
 
     fun setManualDone(date: LocalDate, done: Boolean) {

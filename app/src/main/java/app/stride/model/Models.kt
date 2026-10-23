@@ -59,6 +59,10 @@ data class Targets(
     val runHrHigh: Int = 155,
     val runHrCeiling: Int = 170,
     val weightGoalKg: Double? = null,
+    /** Weekly Zone 2 minutes (heart-rate zone 2 across all workouts). */
+    val zone2Minutes: Int = 150,
+    /** Weekly sauna minutes (Huberman's ~57 min/week). */
+    val saunaMinutes: Int = 57,
 )
 
 object DefaultPlan {
@@ -125,6 +129,12 @@ data class Settings(
     val targets: Targets = Targets(),
     /** Sunday-evening notification to review next week's plan. */
     val planReminder: Boolean = true,
+    /** 06:00 notification with today's plan and recovery. */
+    val morningReminder: Boolean = true,
+    /** 19:00 reminder when a planned workout isn't done yet. */
+    val eveningReminder: Boolean = true,
+    /** Add warm-up sets (~40% and ~70%) before working sets in workout mode. */
+    val warmups: Boolean = true,
 )
 
 /** Activity from intervals.icu (GET /api/v1/athlete/{id}/activities). */
@@ -234,16 +244,20 @@ data class ExerciseEntry(
     val dbId: String? = null,
 ) {
     val volume: Double
-        get() = if (setList.isNotEmpty()) setList.sumOf { it.kg * it.reps } else weightKg * sets * reps
+        get() = if (setList.isNotEmpty()) setList.filter { !it.warmup }.sumOf { it.kg * it.reps } else weightKg * sets * reps
+
+    /** Working sets only (no warm-ups). */
+    val workingSets: List<SetEntry> get() = expandedSets().filter { !it.warmup }
 
     /** The per-set list, created from the summary for older entries. */
     fun expandedSets(): List<SetEntry> = setList.ifEmpty { List(sets.coerceAtLeast(1)) { SetEntry(weightKg, reps, done) } }
 
     /** Replaces the sets and recomputes the summary used by progression and history. */
     fun withSets(list: List<SetEntry>): ExerciseEntry {
-        val top = list.maxOfOrNull { it.kg } ?: 0.0
-        val repsAtTop = list.filter { it.kg == top && it.reps > 0 }.minOfOrNull { it.reps } ?: 0
-        return copy(setList = list, weightKg = top, sets = list.size, reps = repsAtTop)
+        val work = list.filter { !it.warmup }
+        val top = work.maxOfOrNull { it.kg } ?: 0.0
+        val repsAtTop = work.filter { it.kg == top && it.reps > 0 }.minOfOrNull { it.reps } ?: 0
+        return copy(setList = list, weightKg = top, sets = work.size, reps = repsAtTop)
     }
 }
 
@@ -252,6 +266,8 @@ data class SetEntry(
     val kg: Double = 0.0,
     val reps: Int = 0,
     val done: Boolean = false,
+    /** Warm-up set: not counted in volume, records or progression. */
+    val warmup: Boolean = false,
 )
 
 @Serializable
@@ -295,4 +311,6 @@ data class AppData(
     val weekPlans: Map<String, List<PlanDay>> = emptyMap(),
     /** Daily sleep / HRV / resting HR from intervals.icu wellness (Garmin), newest last. */
     val wellness: List<Wellness> = emptyList(),
+    /** Mondays (ISO) of weeks marked as deload weeks: workouts use ~70% of the usual bells. */
+    val deloadWeeks: List<String> = emptyList(),
 )

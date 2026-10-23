@@ -29,6 +29,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Workout mode (`ui/screens/Workout.kt`): exercises with per-set kg/reps/done (`SetEntry`), pictures and steps from
   Free Exercise DB (public domain; index in `assets/exercises.json`, photos from raw.githubusercontent via Coil).
   Presets carry exact `dbId`s; custom names are matched by `data/ExerciseMatcher.kt`. Sessions save on every change.
+- `domain/Training.kt`: records (history per exercise), warm-ups (~40%/70% bells, `SetEntry.warmup`, excluded
+  from volume/records/progression), deload (suggested after 5 steady weeks or an HRV drop; `AppData.deloadWeeks`,
+  ~70% bells), weekly targets (Zone 2 = HR zone 2 minutes, sauna minutes, plan), weight trend/ETA, day swaps.
+- Reminders (`reminder/PlanReminder.kt`, WorkManager every 15 min): Sunday 18:00 plan review, 06:00 today + recovery,
+  19:00 if a planned workout isn't done; each once per day/week.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
