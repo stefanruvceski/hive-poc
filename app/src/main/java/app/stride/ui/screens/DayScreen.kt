@@ -26,6 +26,7 @@ import app.stride.ui.GlassCard
 import app.stride.ui.glowBackground
 import app.stride.ui.levelColor
 import app.stride.ui.theme.StrideColors
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -244,7 +245,7 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
             Text("No exercises logged yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (canAdd) {
                 Spacer(Modifier.height(10.dp))
-                FilledTonalButton(onClick = onEdit) { Text("Log strength workout") }
+                Button(onClick = onEdit) { Text("Start workout") }
             }
         } else {
             s.exercises.forEach { e ->
@@ -270,7 +271,8 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
                 Text(s.note, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(10.dp))
-            FilledTonalButton(onClick = onEdit) { Text("Edit") }
+            if (s.finished) FilledTonalButton(onClick = onEdit) { Text("Open workout") }
+            else Button(onClick = onEdit) { Text("Continue workout · ${s.exercises.count { it.done }}/${s.exercises.size}") }
         }
     }
 }

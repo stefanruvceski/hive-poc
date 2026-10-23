@@ -1,0 +1,2 @@
+exercises.json is derived from Free Exercise DB (https://github.com/yuhonas/free-exercise-db),
+released into the public domain under the Unlicense. Exercise pictures are loaded from the same project.

@@ -74,30 +74,30 @@ object DefaultPlan {
 
     fun presets(kind: DayKind): List<Preset> = when (kind) {
         DayKind.STRENGTH_LEGS -> listOf(
-            Preset("Goblet or front squat", "Quads"),
-            Preset("Bulgarian split squat", "Quads"),
-            Preset("Single-leg Romanian deadlift", "Hamstrings"),
-            Preset("Kettlebell swing", "Hamstrings"),
-            Preset("Single-leg calf raise (step, KB in hand)", "Calves"),
+            Preset("Goblet or front squat", "Quads", "Goblet_Squat"),
+            Preset("Bulgarian split squat", "Quads", "Split_Squat_with_Dumbbells"),
+            Preset("Single-leg Romanian deadlift", "Hamstrings", "Kettlebell_One-Legged_Deadlift"),
+            Preset("Kettlebell swing", "Hamstrings", "One-Arm_Kettlebell_Swings"),
+            Preset("Single-leg calf raise (step, KB in hand)", "Calves", "Calf_Raise_On_A_Dumbbell"),
         )
         DayKind.STRENGTH_UPPER -> listOf(
-            Preset("Kettlebell floor press", "Chest"),
-            Preset("Push-ups on kettlebells", "Chest"),
-            Preset("Kettlebell floor fly", "Chest"),
-            Preset("Single-arm row", "Back"),
-            Preset("Kettlebell pullover", "Back"),
-            Preset("Turkish get-up", "Core"),
-            Preset("Windmill or suitcase carry", "Core"),
+            Preset("Kettlebell floor press", "Chest", "One-Arm_Kettlebell_Floor_Press"),
+            Preset("Push-ups on kettlebells", "Chest", "Pushups"),
+            Preset("Kettlebell floor fly", "Chest", "Dumbbell_Flyes"),
+            Preset("Single-arm row", "Back", "One-Arm_Kettlebell_Row"),
+            Preset("Kettlebell pullover", "Back", "Bent-Arm_Dumbbell_Pullover"),
+            Preset("Turkish get-up", "Core", "Kettlebell_Turkish_Get-Up_Squat_style"),
+            Preset("Windmill or suitcase carry", "Core", "Kettlebell_Windmill"),
         )
         DayKind.STRENGTH_SHOULDERS_CORE -> listOf(
-            Preset("Single-arm overhead press", "Shoulders"),
-            Preset("Lateral raise", "Shoulders"),
-            Preset("Bent-over rear delt raise", "Shoulders"),
-            Preset("Kettlebell curl", "Biceps"),
-            Preset("Hammer curl (KB by the horns)", "Biceps"),
-            Preset("Close-grip floor press", "Triceps"),
-            Preset("Overhead triceps extension", "Triceps"),
-            Preset("Windmill or Turkish get-up", "Core"),
+            Preset("Single-arm overhead press", "Shoulders", "Dumbbell_One-Arm_Shoulder_Press"),
+            Preset("Lateral raise", "Shoulders", "Side_Lateral_Raise"),
+            Preset("Bent-over rear delt raise", "Shoulders", "Seated_Bent-Over_Rear_Delt_Raise"),
+            Preset("Kettlebell curl", "Biceps", "Dumbbell_Bicep_Curl"),
+            Preset("Hammer curl (KB by the horns)", "Biceps", "Hammer_Curls"),
+            Preset("Close-grip floor press", "Triceps", "Close-Grip_Dumbbell_Press"),
+            Preset("Overhead triceps extension", "Triceps", "Standing_Dumbbell_Triceps_Extension"),
+            Preset("Windmill or Turkish get-up", "Core", "Kettlebell_Windmill"),
         )
         else -> emptyList()
     }
@@ -115,7 +115,7 @@ object DefaultPlan {
     }
 }
 
-data class Preset(val name: String, val group: String)
+data class Preset(val name: String, val group: String, val dbId: String? = null)
 
 @Serializable
 data class Settings(
@@ -222,9 +222,36 @@ data class ExerciseEntry(
     val name: String,
     /** Muscle group from the program (Quads, Chest, ...), empty for custom exercises. */
     val group: String = "",
+    /** Summary of the working sets (top weight, set count, reps at the top weight). Kept in sync with [setList]. */
     val weightKg: Double = 0.0,
     val sets: Int = 3,
     val reps: Int = 10,
+    /** Individual sets; empty for sessions logged before per-set tracking. */
+    val setList: List<SetEntry> = emptyList(),
+    /** Ticked off in workout mode. Older entries count as done. */
+    val done: Boolean = true,
+    /** Exercise library id for the picture and steps (free-exercise-db), null = match by name. */
+    val dbId: String? = null,
+) {
+    val volume: Double
+        get() = if (setList.isNotEmpty()) setList.sumOf { it.kg * it.reps } else weightKg * sets * reps
+
+    /** The per-set list, created from the summary for older entries. */
+    fun expandedSets(): List<SetEntry> = setList.ifEmpty { List(sets.coerceAtLeast(1)) { SetEntry(weightKg, reps, done) } }
+
+    /** Replaces the sets and recomputes the summary used by progression and history. */
+    fun withSets(list: List<SetEntry>): ExerciseEntry {
+        val top = list.maxOfOrNull { it.kg } ?: 0.0
+        val repsAtTop = list.filter { it.kg == top && it.reps > 0 }.minOfOrNull { it.reps } ?: 0
+        return copy(setList = list, weightKg = top, sets = list.size, reps = repsAtTop)
+    }
+}
+
+@Serializable
+data class SetEntry(
+    val kg: Double = 0.0,
+    val reps: Int = 0,
+    val done: Boolean = false,
 )
 
 @Serializable
@@ -236,8 +263,13 @@ data class StrengthSession(
     val sauna: Boolean = false,
     val saunaMinutes: Int = 0,
     val note: String = "",
+    /** False while a workout is in progress in workout mode. */
+    val finished: Boolean = true,
 ) {
-    val volume: Double get() = exercises.sumOf { it.weightKg * it.sets * it.reps }
+    val volume: Double get() = exercises.sumOf { it.volume }
+
+    /** Counts for the day once finished or once any exercise is ticked off. */
+    val logged: Boolean get() = finished || exercises.any { it.done }
 }
 
 const val SRC_MANUAL = "manual"

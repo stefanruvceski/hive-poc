@@ -26,6 +26,9 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - `AppData.manualDone`: days checked off by hand (no watch data); shown in `StrideColors.Manual` (blue).
 - Home-screen widgets (Glance, `widget/Widgets.kt`): Today and Weight, refreshed after every data change.
 - Strength: `domain/Progression.kt` suggests the next bell after 10+ reps (program: failure at 6-10); rest timer in the editor.
+- Workout mode (`ui/screens/Workout.kt`): exercises with per-set kg/reps/done (`SetEntry`), pictures and steps from
+  Free Exercise DB (public domain; index in `assets/exercises.json`, photos from raw.githubusercontent via Coil).
+  Presets carry exact `dbId`s; custom names are matched by `data/ExerciseMatcher.kt`. Sessions save on every change.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
