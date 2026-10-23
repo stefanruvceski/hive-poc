@@ -10,6 +10,8 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
@@ -72,6 +74,25 @@ class IntervalsApi(apiKey: String, athleteId: String) {
     suspend fun intervals(activityId: String): List<Interval> = withContext(Dispatchers.IO) {
         val text = request("$BASE/activity/$activityId/intervals")
         StrideJson.decodeFromString(IntervalsResponse.serializer(), text).intervals
+    }
+
+    /**
+     * GPS track as (lat, lng) pairs, thinned to at most [maxPoints], or null without GPS.
+     * intervals.icu returns the latlng stream with latitude in `data` and longitude in `data2`.
+     */
+    suspend fun route(activityId: String, maxPoints: Int = 800): List<Pair<Double, Double>>? = withContext(Dispatchers.IO) {
+        val text = runCatching { request("$BASE/activity/$activityId/streams?types=latlng") }
+            .recoverCatching { request("$BASE/activity/$activityId/streams.json?types=latlng") }
+            .getOrNull() ?: return@withContext null
+        val streams = runCatching { StrideJson.parseToJsonElement(text) as? JsonArray }.getOrNull() ?: return@withContext null
+        val ll = streams.firstOrNull { (it as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "latlng" } as? JsonObject
+            ?: return@withContext null
+        val lat = (ll["data"] as? JsonArray)?.map { it.jsonPrimitive.doubleOrNull } ?: return@withContext null
+        val lng = (ll["data2"] as? JsonArray)?.map { it.jsonPrimitive.doubleOrNull } ?: return@withContext null
+        val points = lat.zip(lng).mapNotNull { (a, b) -> if (a != null && b != null && (a != 0.0 || b != 0.0)) a to b else null }
+        if (points.size < 2) return@withContext null
+        val step = (points.size + maxPoints - 1) / maxPoints
+        points.filterIndexed { i, _ -> i % step == 0 || i == points.lastIndex }
     }
 
     suspend fun putWeight(date: LocalDate, kg: Double) = withContext(Dispatchers.IO) {

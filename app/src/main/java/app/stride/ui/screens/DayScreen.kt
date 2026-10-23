@@ -1,6 +1,22 @@
 package app.stride.ui.screens
 
 import androidx.compose.foundation.background
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import app.stride.domain.DayResult
+import app.stride.share.ShareContent
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,6 +109,7 @@ fun DayScreen(
         else -> StrideColors.Accent
     }
 
+    var sharing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 8 } }
     // Transparent over the glow at the top; solid once content scrolls under the title.
@@ -105,6 +122,9 @@ fun DayScreen(
             TopAppBar(
                 title = { Text("${dayLong(date)}, ${dateShort(date)}") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                actions = {
+                    if (ShareContent.canShare(result)) IconButton(onClick = { sharing = true }) { Icon(Icons.Filled.Share, "Share") }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = barColor, scrolledContainerColor = barColor),
             )
         },
@@ -183,6 +203,39 @@ fun DayScreen(
             }
         }
     }
+    if (sharing) ShareDialog(vm, data, result, intervals) { sharing = false }
+}
+
+/** Preview of the share image with a Share button (opens Android's share sheet). */
+@Composable
+private fun ShareDialog(vm: AppViewModel, data: AppData, result: DayResult, intervals: Map<String, List<Interval>>, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val bitmap by produceState<Bitmap?>(null, result) {
+        value = runCatching { ShareContent.render(context, data, result, intervals) { vm.route(it) } }.getOrNull()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = StrideColors.Elev,
+        title = { Text("Share workout") },
+        text = {
+            Box(Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(16.dp)).background(StrideColors.Bg), contentAlignment = Alignment.Center) {
+                val b = bitmap
+                if (b == null) CircularProgressIndicator() else Image(b.asImageBitmap(), "Share image preview", Modifier.fillMaxSize())
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val b = bitmap ?: return@Button
+                scope.launch { runCatching { ShareContent.share(context, b, result.date) } }
+            }, enabled = bitmap != null) {
+                Icon(Icons.Filled.Share, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Share")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }
 
 /** Lets the user check a day off when the watch wasn't on (shown in blue, not watch-verified green). */
