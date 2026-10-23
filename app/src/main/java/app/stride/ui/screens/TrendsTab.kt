@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.stride.domain.Analyzer
+import app.stride.domain.Recovery
 import app.stride.domain.dateNum
 import app.stride.domain.fmtDur
 import app.stride.domain.fmtKg
@@ -67,6 +68,23 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues) {
         item {
             ChartCard("Total time", "watch workout minutes per week") {
                 BarChart(points.map { it.minutes }, labels, accent, { "${it.roundToInt()}" })
+            }
+        }
+        if (data.wellness.isNotEmpty()) {
+            item {
+                ChartCard("HRV", "weekly average, ms, higher is better") {
+                    LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.hrv } }, labels, MetricColors.Fitness, { "${it.roundToInt()}" })
+                }
+            }
+            item {
+                ChartCard("Sleep", "weekly average per night, hours") {
+                    BarChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.sleepSecs }?.div(3600) }, labels, StrideColors.Manual, { String.format(java.util.Locale.US, "%.1f", it) }, maxValue = 9.0)
+                }
+            }
+            item {
+                ChartCard("Resting heart rate", "weekly average, bpm, lower is better") {
+                    LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.restingHR } }, labels, MetricColors.Heart, { "${it.roundToInt()}" })
+                }
             }
         }
         item {

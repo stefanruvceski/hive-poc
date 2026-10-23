@@ -7,7 +7,6 @@ import app.stride.model.Wellness
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -63,7 +62,11 @@ class IntervalsApi(apiKey: String, athleteId: String) {
 
     suspend fun wellness(oldest: LocalDate, newest: LocalDate): List<Wellness> = withContext(Dispatchers.IO) {
         val text = request("$BASE/athlete/$athlete/wellness?oldest=$oldest&newest=$newest")
-        StrideJson.decodeFromString(ListSerializer(Wellness.serializer()), text)
+        StrideJson.decodeFromString(JsonArray.serializer(), text).mapNotNull { e ->
+            val obj = e as? JsonObject ?: return@mapNotNull null
+            runCatching { StrideJson.decodeFromJsonElement(Wellness.serializer(), obj) }.getOrNull()
+                ?: runCatching { StrideJson.decodeFromJsonElement(Wellness.serializer(), JsonObject(obj.filterKeys { it in WELLNESS_CORE })) }.getOrNull()
+        }
     }
 
     suspend fun intervals(activityId: String): List<Interval> = withContext(Dispatchers.IO) {
@@ -79,6 +82,7 @@ class IntervalsApi(apiKey: String, athleteId: String) {
 
     companion object {
         private const val BASE = "https://intervals.icu/api/v1"
+        private val WELLNESS_CORE = setOf("id", "weight", "restingHR", "hrv", "sleepSecs")
         private val CORE_KEYS = setOf(
             "id", "start_date_local", "type", "name", "moving_time", "elapsed_time", "distance",
             "average_heartrate", "max_heartrate", "icu_hr_zone_times", "icu_hr_zones", "icu_training_load", "source", "_note",

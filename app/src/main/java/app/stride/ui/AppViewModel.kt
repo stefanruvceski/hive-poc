@@ -98,7 +98,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         val existing = byDate[w.id]
                         if (existing == null || existing.source != SRC_MANUAL) byDate[w.id] = WeightEntry(w.id, kg, SRC_GARMIN)
                     }
+                    val recoverySince = today.minusDays(120).toString()
+                    val recovery = (d.wellness + well.filter { it.hasRecovery }) // fresh values win; a failed fetch keeps the old ones
+                        .associateBy { it.id }.values
+                        .filter { it.id >= recoverySince }
+                        .sortedBy { it.id }
                     d.copy(
+                        wellness = recovery,
                         activities = (kept + acts).distinctBy { it.id },
                         weights = byDate.values.sortedBy { it.date },
                         lastSync = LocalDateTime.now().toString(),

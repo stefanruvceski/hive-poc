@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.stride.domain.Analyzer
+import app.stride.domain.Recovery
 import app.stride.domain.dateShort
 import app.stride.domain.dayLong
 import app.stride.domain.fmtDur
@@ -120,6 +121,8 @@ fun DayScreen(
             primary?.let { a -> item(key = "key-" + a.id) { KeyStats(a) } }
 
             result.verdict?.let { v -> item { VerdictCard(v) } }
+
+            Recovery.summary(data.wellness, date)?.let { r -> item { RecoveryCard(r, "Recovery · night before", full = true) } }
 
             if (canCheck && plan != null) {
                 val kind = plan.kind

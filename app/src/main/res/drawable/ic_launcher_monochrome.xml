@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Themed-icon version: rings only, single color (alpha is what counts). -->
+<!-- Themed-icon version: kettlebell outline with heartbeat, single color. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M54,26 a28,28 0 1,1 0,56 a28,28 0 1,1 0,-56" android:strokeWidth="7.6" android:strokeColor="#40FFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M54.00,26.00 A28,28 0 1,1 27.37,45.35" android:strokeWidth="7.6" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M54,35.5 a18.5,18.5 0 1,1 0,37.0 a18.5,18.5 0 1,1 0,-37.0" android:strokeWidth="7.6" android:strokeColor="#40FFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M54.00,35.50 A18.5,18.5 0 1,1 38.38,63.91" android:strokeWidth="7.6" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M54,45 a9,9 0 1,1 0,18 a9,9 0 1,1 0,-18" android:strokeWidth="7.6" android:strokeColor="#40FFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M54.00,45.00 A9,9 0 1,1 47.84,47.44" android:strokeWidth="7.6" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M40.5,52 C36.5,41 38.5,30.5 54,30.5 C69.5,30.5 71.5,41 67.5,52" android:strokeWidth="5" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M54,45 C38.5,45 31,55.5 31,64.5 C31,71.5 34.5,76.5 39.5,78.5 L68.5,78.5 C73.5,76.5 77,71.5 77,64.5 C77,55.5 69.5,45 54,45 Z" android:strokeWidth="5" android:strokeLineJoin="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
+    <path android:pathData="M39,64 L46.5,64 L50,56.5 L55.5,71 L59,64 L69,64" android:strokeWidth="3.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
 </vector>

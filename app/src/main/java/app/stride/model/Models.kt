@@ -198,10 +198,24 @@ data class Interval(
 
 @Serializable
 data class Wellness(
+    /** ISO date. */
     val id: String,
     val weight: Double? = null,
     val restingHR: Double? = null,
-)
+    /** HRV (rMSSD, ms) from the watch's overnight reading. */
+    val hrv: Double? = null,
+    val sleepSecs: Double? = null,
+    /** Garmin sleep score, 0-100. */
+    val sleepScore: Double? = null,
+    val avgSleepingHR: Double? = null,
+    val readiness: Double? = null,
+    val steps: Double? = null,
+    val respiration: Double? = null,
+    val spO2: Double? = null,
+    val stress: Double? = null,
+) {
+    val hasRecovery: Boolean get() = hrv != null || sleepSecs != null || restingHR != null
+}
 
 @Serializable
 data class ExerciseEntry(
@@ -247,4 +261,6 @@ data class AppData(
     val manualDone: List<String> = emptyList(),
     /** Plan per week, keyed by the week's Monday (ISO date); weeks without an entry use settings.plan. */
     val weekPlans: Map<String, List<PlanDay>> = emptyMap(),
+    /** Daily sleep / HRV / resting HR from intervals.icu wellness (Garmin), newest last. */
+    val wellness: List<Wellness> = emptyList(),
 )

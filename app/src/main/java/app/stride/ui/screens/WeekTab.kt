@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.domain.Analyzer
+import app.stride.domain.Recovery
 import app.stride.domain.DayResult
 import app.stride.domain.DayStatus
 import app.stride.domain.WeekResult
@@ -117,6 +118,12 @@ fun WeekTab(
             }
         }
         item { SummaryCard(week, today, onDay) }
+        if (weekOffset == 0) {
+            Recovery.summary(data.wellness, today)?.let { r ->
+                item { SectionLabel("Recovery", Modifier.padding(top = 8.dp, start = 4.dp)) }
+                item { RecoveryCard(r, "Last night", full = false) }
+            }
+        }
         item { SectionLabel("Daily plan", Modifier.padding(top = 8.dp, start = 4.dp)) }
         items(week.days, key = { it.date.toString() }) { d -> DayRow(d, isToday = d.date == today, onClick = { onDay(d.date) }) }
         if (week.summary.bullets.isNotEmpty()) {
