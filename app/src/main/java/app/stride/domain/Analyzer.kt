@@ -96,7 +96,7 @@ object Analyzer {
         val extra = acts.filter { a -> matched.none { it.id == a.id } }
         val strength = data.strength.lastOrNull { it.date == date.toString() }
         val kind = plan?.kind ?: DayKind.REST
-        val logged = matched.isNotEmpty() || (kind.isStrength && strength != null)
+        val logged = matched.isNotEmpty() || (kind.isStrength && strength?.logged == true)
         val manual = plan != null && date.toString() in data.manualDone
         val did = logged || manual
 

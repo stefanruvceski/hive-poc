@@ -52,7 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.stride.ui.screens.DayScreen
 import app.stride.ui.screens.PlanReviewScreen
 import app.stride.ui.screens.SettingsScreen
-import app.stride.ui.screens.StrengthEditor
+import app.stride.ui.screens.WorkoutScreen
 import app.stride.ui.screens.StrengthTab
 import app.stride.ui.screens.TrendsTab
 import app.stride.ui.screens.WeekTab
@@ -163,6 +163,7 @@ fun StrideApp(
                         onDay = { push(Overlay.Day(it)) },
                         onSettings = { push(Overlay.Settings) },
                         onReviewPlan = { push(Overlay.PlanReview(it)) },
+                        onWorkout = { d, id -> push(Overlay.Strength(d, id)) },
                         padding = padding,
                     )
                     1 -> TrendsTab(data = data, today = today, padding = padding)
@@ -181,9 +182,7 @@ fun StrideApp(
                 onStrength = { d, id -> push(Overlay.Strength(d, id)) },
             )
             is Overlay.PlanReview -> PlanReviewScreen(vm = vm, data = data, monday = top.monday, onBack = pop)
-            is Overlay.Strength -> StrengthEditor(
-                vm = vm, data = data, initialDate = top.date, sessionId = top.sessionId, onBack = pop,
-            )
+            is Overlay.Strength -> WorkoutScreen(vm = vm, data = data, date = top.date, sessionId = top.sessionId, onBack = pop)
         }
         SnackbarHost(
             snackbar,

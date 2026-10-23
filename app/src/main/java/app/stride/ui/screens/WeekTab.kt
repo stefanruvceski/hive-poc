@@ -33,6 +33,10 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Pool
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.FitnessCenter
+import app.stride.domain.planFor
+import app.stride.model.StrengthSession
+import app.stride.ui.GlassCard
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
@@ -81,6 +85,7 @@ fun WeekTab(
     onDay: (LocalDate) -> Unit,
     onSettings: () -> Unit,
     onReviewPlan: (LocalDate) -> Unit,
+    onWorkout: (LocalDate, String?) -> Unit,
     padding: PaddingValues,
 ) {
     val nextMonday = mondayOf(today).plusWeeks(1)
@@ -123,6 +128,13 @@ fun WeekTab(
                 NavButton(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next week", enabled = weekOffset < 0) { onWeekOffset(weekOffset + 1) }
             }
         }
+        if (weekOffset == 0) {
+            val todayPlan = data.planFor(today)
+            val todaySession = data.strength.lastOrNull { it.date == today.toString() }
+            if (todayPlan != null && todayPlan.kind.isStrength && todaySession?.finished != true) {
+                item { TodayWorkoutCard(todayPlan.title, todaySession) { onWorkout(today, todaySession?.id) } }
+            }
+        }
         item { SummaryCard(week, today, onDay) }
         if (weekOffset == 0) {
             Recovery.summary(data.wellness, today)?.let { r ->
@@ -151,6 +163,28 @@ private fun NavButton(icon: ImageVector, description: String, enabled: Boolean =
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(icon, description, tint = if (enabled) StrideColors.Text else StrideColors.Faint.copy(alpha = 0.5f))
+        }
+    }
+}
+
+/** Big "start / continue today's workout" card for strength days. */
+@Composable
+private fun TodayWorkoutCard(title: String, session: StrengthSession?, onClick: () -> Unit) {
+    val done = session?.exercises?.count { it.done } ?: 0
+    val total = session?.exercises?.size ?: 0
+    GlassCard(Modifier.fillMaxWidth(), tint = StrideColors.Accent) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBubble(Icons.Filled.FitnessCenter, StrideColors.Accent, 48)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("TODAY'S WORKOUT", style = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = StrideColors.Accent)
+                Text(title, style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text)
+                if (session != null) Text("$done of $total exercises done", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+            Text(if (session == null) "Start workout" else "Continue workout")
         }
     }
 }
