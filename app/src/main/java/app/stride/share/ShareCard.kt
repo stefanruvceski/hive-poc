@@ -180,12 +180,12 @@ object ShareCard {
             moveTo(pts[0].first, pts[0].second)
             for (i in 1 until pts.size) lineTo(pts[i].first, pts[i].second)
         }
-        val shader = LinearGradient(box.left, box.top, box.right, box.bottom, intArrayOf(EMERALD, CYAN, PINK), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+        val routeShader = LinearGradient(box.left, box.top, box.right, box.bottom, intArrayOf(EMERALD, CYAN, PINK), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
         fun stroke(w: Float) = paint().apply {
             style = Paint.Style.STROKE; strokeWidth = w; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         }
-        c.drawPath(path, stroke(22f).apply { this.shader = shader; maskFilter = BlurMaskFilter(22f, BlurMaskFilter.Blur.NORMAL); alpha = 170 })
-        c.drawPath(path, stroke(11f).apply { this.shader = shader })
+        c.drawPath(path, stroke(22f).apply { shader = routeShader; maskFilter = BlurMaskFilter(22f, BlurMaskFilter.Blur.NORMAL); alpha = 170 })
+        c.drawPath(path, stroke(11f).apply { shader = routeShader })
         c.drawPath(path, stroke(2.5f).apply { color = 0x8CFFFFFF.toInt() })
 
         // Kilometre markers along the track.
