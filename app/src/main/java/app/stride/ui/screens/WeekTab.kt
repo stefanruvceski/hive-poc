@@ -27,6 +27,12 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditCalendar
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.filled.HotTub
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.Pool
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
@@ -128,17 +134,7 @@ fun WeekTab(
         items(week.days, key = { it.date.toString() }) { d -> DayRow(d, isToday = d.date == today, onClick = { onDay(d.date) }) }
         if (week.summary.bullets.isNotEmpty()) {
             item { SectionLabel("Summary", Modifier.padding(top = 8.dp, start = 4.dp)) }
-            item {
-                FCard {
-                    week.summary.bullets.forEachIndexed { i, b ->
-                        if (i > 0) Spacer(Modifier.height(8.dp))
-                        Row {
-                            Text("•", color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(16.dp))
-                            Text(b, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            }
+            items(week.summary.bullets) { b -> SummaryItem(b) }
         }
     }
 }
@@ -155,6 +151,27 @@ private fun NavButton(icon: ImageVector, description: String, enabled: Boolean =
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(icon, description, tint = if (enabled) StrideColors.Text else StrideColors.Faint.copy(alpha = 0.5f))
+        }
+    }
+}
+
+/** One summary line as its own card, with an icon and color picked from what it's about. */
+@Composable
+private fun SummaryItem(text: String) {
+    val (icon, color) = when {
+        text.startsWith("Heads up") -> Icons.Filled.Warning to StrideColors.Warn
+        text.startsWith("Done") -> Icons.Filled.CheckCircle to StrideColors.Good
+        text.startsWith("Easy swim") || text.startsWith("Intense swim") -> Icons.Filled.Pool to MetricColors.Distance
+        text.startsWith("Run") -> Icons.AutoMirrored.Filled.DirectionsRun to MetricColors.Pace
+        text.startsWith("Sauna") -> Icons.Filled.HotTub to StrideColors.Accent2
+        text.startsWith("Weight") -> Icons.Filled.MonitorWeight to MetricColors.Load
+        else -> Icons.Filled.Insights to StrideColors.Dim
+    }
+    FCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBubble(icon, color, 40)
+            Spacer(Modifier.width(12.dp))
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = StrideColors.Text, modifier = Modifier.weight(1f))
         }
     }
 }
