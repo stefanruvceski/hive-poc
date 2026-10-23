@@ -8,7 +8,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 
 ## Build
 - CI: `.github/workflows/build.yml` builds a signed release APK on every push to `main` and publishes it as a GitHub Release. Target scheme: tag `android-b<N>`, N = versionCode = run_number, asset `Stride.apk` (the in-app update banner depends on it).
-- Local: `gradle assembleRelease` with Gradle 8.9, JDK 17, Android SDK 35 (no wrapper committed; add one with `gradle wrapper --gradle-version 8.9` if useful).
+- Local: `gradle assembleRelease` with Gradle 8.11.1, JDK 17, Android SDK 36 (no wrapper committed; add one with `gradle wrapper --gradle-version 8.11.1` if useful).
 - Signing: no keystore exists yet and none may be committed. `app/build.gradle.kts` reads `STRIDE_KEYSTORE_PATH` and `STRIDE_KEYSTORE_PASSWORD` (alias `stride`). CI must decode the keystore from secrets `STRIDE_KEYSTORE_BASE64` + `STRIDE_KEYSTORE_PASSWORD`, like Streakli does. Once the first release is out, never change the key, or updates won't install over the old app.
 
 ## In-app updates
@@ -54,6 +54,22 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   the GPS route (`/activity/{id}/streams?types=latlng`, lat in `data`, lng in `data2`), strength, swim. Day screen → Share.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
+
+## Coach, live workout, Health Connect, backup, extras
+- AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (official Anthropic Java SDK, `claude-opus-5-5`,
+  server-side refusal fallback). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
+  Reviews in `AppData.coach[monday]`; Week tab section "coach"; Sunday 19:00 the worker writes one and notifies.
+  R8 keeps for the SDK (Jackson) are in `proguard-rules.pro`.
+- Live workout (`live/LiveWorkout.kt`): ongoing lock-screen notification while a stored, unfinished session is open:
+  current set (`domain/LiveSet.kt`, tested), rest countdown, "Set done" / "+30 s" actions handled by
+  `LiveWorkoutReceiver` (writes the store, `DataEvents.notifyChanged()` makes the app reload).
+- Health Connect (`data/HealthSync.kt`, connect-client): fills missing steps/sleep/HRV/resting HR/weight, writes
+  finished strength sessions without a watch workout (`AppData.hcExported`). Foreground only (no background read).
+- Backup (`data/Backup.kt`): export/restore JSON via the system file picker (Drive works), weekly auto backup into a
+  picked folder (SAF tree, `Settings.backupFolder`). Keys are stripped.
+- Trends: Challenges and badges (`domain/Badges.kt`), Sleep and HRV insights (`domain/Insights.kt`), Year in review
+  (`domain/YearReview.kt` + `share/YearCards.kt`, 4 story cards, share all).
+- Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).
 
 ## Design
 Match Streakli, the user's habit tracker: repo `stefanruvceski/habit-tracker`, folder `apps/mobile/src`

@@ -22,6 +22,12 @@ import app.stride.R
 import app.stride.data.IntervalsApi
 import app.stride.data.Store
 import app.stride.data.Sync
+import app.stride.data.Backup
+import app.stride.data.DataEvents
+import app.stride.coach.CoachClient
+import app.stride.coach.CoachPrompt
+import app.stride.domain.mondayOf
+import java.time.DayOfWeek
 import app.stride.domain.Notice
 import app.stride.domain.Notices
 import app.stride.model.Activity
@@ -71,6 +77,27 @@ object PlanReminder {
             }
         }
 
+        // Weekly automatic backup to the folder picked in Settings.
+        runCatching { Backup.autoBackupIfDue(context, store, now) }
+
+        // Sunday 19:00+: the AI coach reviews the week (user's own Anthropic key).
+        val monday = mondayOf(now.toLocalDate())
+        val sentSoFar = prefs.getStringSet(KEY_SENT, emptySet()).orEmpty()
+        if (data.settings.notifyOn(NotifType.COACH) && data.settings.anthropicKey.isNotBlank() &&
+            now.dayOfWeek == DayOfWeek.SUNDAY && now.hour >= 19 && monday.toString() !in data.coach
+        ) {
+            runCatching {
+                val text = CoachClient.review(data.settings.anthropicKey, CoachPrompt.user(data, monday, now.toLocalDate()))
+                data = store.update { it.copy(coach = it.coach + (monday.toString() to text)) }
+                DataEvents.notifyChanged()
+                val n = Notice(NotifType.COACH, monday.toString(), "Your week, reviewed by the coach",
+                    text.lines().filter { it.isNotBlank() }.take(4).joinToString("\n"))
+                if (n.dedupe !in sentSoFar && notify(context, n)) {
+                    prefs.edit().putStringSet(KEY_SENT, (sentSoFar + n.dedupe).toList().takeLast(300).toSet()).apply()
+                }
+            }
+        }
+
         // Update check twice a day.
         var latest = prefs.getInt(KEY_LATEST_BUILD, 0).takeIf { it > 0 }
         if (!BuildConfig.DEBUG && System.currentTimeMillis() - prefs.getLong(KEY_UPDATE_CHECK, 0) > TimeUnit.HOURS.toMillis(12)) {
@@ -94,6 +121,7 @@ object PlanReminder {
         NotifType.WORKOUT_DONE, NotifType.PERSONAL_BEST, NotifType.TARGET_HIT, NotifType.WEEK_RECAP, NotifType.MONTH_RECAP -> "progress" to "Workouts and progress"
         NotifType.LOW_RECOVERY, NotifType.BEDTIME, NotifType.DELOAD, NotifType.WEIGH_IN -> "health" to "Recovery and health"
         NotifType.NO_DATA, NotifType.UPDATE -> "app" to "App and sync"
+        NotifType.COACH, NotifType.BADGE -> "progress" to "Workouts and progress"
     }
 
     // Permission is checked right above the notify call (Android 13+ only needs it).

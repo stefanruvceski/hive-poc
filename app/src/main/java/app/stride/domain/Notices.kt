@@ -187,6 +187,16 @@ object Notices {
             }
         }
 
+        // New badges (earned in the last 2 days) and finished monthly challenges.
+        if (on(NotifType.BADGE) && hour in 8..21) {
+            Badges.badges(data, today).filter { b -> b.earnedOn?.let { !it.isBefore(today.minusDays(2)) } == true }.forEach { b ->
+                out += Notice(NotifType.BADGE, b.id, "${b.emoji} Badge: ${b.title}", b.description + ".")
+            }
+            Badges.challenges(data, today).filter { it.done && it.current > 0 }.forEach { c ->
+                out += Notice(NotifType.BADGE, "${YearMonth.from(today)}-${c.id}", "${c.emoji} Challenge done", "${c.title} this month. Nice work.")
+            }
+        }
+
         if (on(NotifType.UPDATE) && latestBuild != null && latestBuild > installedBuild) {
             out += Notice(NotifType.UPDATE, "$latestBuild", "Stride update", "Build $latestBuild is ready. Open Stride and tap Install.")
         }

@@ -69,6 +69,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout
     var apiKey by remember { mutableStateOf(s.apiKey) }
     var athlete by remember { mutableStateOf(s.athleteId) }
     var showKey by remember { mutableStateOf(false) }
+    var anthropicKey by remember { mutableStateOf(s.anthropicKey) }
 
     val t = s.targets
     var swimMeters by remember { mutableStateOf(t.easySwimMeters.toString()) }
@@ -98,7 +99,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout
             zone2Minutes = zone2.toIntOrNull() ?: d.zone2Minutes,
             saunaMinutes = saunaTarget.toIntOrNull() ?: d.saunaMinutes,
         )
-        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), warmups = warmups,
+        val updated = s.copy(apiKey = apiKey.trim(), athleteId = athlete.trim().ifBlank { "0" }, targets = targets, plan = plan.toList(), warmups = warmups, anthropicKey = anthropicKey.trim(),
         )
         if (updated != s) {
             vm.saveSettings(updated)
@@ -153,6 +154,11 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = StrideColors.Dim)
                 }
             }
+            item { LiveWorkoutCard(vm, data) }
+            item { CoachKeyCard(anthropicKey) { anthropicKey = it } }
+            item { SectionLabel("Data", Modifier.padding(start = 4.dp, top = 8.dp)) }
+            item { HealthConnectCard(vm, data) }
+            item { BackupCard(vm, data) }
             item { SectionLabel("intervals.icu", Modifier.padding(start = 4.dp, top = 8.dp)) }
             item {
                 FCard {

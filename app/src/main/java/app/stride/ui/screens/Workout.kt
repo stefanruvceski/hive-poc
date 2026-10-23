@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.data.ExerciseLibrary
 import app.stride.data.ExerciseMatcher
+import app.stride.live.LiveWorkout
 import app.stride.data.LibraryExercise
 import app.stride.domain.Deload
 import app.stride.domain.Progression
@@ -186,6 +187,17 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
     var pickingPicture by remember { mutableStateOf(false) }
     val timer = rememberRestTimer()
 
+    // Lock-screen notification with the current set and rest; follows every change to the session.
+    LaunchedEffect(stored, timer.endAt, data.settings.liveWorkout) {
+        if (stored != null && data.settings.liveWorkout) LiveWorkout.show(context, stored, timer.endAt, timer.length)
+        else if (stored == null || !data.settings.liveWorkout) LiveWorkout.stop(context)
+    }
+    // A rest started from the notification shows up in the in-app timer too.
+    LaunchedEffect(data) {
+        val end = LiveWorkout.restEnd(context)
+        if (end > timer.endAt && end > System.currentTimeMillis()) timer.endAt = end
+    }
+
     BackHandler(enabled = open != null) { open = null }
 
     fun libFor(e: ExerciseEntry): LibraryExercise? =
@@ -224,7 +236,7 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
                             commit(session.copy(exercises = session.exercises.filterIndexed { j, _ -> j != i }))
                         }) { Icon(Icons.Filled.Delete, "Remove exercise") }
                     } else if (stored != null) {
-                        IconButton(onClick = { vm.deleteStrength(stored.id); vm.toast("Workout deleted"); onBack() }) {
+                        IconButton(onClick = { LiveWorkout.stop(context); vm.deleteStrength(stored.id); vm.toast("Workout deleted"); onBack() }) {
                             Icon(Icons.Filled.Delete, "Delete workout")
                         }
                     }

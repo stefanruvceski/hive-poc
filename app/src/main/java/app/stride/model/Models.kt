@@ -141,6 +141,16 @@ data class Settings(
     val layout: LayoutPrefs = LayoutPrefs(),
     /** Last look picked for share images. */
     val share: ShareStyle = ShareStyle(),
+    /** The user's own Anthropic API key for the weekly AI coach; stays on the phone, never in exports. */
+    val anthropicKey: String = "",
+    /** Ongoing lock-screen notification with the current set and rest timer during a workout. */
+    val liveWorkout: Boolean = true,
+    /** Read steps, sleep, weight, HRV, resting HR from Health Connect and write strength workouts to it. */
+    val healthConnect: Boolean = false,
+    /** Folder (SAF tree URI) for the automatic weekly backup, null = off. */
+    val backupFolder: String? = null,
+    /** When the last automatic backup was written (ISO date-time). */
+    val lastBackup: String? = null,
 ) {
     fun notifyOn(t: NotifType): Boolean = notifications[t.id] ?: when (t) {
         NotifType.PLAN_REVIEW -> planReminder
@@ -170,6 +180,8 @@ enum class NotifType(val id: String, val title: String, val description: String,
     DELOAD("deload", "Deload suggestion", "Monday · when a lighter week is due"),
     NO_DATA("no_data", "Watch not syncing", "No watch workouts for 3 days while workouts were planned"),
     UPDATE("update", "App update", "A new Stride version is out"),
+    COACH("coach", "Weekly AI coach", "Sunday 19:00 · review of the week and advice for next week (needs an Anthropic API key)"),
+    BADGE("badge", "Badges", "When you earn a badge or finish a monthly challenge"),
 }
 
 /** Visible tabs and sections; ids come from ui/Layout.kt. Empty lists mean the default order. */
@@ -380,4 +392,8 @@ data class AppData(
     val wellness: List<Wellness> = emptyList(),
     /** Mondays (ISO) of weeks marked as deload weeks: workouts use ~70% of the usual bells. */
     val deloadWeeks: List<String> = emptyList(),
+    /** Weekly AI coach reviews, keyed by the reviewed week's Monday (ISO date). */
+    val coach: Map<String, String> = emptyMap(),
+    /** Strength session ids already written to Health Connect. */
+    val hcExported: List<String> = emptyList(),
 )

@@ -39,7 +39,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          gradle-version: "8.11.1"
 
       # Every signed build uses the same key; changing it breaks in-place updates.
       - name: Decode keystore

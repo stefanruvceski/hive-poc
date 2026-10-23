@@ -185,6 +185,24 @@ object ShareContent {
         )
     }
 
+    /** Saves several images (Year in review) and opens the share sheet with all of them. */
+    suspend fun shareMany(context: Context, bitmaps: List<Bitmap>, name: String) {
+        val uris: ArrayList<Uri> = withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, "share").apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() }
+            ArrayList(bitmaps.mapIndexed { i, b ->
+                val file = File(dir, "$name-${i + 1}.png")
+                file.outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                FileProvider.getUriForFile(context, "${context.packageName}.updates", file)
+            })
+        }
+        val send = Intent(Intent.ACTION_SEND_MULTIPLE)
+            .setType("image/png")
+            .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(Intent.createChooser(send, "Share year in review"))
+    }
+
     /** Saves the image to the cache and opens the share sheet. */
     suspend fun share(context: Context, bitmap: Bitmap, date: LocalDate) {
         val uri: Uri = withContext(Dispatchers.IO) {
