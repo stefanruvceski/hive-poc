@@ -58,9 +58,9 @@ class SectionHost(
      */
     fun LazyListScope.sections(build: SectionContent.() -> Unit) {
         val content = SectionContent().apply(build).map
-        val list = Layouts.sections(prefs, tab)
+        val list = LayoutOps.sections(prefs, tab)
         list.forEachIndexed { i, s ->
-            val hidden = Layouts.hidden(prefs, tab, s)
+            val hidden = LayoutOps.hidden(prefs, tab, s)
             if (editing) {
                 item(key = "edit-${s.id}") {
                     EditBar(
@@ -68,9 +68,9 @@ class SectionHost(
                         hidden = hidden,
                         canUp = i > 0,
                         canDown = i < list.lastIndex,
-                        onToggle = { onPrefs(Layouts.toggleSection(prefs, tab, s)) },
-                        onUp = { onPrefs(Layouts.moveSection(prefs, tab, s, -1)) },
-                        onDown = { onPrefs(Layouts.moveSection(prefs, tab, s, 1)) },
+                        onToggle = { onPrefs(LayoutOps.toggleSection(prefs, tab, s)) },
+                        onUp = { onPrefs(LayoutOps.moveSection(prefs, tab, s, -1)) },
+                        onDown = { onPrefs(LayoutOps.moveSection(prefs, tab, s, 1)) },
                     )
                 }
             }

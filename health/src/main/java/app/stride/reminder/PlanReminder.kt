@@ -19,6 +19,7 @@ import androidx.work.WorkerParameters
 import app.stride.host.AppInfo
 import app.stride.host.Host
 import app.stride.core.R
+import app.stride.notify.Notifier
 import app.stride.data.IntervalsApi
 import app.stride.data.Store
 import app.stride.data.Sync
@@ -123,29 +124,11 @@ object PlanReminder {
         NotifType.COACH, NotifType.BADGE -> "progress" to "Workouts and progress"
     }
 
-    // Permission is checked right above the notify call (Android 13+ only needs it).
-    @SuppressLint("MissingPermission")
     private fun notify(context: Context, n: Notice): Boolean {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return false
         val (channel, channelName) = channel(n.type)
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(channel, channelName, NotificationManager.IMPORTANCE_DEFAULT))
         // One slot per type; workout notes get their own so two workouts don't replace each other.
         val id = 100 + n.type.ordinal * 10 + if (n.type == NotifType.WORKOUT_DONE || n.type == NotifType.PERSONAL_BEST) Math.floorMod(n.key.hashCode(), 10) else 0
-        val open = Host.openIntent(context, if (n.type == NotifType.PLAN_REVIEW) "plan-review" else null)
-        val pending = PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val notification = NotificationCompat.Builder(context, channel)
-            .setSmallIcon(R.drawable.ic_stat_stride)
-            .setContentTitle(n.title)
-            .setContentText(n.text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(n.text))
-            .setContentIntent(pending)
-            .setAutoCancel(true)
-            .build()
-        NotificationManagerCompat.from(context).notify(id, notification)
-        return true
+        return Notifier.post(context, channel, channelName, id, n.title, n.text, if (n.type == NotifType.PLAN_REVIEW) "plan-review" else null)
     }
 
     /** A sample of [t] right now, for the test button in Settings. */
