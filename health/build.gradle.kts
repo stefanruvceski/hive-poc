@@ -28,8 +28,6 @@ android {
 
 dependencies {
     api(project(":core"))
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
     // Steps, sleep, weight, HRV and resting HR from Health Connect; strength workouts written back.
     implementation("androidx.health.connect:connect-client:1.1.0")

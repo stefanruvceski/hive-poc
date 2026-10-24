@@ -95,7 +95,7 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
         else -> "Hello"
     }
     LazyColumn(
-        Modifier.fillMaxSize().background(StrideColors.Bg).glowBackground(StrideColors.Accent, StrideColors.Accent2).statusBarsPadding().navigationBarsPadding(),
+        Modifier.fillMaxSize().background(StrideColors.Bg).glowBackground(StrideColors.Accent, StrideColors.Amber).statusBarsPadding().navigationBarsPadding(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -152,6 +152,6 @@ private fun ComingSoon() {
     ) {
         Icon(Icons.Filled.AddCircleOutline, null, tint = StrideColors.Faint)
         Spacer(Modifier.width(12.dp))
-        Text("More apps will live here, like Habits.", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Faint)
+        Text("More apps can join the hive later.", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Faint)
     }
 }
