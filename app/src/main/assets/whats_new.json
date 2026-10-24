@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-28-drawify",
+    "title": "Drawify joins the hive ✏️",
+    "items": [
+      {"icon": "apps", "text": "A new app on the home screen: Drawify. Pick a picture and it floats over the camera, so you can trace it onto paper."},
+      {"icon": "palette", "text": "Drag, pinch and rotate it, adjust the opacity, make white transparent or turn a photo into an outline, mirror it, lock it in place."},
+      {"icon": "spark", "text": "Tilt correction keeps the picture flat on the paper when the phone is at an angle, or drag the four corners yourself. Share any picture to Hive to open it in Drawify."}
+    ]
+  },
+  {
     "id": "2026-10-27-habits-money",
     "title": "Habits and Money join the hive 🐝",
     "items": [
