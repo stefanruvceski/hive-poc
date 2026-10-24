@@ -145,6 +145,7 @@ fun WeekTab(
         val comparison = workoutComparison(data, monday, today)
         with(host) {
             sections {
+                    section("rings") { item { DailyRingsCard(data, monday, today, onEdit = onEditGoals) } }
                     section("today") {
                         val todayPlan = data.planFor(today)
                         val todaySession = data.strength.lastOrNull { it.date == today.toString() }

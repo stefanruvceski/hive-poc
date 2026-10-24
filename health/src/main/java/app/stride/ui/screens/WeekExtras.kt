@@ -22,6 +22,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import java.time.LocalDate
+import app.stride.model.RingKind
+import app.stride.model.AppData
+import app.stride.domain.dayLong
+import app.stride.domain.dayShort
+import app.stride.domain.Rings
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +59,7 @@ internal fun goalColor(kind: GoalKind): Color = Color(goalArgb(kind))
 fun goalArgb(kind: GoalKind): Int = when (kind) {
     GoalKind.PLAN, GoalKind.WORKOUTS -> 0xFF34D399.toInt()
     GoalKind.ZONE2, GoalKind.SWIM -> 0xFF22D3EE.toInt()
-    GoalKind.SAUNA, GoalKind.LIFTED -> 0xFFF472B6.toInt()
+    GoalKind.SAUNA, GoalKind.LIFTED -> 0xFFF97316.toInt()
     GoalKind.INTENSE, GoalKind.RUN -> 0xFFF59E0B.toInt()
     GoalKind.STRENGTH, GoalKind.MINUTES -> 0xFFA78BFA.toInt()
     GoalKind.SLEEP, GoalKind.REST -> 0xFF60A5FA.toInt()
@@ -65,7 +76,7 @@ fun TargetsCard(goals: List<GoalProgress>, onEdit: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Rings(goals.map { goalColor(it.kind) to it.fraction }, Modifier.size(120.dp))
+            RingStack(goals.map { goalColor(it.kind) to it.fraction }, Modifier.size(120.dp))
             Spacer(Modifier.width(18.dp))
             Column(verticalArrangement = Arrangement.spacedBy(if (goals.size > 3) 6.dp else 10.dp)) {
                 goals.forEach { g ->
@@ -91,7 +102,7 @@ fun TargetsCard(goals: List<GoalProgress>, onEdit: () -> Unit) {
 
 /** Concentric rings; a value over 1 laps the ring with a darker overlap like Apple's. Strokes thin out for 4 rings. */
 @Composable
-private fun Rings(values: List<Pair<Color, Float>>, modifier: Modifier) {
+internal fun RingStack(values: List<Pair<Color, Float>>, modifier: Modifier) {
     Canvas(modifier) {
         val n = values.size.coerceAtLeast(1)
         val stroke = size.minDimension / (n * 2.36f + 2.2f)
@@ -104,6 +115,83 @@ private fun Rings(values: List<Pair<Color, Float>>, modifier: Modifier) {
             if (sweep > 0f) {
                 drawArc(color, -90f, sweep.coerceAtMost(360f), false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                 if (sweep > 360f) drawArc(color.copy(alpha = 0.6f), -90f, sweep - 360f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            }
+        }
+    }
+}
+
+/** One color per kind of daily ring, the same in the app and the widget. */
+internal fun ringColor(kind: RingKind): Color = Color(ringArgb(kind))
+
+fun ringArgb(kind: RingKind): Int = when (kind) {
+    RingKind.STEPS -> 0xFFFACC15.toInt()
+    RingKind.MINUTES, RingKind.RUN -> 0xFF34D399.toInt()
+    RingKind.CALORIES, RingKind.SAUNA -> 0xFFF97316.toInt()
+    RingKind.PLAN -> 0xFF2DD4BF.toInt()
+    RingKind.ZONE2, RingKind.SWIM -> 0xFF22D3EE.toInt()
+    RingKind.INTENSE -> 0xFFF87171.toInt()
+    RingKind.LIFTED -> 0xFFF59E0B.toInt()
+    RingKind.SLEEP -> 0xFFA78BFA.toInt()
+    RingKind.WEIGH_IN -> 0xFF60A5FA.toInt()
+}
+
+/**
+ * Apple Health style daily rings: the chosen day's rings with their numbers, and a Mon–Sun row of small
+ * rings so the week shows at a glance (tap a day to see it, hold the card to edit the rings).
+ */
+@Composable
+fun DailyRingsCard(data: AppData, monday: LocalDate, today: LocalDate, onEdit: () -> Unit) {
+    val days = (0..6).map { monday.plusDays(it.toLong()) }
+    var selected by remember(monday, today) { mutableStateOf(if (today in days) today else days.last()) }
+    val byDay = remember(data, monday, today) { days.associateWith { d -> if (d.isAfter(today)) null else Rings.progress(data, d, today) } }
+    val p = byDay[selected].orEmpty()
+    GlassCard(Modifier.fillMaxWidth().onLongPressOpen("daily-rings", onEdit)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                if (selected == today) "Today's rings" else "${dayLong(selected)}'s rings",
+                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f),
+            )
+            Text(if (Rings.allClosed(p)) "all closed ✓" else "hold to edit", style = TextStyle(fontSize = 11.sp, fontWeight = if (Rings.allClosed(p)) FontWeight.Bold else FontWeight.Normal), color = if (Rings.allClosed(p)) StrideColors.Accent else StrideColors.Faint)
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RingStack(p.map { ringColor(it.kind) to it.fraction }, Modifier.size(120.dp))
+            Spacer(Modifier.width(18.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(if (p.size > 3) 6.dp else 10.dp)) {
+                p.forEach { r ->
+                    val color = ringColor(r.kind)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(r.kind.title.uppercase(), style = TextStyle(fontSize = 10.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = color, maxLines = 1)
+                            Text(
+                                r.label + if (r.closed && !r.restDay) "  ✓" else "",
+                                style = TextStyle(fontSize = if (p.size > 3) 14.sp else 15.sp, fontWeight = FontWeight.ExtraBold),
+                                color = StrideColors.Text, maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth()) {
+            days.forEach { d ->
+                val rings = byDay[d]
+                val isSel = d == selected
+                Column(
+                    Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (isSel) Color.White.copy(alpha = 0.06f) else Color.Transparent)
+                        .clickable(enabled = rings != null) { selected = d }
+                        .padding(vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(dayShort(d).take(1), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = if (d == today) StrideColors.Accent else StrideColors.Faint)
+                    Spacer(Modifier.height(4.dp))
+                    if (rings != null) RingStack(rings.map { ringColor(it.kind) to it.fraction }, Modifier.size(30.dp))
+                    else Box(Modifier.size(30.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.04f)))
+                }
             }
         }
     }

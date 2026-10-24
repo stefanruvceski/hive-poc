@@ -25,6 +25,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import app.stride.model.RingKind
+import app.stride.model.DailyRing
+import app.stride.domain.fmtRing
+import app.stride.domain.Rings
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -229,7 +235,85 @@ fun WeeklyGoalsCard(vm: AppViewModel, data: AppData) {
     }
 }
 
-/** Full-screen editor for weekly targets, opened from the Week tab's targets card. */
+/** Pick up to [Rings.MAX] daily rings and how much each needs to close; changes save right away. */
+@Composable
+fun DailyRingsEditor(vm: AppViewModel, data: AppData) {
+    val rings = data.settings.rings
+    var adding by remember { mutableStateOf(false) }
+    fun save(list: List<DailyRing>) = vm.updateSettings { it.copy(dailyRings = list) }
+    FCard {
+        Text("Daily rings", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Up to ${Rings.MAX} rings to close every day, on the Week tab and in the rings widget. Today's plan follows your plan (rest days count as closed).",
+            style = MaterialTheme.typography.bodySmall,
+            color = StrideColors.Dim,
+        )
+        rings.forEachIndexed { i, r ->
+            if (i > 0) HorizontalDivider(color = StrideColors.Border)
+            Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(ringColor(r.kind)))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(r.kind.title, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (r.kind == RingKind.PLAN) "the day's planned workout" else "${fmtRing(r.kind, r.amount)} ${r.kind.unit} a day",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StrideColors.Dim,
+                    )
+                }
+                if (r.kind != RingKind.PLAN && r.kind != RingKind.WEIGH_IN) {
+                    IconButton(onClick = { save(rings.mapIndexed { j, x -> if (j == i) x.copy(amount = (x.amount - x.kind.step).coerceAtLeast(x.kind.step)) else x }) }) {
+                        Icon(Icons.Filled.Remove, "Less")
+                    }
+                    IconButton(onClick = { save(rings.mapIndexed { j, x -> if (j == i) x.copy(amount = x.amount + x.kind.step) else x }) }) {
+                        Icon(Icons.Filled.Add, "More")
+                    }
+                }
+                IconButton(onClick = { save(rings.filterIndexed { j, _ -> j != i }) }, enabled = rings.size > 1) {
+                    Icon(Icons.Filled.Close, "Remove", tint = StrideColors.Faint)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { adding = true }, enabled = rings.size < Rings.MAX) { Text("Add ring") }
+            TextButton(onClick = { vm.updateSettings { it.copy(dailyRings = null) } }) { Text("Reset") }
+        }
+    }
+    if (adding) {
+        val used = rings.map { it.kind }.toSet()
+        AlertDialog(
+            onDismissRequest = { adding = false },
+            containerColor = StrideColors.Elev,
+            title = { Text("Add a daily ring") },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                    RingKind.entries.filter { it !in used }.groupBy { it.group }.forEach { (group, kinds) ->
+                        item { Text(group.uppercase(), style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) }
+                        items(kinds) { k ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    save(rings + DailyRing(k, k.default))
+                                    adding = false
+                                }.padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(Modifier.size(10.dp).clip(CircleShape).background(ringColor(k)))
+                                Spacer(Modifier.width(10.dp))
+                                Text(k.title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Text(if (k == RingKind.PLAN) "from plan" else "${fmtRing(k, k.default)} ${k.unit}", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { adding = false }) { Text("Close") } },
+        )
+    }
+}
+
+/** Full-screen editor for daily rings and weekly targets, opened from either card on the Week tab. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
@@ -237,13 +321,17 @@ fun GoalsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             androidx.compose.material3.TopAppBar(
-                title = { Text("Weekly targets") },
+                title = { Text("Rings and targets") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
     ) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp)) { WeeklyGoalsCard(vm, data) }
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            DailyRingsEditor(vm, data)
+            Text("Weekly targets", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+            WeeklyGoalsCard(vm, data)
+        }
     }
 }
 

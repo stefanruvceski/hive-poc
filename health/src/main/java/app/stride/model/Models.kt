@@ -154,7 +154,17 @@ data class Settings(
     val lastBackup: String? = null,
     /** Weekly targets shown as rings (up to 4); null = the defaults (plan, Zone 2, sauna). */
     val weeklyGoals: List<WeeklyGoal>? = null,
+    /** Daily rings (up to 4); null = the defaults (steps, training time, sleep). */
+    val dailyRings: List<DailyRing>? = null,
 ) {
+    /** The daily rings in use: the user's pick, else steps + training time + sleep. */
+    val rings: List<DailyRing>
+        get() = dailyRings ?: listOf(
+            DailyRing(RingKind.STEPS, RingKind.STEPS.default),
+            DailyRing(RingKind.MINUTES, RingKind.MINUTES.default),
+            DailyRing(RingKind.SLEEP, RingKind.SLEEP.default),
+        )
+
     /** The weekly targets in use: the user's pick, else plan + Zone 2 + sauna from [targets]. */
     val goals: List<WeeklyGoal>
         get() = weeklyGoals ?: listOf(
@@ -217,6 +227,30 @@ enum class GoalKind(val title: String, val unit: String, val default: Double, va
     EARLY("Workouts before 07:00", "workouts", 3.0, 1.0, "Habits"),
     REST("Rest days", "days", 1.0, 1.0, "Habits"),
 }
+
+/**
+ * What a daily ring can measure (Apple Health style: close them every day). [step] is the +/- step in
+ * the editor. Never rename: stored by name.
+ */
+@Serializable
+enum class RingKind(val title: String, val unit: String, val default: Double, val step: Double, val group: String) {
+    STEPS("Steps", "steps", 8000.0, 500.0, "Move"),
+    MINUTES("Training time", "min", 45.0, 5.0, "Move"),
+    CALORIES("Workout calories", "kcal", 400.0, 50.0, "Move"),
+    PLAN("Today's plan", "workout", 0.0, 1.0, "Training"),
+    ZONE2("Zone 2", "min", 30.0, 5.0, "Training"),
+    INTENSE("Intense (zones 4-5)", "min", 10.0, 5.0, "Training"),
+    LIFTED("Kg lifted", "kg", 2000.0, 250.0, "Training"),
+    SWIM("Swim", "km", 1.5, 0.25, "Cardio"),
+    RUN("Run", "km", 5.0, 0.5, "Cardio"),
+    SLEEP("Sleep (last night)", "h", 7.5, 0.25, "Health"),
+    SAUNA("Sauna", "min", 15.0, 5.0, "Health"),
+    WEIGH_IN("Weigh-in", "time", 1.0, 1.0, "Habits"),
+}
+
+/** One daily ring: what and how much ([amount] is ignored for PLAN, which follows the day's plan). */
+@Serializable
+data class DailyRing(val kind: RingKind, val amount: Double)
 
 /** One weekly target: what and how much ([amount] is ignored for PLAN, which comes from the week's plan). */
 @Serializable

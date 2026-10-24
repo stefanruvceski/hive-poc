@@ -12,6 +12,7 @@ object Layouts {
     val WEEK = TabDef(
         "week", "Week",
         listOf(
+            SectionDef("rings", "Daily rings"),
             SectionDef("today", "Today's workout"),
             SectionDef("swap", "Recovery swap"),
             SectionDef("progress", "Week progress"),

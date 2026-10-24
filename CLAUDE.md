@@ -68,6 +68,10 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - `domain/Training.kt`: records (history per exercise), warm-ups (~40%/70% bells, `SetEntry.warmup`, excluded
   from volume/records/progression), deload (suggested after 5 steady weeks or an HRV drop; `AppData.deloadWeeks`,
   ~70% bells), weight trend/ETA, day swaps.
+- Daily rings (Apple Health style): `Settings.dailyRings` (up to 4 `DailyRing(RingKind, amount)`, null = steps 8,000 +
+  training 45 min + sleep 7.5 h), progress per day in `domain/Rings.kt` (tested; PLAN follows the day's plan, rest day =
+  closed). Week tab section "rings" (`DailyRingsCard`: the day's rings + a Mon–Sun row of small rings), editor
+  `DailyRingsEditor` in Settings and the Rings and targets screen; the rings widget shows today's rings.
 - Weekly targets: `Settings.weeklyGoals` (up to 4 `WeeklyGoal(GoalKind, amount)`, null = plan + Zone 2 + sauna),
   progress in `domain/Goals.kt` (tested); rings on the Week tab (Edit → `GoalsScreen`), Settings and the rings widget.
 - Reminders (`reminder/PlanReminder.kt`, WorkManager every 15 min): Sunday 18:00 plan review, 06:00 today + recovery,
