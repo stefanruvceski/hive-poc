@@ -141,6 +141,14 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
         lockTx(tx.id)
     }
 
+    /** Saves an edited payment; a new date or currency locks that day's rate again. */
+    fun updateTransaction(t: Transaction) {
+        val old = _data.value.transactions.firstOrNull { it.id == t.id } ?: return
+        val relock = old.date != t.date || old.currency != t.currency
+        update { d -> d.copy(transactions = d.transactions.map { if (it.id == t.id) (if (relock) t.copy(fxRate = null, fxRateDate = null) else t) else it }) }
+        if (relock) lockTx(t.id)
+    }
+
     fun deleteTransaction(id: String) = update { d -> d.copy(transactions = d.transactions.filter { it.id != id }) }
 
     fun setGoal(g: GoalConfig) = update { d -> d.copy(goal = g) }
@@ -160,6 +168,13 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
         val ex = e.copy(id = id("exp"), createdAt = Instant.now().toString())
         update { d -> d.copy(expenses = d.expenses + ex) }
         lockExpense(ex.id)
+    }
+
+    fun updateExpense(e: Expense) {
+        val old = _data.value.expenses.firstOrNull { it.id == e.id } ?: return
+        val relock = old.date != e.date || old.currency != e.currency
+        update { d -> d.copy(expenses = d.expenses.map { if (it.id == e.id) (if (relock) e.copy(fxRate = null, fxRateDate = null) else e) else it }) }
+        if (relock) lockExpense(e.id)
     }
 
     fun deleteExpense(id: String) = update { d -> d.copy(expenses = d.expenses.filter { it.id != id }) }

@@ -23,13 +23,14 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
   to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon (`ic_hive_*`: same-size hexagons in an uneven comb), shortcuts,
   FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Drawify. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
-  `HomeSummary`); opening the app lands there, deep links go straight into a module, back returns home.
+  `HomeSummary`; order and hidden apps in `host/HomeOrder`, tested, prefs `hive_home`, edited with the pencil or a long press); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
   the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`ic_stat_hive`, the comb; `app.stride.core.R`),
   and the host contract in `host/`: `AppModule`, `Host` (open the app via `Host.openIntent` / `Host.component`, never a
   direct `MainActivity` reference), `OpenRequest`, `AppInfo` (library modules have no `BuildConfig` of their own).
 - Shared in `:core` for every module (use these before writing new ones): `ui/Layout.kt` + `LayoutOps` + `model/LayoutPrefs`
-  (hold-to-edit sections, per-module tab lists), `ui/Rings.kt` (`RingStack`), `ui/Heatmap.kt` (`YearHeatmap`), `ui/Controls.kt`
+  (hold-to-edit sections, per-module tab lists) + `ui/TabsAndSections.kt` (`TabsAndSectionsScreen`: hide / reorder tabs and
+  sections for any module; Health, Habits and Money use it), `ui/Rings.kt` (`RingStack`), `ui/Heatmap.kt` (`YearHeatmap`), `ui/Controls.kt`
   (`PeriodNav`, `ThinBar`, `Segment`, `Chip`, `DateField`), `ui/Components.kt` (cards, `LineChart` with tap tooltips and `more`
   series, `BarChart`, `ProgressRing`, `ui/MoreCharts.kt` (`StackedBarChart` with tap select, `DonutChart`), `WeekStrip`, `StatTile`, nav bar), `ui/Celebration.kt`, `data/JsonStore` (one JSON file per
   module, atomic writes), `notify/Notifier` (post + post-once dedupe), `widget/WidgetKit.kt` + `WidgetArt` (Glance frame, text
@@ -44,7 +45,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   from currency-api or NBS (`data/FxClient`, keyless). Tabs Income / Reports / Spending / Setup, monthly income reminder.
   Reports (`domain/Reports`, tested; `ui/ReportsTab`): income / spending / net per month by source or category
   (`StackedBarChart`, tap a month → its items), donut + per-slice trend, running total vs last year and goal pace,
-  savings rate, weekday spending, biggest items, insights.
+  savings rate, weekday spending, biggest items, insights. All income / All expenses (`ui/AllItemsScreen`, filters in
+  `domain/Ledger`, tested): search, year, source or category, status, grouped by month; tap to edit or delete.
   No accounts and no cloud: all three apps keep their data on the phone (Google sign-in may come later, for Hive as a whole).
 - `:draw` (`DrawModule`, package `app.stride.draw`): Drawify, ported from `stefanruvceski/drawify` (its own update banner dropped,
   Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and

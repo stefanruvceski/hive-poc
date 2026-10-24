@@ -1,6 +1,7 @@
 package app.stride.money.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,7 +59,7 @@ internal fun pct(v: Double): String = "${(v * 100).roundToInt()}%"
 
 /** Income for a year: goal ring, pace, level, months, sources and recent income (Streakli's Finance screen). */
 @Composable
-fun IncomeTab(vm: MoneyViewModel, d: MoneyData, today: LocalDate, year: Int, onYear: (Int) -> Unit, onAdd: () -> Unit, padding: PaddingValues, host: SectionHost) {
+fun IncomeTab(vm: MoneyViewModel, d: MoneyData, today: LocalDate, year: Int, onYear: (Int) -> Unit, onAdd: () -> Unit, padding: PaddingValues, host: SectionHost, onAll: () -> Unit = {}, onEdit: (String) -> Unit = {}) {
     var invoiced by rememberSaveable { mutableStateOf(false) }
     val ref = if (year == today.year) today.monthValue else 12
     val k = remember(d, year, ref) { Finance.kpis(d, year, ref) }
@@ -185,10 +186,13 @@ fun IncomeTab(vm: MoneyViewModel, d: MoneyData, today: LocalDate, year: Int, onY
                     if (recent.isNotEmpty()) item {
                         val sources = d.sources.associateBy { it.id }
                         FCard {
-                            Text("Recent", color = StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Recent", color = StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                androidx.compose.material3.TextButton(onClick = onAll) { Text("See all ${d.transactions.size} →") }
+                            }
                             recent.forEach { t ->
                                 val src = sources[t.sourceId]
-                                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onEdit(t.id) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(src?.let { Color(it.color) } ?: StrideColors.Faint))
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
