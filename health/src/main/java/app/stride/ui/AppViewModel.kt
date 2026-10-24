@@ -204,8 +204,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (!silent) toast("Health Connect isn't available on this phone.")
                     return@launch
                 }
-                val days = HealthSync.read(app)
-                update { d -> HealthSync.merge(d, days) }
+                val read = HealthSync.read(app)
+                update { d -> HealthSync.merge(d, read.days, read.nights) }
                 val written = HealthSync.writeStrength(app, _data.value)
                 if (written.isNotEmpty()) update { d -> d.copy(hcExported = (d.hcExported + written).takeLast(500)) }
                 if (!silent) toast("Health Connect synced" + if (written.isNotEmpty()) " · ${written.size} workouts written" else "")
@@ -329,7 +329,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _garmin.value = _garmin.value.copy(busy = true)
             try {
-                garmin.sendWorkout(GarminWorkout.build(name, session), session.date, fallback = GarminWorkout.build(name, session, exactNames = false))
+                garmin.sendWorkout(
+                    GarminWorkout.build(name, session), session.date,
+                    // Exact exercise names are a guess at Garmin's catalog, so retry without them, then without the sauna step.
+                    fallbacks = listOf(GarminWorkout.build(name, session, exactNames = false), GarminWorkout.build(name, session, exactNames = false, sauna = false)),
+                )
                 toast("Sent to Garmin · sync the watch, then find it under Workouts or today's calendar")
             } catch (e: Exception) {
                 toast(e.message ?: "Couldn't send to Garmin")

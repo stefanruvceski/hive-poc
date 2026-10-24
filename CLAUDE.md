@@ -1,7 +1,7 @@
-# Tend (repo "stride"): notes for Claude Code
+# Hive (repo "stride"): notes for Claude Code
 
 Personal Android app for Stefan (Pixel 10 Pro). Everything user-facing is in English.
-The app is called **Tend** (`host/Brand.NAME` + `@string/app_name` in core); Stride lives on inside it as the
+The app is called **Hive** (formerly Tend) (`host/Brand.NAME` + `@string/app_name` in core); Stride lives on inside it as the
 **Health** module. The repo, package (`app.stride`), release tags and `Stride.apk` keep the old name on purpose:
 renaming them would break updates.
 
@@ -21,7 +21,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 
 ## Modules (ready for a "super-app" of several apps)
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
-  to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon, shortcuts,
+  to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon (`ic_hive_*`: same-size hexagons in an uneven comb), shortcuts,
   FileProvider, backup rules. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
@@ -77,6 +77,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   canvas + World Imagery and tile.openstreetmap.org (darkened), with fallbacks; CARTO was dropped (it now wants a key).
   1080x1920 bitmaps drawn with android.graphics (fonts in `res/font`, OFL): run/walk with
   the GPS route (`/activity/{id}/streams?types=latlng`, lat in `data`, lng in `data2`), strength, swim. Day screen → Share.
+- Sleep: nights with stages from Health Connect (`AppData.sleep`, `SleepNight`/`SleepStage`, main session per wake
+  date, 120 days). Stages are the watch's; `domain/Sleep.kt` (tested) adds efficiency, latency, WASO, awakenings,
+  stage shares vs 13-23% deep / 20-25% REM, Sleep Regularity Index, bedtime spread, 7-day debt and a 0-100 score
+  (duration 40, efficiency 20, continuity 10, deep 15, REM 15; renormalized without stages). UI in
+  `ui/screens/SleepViews.kt`: hypnogram card on the Day screen, "Sleep stages" section in Trends.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
@@ -97,7 +102,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Garmin gym workouts (`garmin/`, unofficial): `GarminClient` signs in like garth (SSO → OAuth1 → OAuth2, consumer key
   from thegarth S3; only tokens kept in prefs `garmin`, excluded from Android backup), `GarminWorkout` builds the
   workout-service JSON (repeat groups, reps, kg, rest; tested), `GarminExercises` maps names to FIT categories and, where known, exact exercise names (tested; on a 4xx the
-  upload is retried without exact names); bodyweight exercises go without weight.
+  upload is retried without exact names); bodyweight exercises go without weight; a checked sauna becomes a timed step after the last exercise (dropped on the last retry).
   Workout screen → watch icon sends the session, scheduled on its date. Settings → Garmin Connect (MFA supported).
 - Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).
 

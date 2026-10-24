@@ -15,6 +15,9 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import app.stride.domain.Analyzer
 import app.stride.model.AppData
+import app.stride.model.SleepNight
+import app.stride.model.SleepStage
+import app.stride.model.SleepStageKind
 import app.stride.model.WeightEntry
 import app.stride.model.Wellness
 import java.time.Instant
@@ -65,7 +68,19 @@ object HealthSync {
         return out
     }
 
-    suspend fun read(context: Context, days: Long = 45): Map<String, Day> {
+    /** What one read returns: daily values and nights with sleep stages. */
+    class Data(val days: Map<String, Day>, val nights: List<SleepNight>)
+
+    private fun stageKind(type: Int): SleepStageKind? = when (type) {
+        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> SleepStageKind.AWAKE
+        SleepSessionRecord.STAGE_TYPE_LIGHT -> SleepStageKind.LIGHT
+        SleepSessionRecord.STAGE_TYPE_DEEP -> SleepStageKind.DEEP
+        SleepSessionRecord.STAGE_TYPE_REM -> SleepStageKind.REM
+        SleepSessionRecord.STAGE_TYPE_SLEEPING -> SleepStageKind.ASLEEP
+        else -> null
+    }
+
+    suspend fun read(context: Context, days: Long = 45): Data {
         val client = HealthConnectClient.getOrCreate(context)
         val have = client.permissionController.getGrantedPermissions()
         val zone = ZoneId.systemDefault()
@@ -73,6 +88,7 @@ object HealthSync {
         val from = LocalDate.now().minusDays(days).atStartOfDay(zone).toInstant()
         fun date(i: Instant) = i.atZone(zone).toLocalDate().toString()
         val map = HashMap<String, Day>()
+        val nights = mutableListOf<SleepNight>()
         fun upd(d: String, f: (Day) -> Day) { map[d] = f(map[d] ?: Day()) }
 
         if (HealthPermission.getReadPermission(StepsRecord::class) in have) {
@@ -80,8 +96,27 @@ object HealthSync {
                 .forEach { (d, list) -> upd(d) { it.copy(steps = list.sumOf { r -> r.count }.toDouble()) } }
         }
         if (HealthPermission.getReadPermission(SleepSessionRecord::class) in have) {
-            readAll(client, SleepSessionRecord::class, from, to).groupBy { date(it.endTime) }
-                .forEach { (d, list) -> upd(d) { it.copy(sleepSecs = list.sumOf { r -> (r.endTime.epochSecond - r.startTime.epochSecond).toDouble() }) } }
+            val sessions = readAll(client, SleepSessionRecord::class, from, to)
+            sessions.groupBy { date(it.endTime) }.forEach { (d, list) ->
+                // Time asleep: staged nights count only sleep stages; unstaged ones count the whole session.
+                val asleep = list.sumOf { r ->
+                    if (r.stages.isEmpty()) (r.endTime.epochSecond - r.startTime.epochSecond).toDouble()
+                    else r.stages.filter { s -> stageKind(s.stage).let { it != null && it != SleepStageKind.AWAKE } }
+                        .sumOf { s -> (s.endTime.epochSecond - s.startTime.epochSecond).toDouble() }
+                }
+                upd(d) { it.copy(sleepSecs = asleep) }
+                // The main sleep of the night: the longest session ending that day (naps are left out).
+                val main = list.maxBy { it.endTime.epochSecond - it.startTime.epochSecond }
+                nights += SleepNight(
+                    date = d,
+                    start = main.startTime.epochSecond,
+                    end = main.endTime.epochSecond,
+                    stages = main.stages.mapNotNull { s -> stageKind(s.stage)?.let { SleepStage(s.startTime.epochSecond, s.endTime.epochSecond, it) } }
+                        .sortedBy { it.start },
+                    offsetMinutes = (main.startZoneOffset ?: zone.rules.getOffset(main.startTime)).totalSeconds / 60,
+                    source = main.metadata.dataOrigin.packageName,
+                )
+            }
         }
         if (HealthPermission.getReadPermission(WeightRecord::class) in have) {
             readAll(client, WeightRecord::class, from, to).groupBy { date(it.time) }
@@ -95,11 +130,11 @@ object HealthSync {
             readAll(client, RestingHeartRateRecord::class, from, to).groupBy { date(it.time) }
                 .forEach { (d, list) -> upd(d) { it.copy(restingHr = list.map { r -> r.beatsPerMinute.toDouble() }.average()) } }
         }
-        return map
+        return Data(map, nights)
     }
 
     /** Fills gaps only: values intervals.icu (Garmin) or the user entered win. Pure, unit tested. */
-    fun merge(d: AppData, days: Map<String, Day>): AppData {
+    fun merge(d: AppData, days: Map<String, Day>, nights: List<SleepNight> = emptyList()): AppData {
         val well = d.wellness.associateBy { it.id }.toMutableMap()
         for ((date, v) in days) {
             val w = well[date] ?: Wellness(date)
@@ -115,7 +150,10 @@ object HealthSync {
             val kg = v.weight ?: continue
             if (date !in weights) weights[date] = WeightEntry(date, kg, SOURCE)
         }
+        val since = LocalDate.now().minusDays(120).toString()
+        val sleep = (d.sleep.associateBy { it.date } + nights.associateBy { it.date }).values.filter { it.date >= since }.sortedBy { it.date }
         return d.copy(
+            sleep = sleep,
             wellness = well.values.filter { it.hasRecovery || it.steps != null }.sortedBy { it.id },
             weights = weights.values.sortedBy { it.date },
         )

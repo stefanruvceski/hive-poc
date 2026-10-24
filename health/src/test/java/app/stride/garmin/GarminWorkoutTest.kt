@@ -81,4 +81,19 @@ class GarminWorkoutTest {
         assertEquals(null, withNames["weightValue"])
         assertEquals(null, firstSet(GarminWorkout.build("Upper", s, exactNames = false))["exerciseName"])
     }
+
+    @Test
+    fun saunaStepAfterTheLastExercise() {
+        val squat = ExerciseEntry("Goblet squat").withSets(List(3) { SetEntry(20.0, 8) })
+        val s = StrengthSession("s", "2026-10-24", DayKind.STRENGTH_LEGS, listOf(squat), sauna = true, saunaMinutes = 15)
+        fun steps(w: kotlinx.serialization.json.JsonObject) = w["workoutSegments"]!!.jsonArray[0].jsonObject["workoutSteps"]!!.jsonArray
+        val last = steps(GarminWorkout.build("Legs", s)).last().jsonObject
+        assertEquals("cooldown", last["stepType"]!!.jsonObject["stepTypeKey"]!!.jsonPrimitive.content)
+        assertEquals("time", last["endCondition"]!!.jsonObject["conditionTypeKey"]!!.jsonPrimitive.content)
+        assertEquals(900.0, last["endConditionValue"]!!.jsonPrimitive.content.toDouble(), 0.0)
+        assertEquals(4, last["stepOrder"]!!.jsonPrimitive.int) // repeat group 1, set 2, rest 3, sauna 4
+        // No sauna checked, or turned off for the retry: the workout ends with the last exercise.
+        assertEquals(1, steps(GarminWorkout.build("Legs", s.copy(sauna = false))).size)
+        assertEquals(1, steps(GarminWorkout.build("Legs", s, sauna = false)).size)
+    }
 }
