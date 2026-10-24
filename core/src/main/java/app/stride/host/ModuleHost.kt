@@ -3,6 +3,7 @@ package app.stride.host
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -84,6 +88,13 @@ fun ModuleHost(modules: List<AppModule>, open: OpenRequest) {
 @Composable
 private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
     val context = LocalContext.current
+    // The user's order and hidden apps (hold a card or tap the pencil to edit).
+    val prefs = remember { context.getSharedPreferences("hive_home", android.content.Context.MODE_PRIVATE) }
+    var order by remember { mutableStateOf(HomeOrder.decode(prefs.getString("apps", null))) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    fun save(o: HomeOrder) { order = o; prefs.edit().putString("apps", o.encode()).apply() }
+    val ids = modules.map { it.id }
+    BackHandler(enabled = editing) { editing = false }
     val updates: UpdateViewModel = viewModel()
     val update by updates.state.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.onForeground(context) }
@@ -106,8 +117,14 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
                     style = TextStyle(fontSize = 12.sp, letterSpacing = 0.8.sp, fontWeight = FontWeight.Bold),
                     color = StrideColors.Faint,
                 )
-                Text(greeting, style = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.ExtraBold), color = StrideColors.Text)
-                Text(Brand.NAME, style = MaterialTheme.typography.titleMedium, color = StrideColors.Accent)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(greeting, style = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.ExtraBold), color = StrideColors.Text)
+                        Text(Brand.NAME, style = MaterialTheme.typography.titleMedium, color = StrideColors.Accent)
+                    }
+                    if (editing) androidx.compose.material3.Button(onClick = { editing = false }) { Text("Done") }
+                    else androidx.compose.material3.IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, "Edit apps", tint = StrideColors.Dim) }
+                }
             }
         }
         item {
@@ -119,14 +136,41 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
                 onCancelPermission = updates::cancelPermission,
             )
         }
-        items(modules, key = { it.id }) { m -> ModuleCard(m) { onOpen(m) } }
-        item { ComingSoon() }
+        if (editing) {
+            item { Text("Move apps up or down and switch off the ones you don't use. Their data stays.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim, modifier = Modifier.padding(horizontal = 4.dp)) }
+            val sorted = order.sorted(ids)
+            items(sorted, key = { "edit-$it" }) { id ->
+                val m = modules.first { it.id == id }
+                val i = sorted.indexOf(id)
+                val shown = id !in order.hidden
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(StrideColors.Elev).padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(m.accent.copy(alpha = if (shown) 0.18f else 0.06f)), contentAlignment = Alignment.Center) {
+                        Icon(m.icon, null, tint = if (shown) m.accent else StrideColors.Faint)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(m.title, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold), color = if (shown) StrideColors.Text else StrideColors.Faint, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.IconButton(onClick = { save(order.move(ids, id, -1)) }, enabled = i > 0) { Icon(Icons.Filled.KeyboardArrowUp, "Move up") }
+                    androidx.compose.material3.IconButton(onClick = { save(order.move(ids, id, 1)) }, enabled = i < sorted.lastIndex) { Icon(Icons.Filled.KeyboardArrowDown, "Move down") }
+                    androidx.compose.material3.Switch(checked = shown, onCheckedChange = { save(order.toggle(ids, id)) })
+                }
+            }
+        } else {
+            items(order.visible(ids), key = { it }) { id ->
+                val m = modules.first { it.id == id }
+                ModuleCard(m, onLongClick = { editing = true }) { onOpen(m) }
+            }
+            item { ComingSoon() }
+        }
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun ModuleCard(m: AppModule, onClick: () -> Unit) {
-    GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).clickable(onClick = onClick), tint = m.accent) {
+private fun ModuleCard(m: AppModule, onLongClick: () -> Unit, onClick: () -> Unit) {
+    GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick), tint = m.accent) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(m.accent.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
                 Icon(m.icon, null, tint = m.accent, modifier = Modifier.size(30.dp))

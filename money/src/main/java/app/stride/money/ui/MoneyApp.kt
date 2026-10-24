@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
@@ -38,6 +39,7 @@ import app.stride.ui.LongPressTargets
 import app.stride.ui.NavItem
 import app.stride.ui.SectionHost
 import app.stride.ui.StrideNavBar
+import app.stride.ui.TabsAndSectionsScreen
 import app.stride.ui.theme.StrideColors
 import java.time.LocalDate
 import java.time.YearMonth
@@ -62,6 +64,7 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
     var tabId by rememberSaveable { mutableStateOf("income") }
     val tab = tabs.firstOrNull { it.id == tabId } ?: tabs.first()
     var editing by rememberSaveable { mutableStateOf(false) }
+    var layoutScreen by rememberSaveable { mutableStateOf(false) }
     var year by rememberSaveable { mutableStateOf(today.year) }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var form by rememberSaveable { mutableStateOf<String?>(null) }
@@ -107,6 +110,12 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
         return
     }
 
+    if (layoutScreen) {
+        BackHandler { layoutScreen = false }
+        TabsAndSectionsScreen(MoneyLayouts.ALL, layout, vm::setLayout) { layoutScreen = false }
+        return
+    }
+
     val host = SectionHost(tab, layout, editing, onPrefs = vm::setLayout, onLongPress = { editing = true })
     CompositionLocalProvider(LocalLongPressTargets provides remember { LongPressTargets() }) {
         Scaffold(
@@ -116,12 +125,14 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
                     title = { Column { Text("Edit ${tab.title}"); Text("Hide or move sections", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim) } },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                     actions = {
+                        TextButton(onClick = { editing = false; layoutScreen = true }) { Text("Tabs") }
                         TextButton(onClick = { vm.setLayout(LayoutOps.resetTab(layout, tab)) }) { Text("Reset") }
                         Button(onClick = { editing = false }, modifier = Modifier.padding(end = 8.dp)) { Text("Done") }
                     },
                 ) else TopAppBar(
                     navigationIcon = { if (onHome != null) IconButton(onClick = onHome) { Icon(Icons.Filled.Apps, "All apps") } },
                     title = { Text(if (tab.id == "income") "Money" else tab.title, style = MaterialTheme.typography.headlineSmall) },
+                    actions = { IconButton(onClick = { layoutScreen = true }) { Icon(Icons.Filled.DashboardCustomize, "Tabs and sections", tint = StrideColors.Dim) } },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 )
             },

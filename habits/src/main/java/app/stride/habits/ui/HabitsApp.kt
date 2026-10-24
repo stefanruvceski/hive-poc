@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Today
@@ -47,6 +48,7 @@ import app.stride.ui.NavItem
 import app.stride.ui.ProgressRing
 import app.stride.ui.SectionHost
 import app.stride.ui.StrideNavBar
+import app.stride.ui.TabsAndSectionsScreen
 import app.stride.ui.theme.StrideColors
 import java.time.LocalDate
 import java.time.YearMonth
@@ -70,6 +72,7 @@ fun HabitsApp(open: OpenRequest, onHome: (() -> Unit)?) {
     var tabId by rememberSaveable { mutableStateOf("today") }
     val tab = tabs.firstOrNull { it.id == tabId } ?: tabs.first()
     var editing by rememberSaveable { mutableStateOf(false) }
+    var layoutScreen by rememberSaveable { mutableStateOf(false) }
     var date by remember { mutableStateOf(today) }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var year by rememberSaveable { mutableStateOf(today.year) }
@@ -100,6 +103,12 @@ fun HabitsApp(open: OpenRequest, onHome: (() -> Unit)?) {
         return
     }
 
+    if (layoutScreen) {
+        BackHandler { layoutScreen = false }
+        TabsAndSectionsScreen(HabitLayouts.ALL, layout, vm::setLayout) { layoutScreen = false }
+        return
+    }
+
     val host = SectionHost(tab, layout, editing, onPrefs = vm::setLayout, onLongPress = { editing = true })
     CompositionLocalProvider(LocalLongPressTargets provides remember { LongPressTargets() }) {
         Box(Modifier.fillMaxSize()) {
@@ -110,6 +119,7 @@ fun HabitsApp(open: OpenRequest, onHome: (() -> Unit)?) {
                         title = { Column { Text("Edit ${tab.title}"); Text("Hide or move sections", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim) } },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                         actions = {
+                            TextButton(onClick = { editing = false; layoutScreen = true }) { Text("Tabs") }
                             TextButton(onClick = { vm.setLayout(LayoutOps.resetTab(layout, tab)) }) { Text("Reset") }
                             Button(onClick = { editing = false }, modifier = Modifier.padding(end = 8.dp)) { Text("Done") }
                         },
@@ -118,6 +128,7 @@ fun HabitsApp(open: OpenRequest, onHome: (() -> Unit)?) {
                         title = { Text(if (tab.id == "today") "Habits" else tab.title, style = MaterialTheme.typography.headlineSmall) },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                         actions = {
+                            IconButton(onClick = { layoutScreen = true }) { Icon(Icons.Filled.DashboardCustomize, "Tabs and sections", tint = StrideColors.Dim) }
                             val c = HabitStats.dayCounts(d, today)
                             if (c.total > 0) Box(Modifier.padding(end = 12.dp)) { ProgressRing(c.progress.toFloat(), size = 30, stroke = 4, label = "") }
                         },

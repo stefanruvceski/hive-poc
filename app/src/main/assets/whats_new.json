@@ -1,5 +1,13 @@
 [
   {
+    "id": "2026-10-30-layout-everywhere",
+    "title": "Arrange every app your way 🧩",
+    "items": [
+      {"icon": "apps", "text": "Home: tap the pencil (or hold an app card) to move apps up or down and switch off the ones you don't use. Their data stays."},
+      {"icon": "palette", "text": "Habits and Money now have Tabs and sections like Health: hide or reorder whole tabs and every section in them (the grid icon at the top, or Tabs in edit mode)."}
+    ]
+  },
+  {
     "id": "2026-10-30-money-all",
     "title": "Every payment in one place 🧾",
     "items": [

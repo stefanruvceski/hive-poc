@@ -59,84 +59,10 @@ import app.stride.ui.Layouts
 import app.stride.ui.SectionLabel
 import app.stride.ui.theme.StrideColors
 
-/** All tabs with their sections: switch each on or off and move it up or down. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** All tabs with their sections (the shared core screen with Health's tabs). */
 @Composable
 fun LayoutScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
-    val prefs = data.settings.layout
-    var open by rememberSaveable { mutableStateOf<String?>(null) }
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("Tabs and sections") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = { TextButton(onClick = { vm.setLayout(LayoutPrefs()) }) { Text("Reset all") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-            )
-        },
-    ) { padding ->
-        val tabs = Layouts.tabs(prefs)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 32.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item {
-                Text(
-                    "Tip: long-press anywhere on a tab to edit its sections right there.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = StrideColors.Dim,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-            }
-            items(tabs, key = { it.id }) { tab ->
-                val i = tabs.indexOf(tab)
-                val shown = tab.id !in prefs.hiddenTabs
-                val expanded = open == tab.id
-                FCard {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Row(Modifier.weight(1f).clickable { open = if (expanded) null else tab.id }, verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = StrideColors.Dim)
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(tab.title, style = MaterialTheme.typography.titleMedium, color = if (shown) StrideColors.Text else StrideColors.Faint)
-                                val hiddenCount = tab.sections.count { Layouts.hidden(prefs, tab, it) }
-                                Text(
-                                    if (!shown) "Hidden tab" else "${tab.sections.size - hiddenCount} of ${tab.sections.size} sections shown",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = StrideColors.Dim,
-                                )
-                            }
-                        }
-                        IconButton(onClick = { vm.setLayout(Layouts.moveTab(prefs, tab, -1)) }, enabled = i > 0) { Icon(Icons.Filled.KeyboardArrowUp, "Move tab up") }
-                        IconButton(onClick = { vm.setLayout(Layouts.moveTab(prefs, tab, 1)) }, enabled = i < tabs.lastIndex) { Icon(Icons.Filled.KeyboardArrowDown, "Move tab down") }
-                        Switch(checked = shown, onCheckedChange = { vm.setLayout(Layouts.toggleTab(prefs, tab)) })
-                    }
-                    AnimatedVisibility(expanded) {
-                        Column {
-                            Spacer(Modifier.height(8.dp))
-                            val sections = Layouts.sections(prefs, tab)
-                            sections.forEachIndexed { j, s ->
-                                if (j > 0) HorizontalDivider(color = StrideColors.Border)
-                                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    val visible = !Layouts.hidden(prefs, tab, s)
-                                    Text(s.title, style = MaterialTheme.typography.bodyMedium, color = if (visible) StrideColors.Text else StrideColors.Faint, modifier = Modifier.weight(1f).padding(start = 32.dp))
-                                    IconButton(onClick = { vm.setLayout(Layouts.moveSection(prefs, tab, s, -1)) }, enabled = j > 0, modifier = Modifier.size(40.dp)) {
-                                        Icon(Icons.Filled.KeyboardArrowUp, "Move up")
-                                    }
-                                    IconButton(onClick = { vm.setLayout(Layouts.moveSection(prefs, tab, s, 1)) }, enabled = j < sections.lastIndex, modifier = Modifier.size(40.dp)) {
-                                        Icon(Icons.Filled.KeyboardArrowDown, "Move down")
-                                    }
-                                    Switch(checked = visible, onCheckedChange = { vm.setLayout(Layouts.toggleSection(prefs, tab, s)) })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    app.stride.ui.TabsAndSectionsScreen(Layouts.ALL, data.settings.layout, vm::setLayout, onBack)
 }
 
 /** Every notification type with its own switch and a test button. */
