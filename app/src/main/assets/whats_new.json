@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-27-habits-money",
+    "title": "Habits and Money join the hive 🐝",
+    "items": [
+      {"icon": "apps", "text": "Two new apps on the home screen: Habits and Money. Streakli now lives inside Hive, and everything stays on your phone."},
+      {"icon": "spark", "text": "Habits: daily habits by part of the day, to-dos, mood, streaks, a month grid, a yearly dashboard with insights, reminders and two widgets. Close the day for a little celebration."},
+      {"icon": "chart", "text": "Money: income by source with exchange rates, paid vs invoiced, a yearly goal with pace and levels, and monthly budgets for your spending."},
+      {"icon": "palette", "text": "All three apps share the same cards, charts, rings and hold-to-edit sections."}
+    ]
+  },
+  {
     "id": "2026-10-26-daily-rings",
     "title": "Close your rings every day ⭕",
     "items": [

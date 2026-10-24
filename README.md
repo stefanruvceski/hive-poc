@@ -1,6 +1,12 @@
 # Hive (formerly Tend, originally Stride)
 
-A personal Android "home" for several small apps. The first one, **Health** (formerly Stride), is a training diary for a weekly plan based on Huberman's Protocols (swimming, running, kettlebells, sauna).
+A personal Android "home" for several small apps, all keeping their data on the phone:
+
+- **Health** (formerly Stride): training, recovery, sleep and weight (below).
+- **Habits** (formerly Streakli): daily habits by part of the day, to-dos, mood, streaks, month grid, yearly dashboard, reminders, widgets.
+- **Money** (Streakli's Finance): income by source with exchange rates, yearly goal and levels, monthly budgets.
+
+**Health** is a training diary for a weekly plan based on Huberman's Protocols (swimming, running, kettlebells, sauna).
 Pulls workouts from a Garmin watch through intervals.icu. Visual design matches Streakli
 (`stefanruvceski/habit-tracker`, `apps/mobile`): dark navy, bordered cards, emerald accent.
 
