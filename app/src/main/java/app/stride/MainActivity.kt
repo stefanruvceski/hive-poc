@@ -6,19 +6,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import app.stride.ui.OpenRequest
-import app.stride.widget.Widgets
-import app.stride.reminder.PlanReminder
-import app.stride.ui.StrideApp
+import app.stride.host.Host
+import app.stride.host.ModuleHost
+import app.stride.host.OpenRequest
 import app.stride.ui.theme.StrideTheme
 
+/** The one activity: hosts the modules and turns intents (widgets, notifications, shortcuts) into open requests. */
 class MainActivity : ComponentActivity() {
-    // Bumped when the Sunday notification is tapped, so the app opens next week's plan.
-    private val planReviewRequest = mutableIntStateOf(0)
-
-    // Where a widget asked to open ("workout", a tab id, "day:YYYY-MM-DD"), with a counter so repeats still fire.
+    // Where to open ("workout", a tab id, "day:YYYY-MM-DD", "plan-review"), with a counter so repeats still fire.
     private val openRequest = mutableStateOf(OpenRequest(0, ""))
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,11 +23,10 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
-        PlanReminder.schedule(this)
         if (savedInstanceState == null) handle(intent)
         setContent {
             StrideTheme {
-                StrideApp(planReviewRequest = planReviewRequest.intValue, openRequest = openRequest.value)
+                ModuleHost(Modules.all, openRequest.value)
             }
         }
     }
@@ -42,12 +37,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handle(intent: Intent?) {
-        if (intent?.getBooleanExtra(PlanReminder.EXTRA_REVIEW_PLAN, false) == true) {
-            intent.removeExtra(PlanReminder.EXTRA_REVIEW_PLAN)
-            planReviewRequest.intValue++
-        }
-        intent?.getStringExtra(Widgets.EXTRA_OPEN)?.let { target ->
-            intent.removeExtra(Widgets.EXTRA_OPEN)
+        intent?.getStringExtra(Host.EXTRA_OPEN)?.let { target ->
+            intent.removeExtra(Host.EXTRA_OPEN)
             openRequest.value = OpenRequest(openRequest.value.id + 1, target)
         }
     }

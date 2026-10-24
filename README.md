@@ -34,11 +34,15 @@ Releases are signed with a keystore kept in GitHub secrets (`STRIDE_KEYSTORE_BAS
 Kotlin 2.0, Jetpack Compose (Material 3), kotlinx.serialization, OkHttp. AGP 8.9, Gradle 8.11.1, JDK 17, compileSdk 36 (targetSdk 35), minSdk 26.
 No Gradle wrapper is committed; CI uses `gradle/actions/setup-gradle` with Gradle 8.11.1.
 
+Three Gradle modules, so more apps can live inside Stride later:
+
 ```
-app/src/main/java/app/stride/
+app/      thin shell: MainActivity, StrideApplication, Modules (the module list), launcher icon, shortcuts
+core/     shared: theme + components, in-app updates, Claude client, host contract (AppModule, Host, AppInfo)
+health/   the Stride module (HealthModule):
   model/      data classes (plan, intervals.icu DTOs, strength, weight)
-  data/       local JSON store, intervals.icu API client
-  domain/     Analyzer (plan matching, verdicts, weekly summary, trends), formatting
-  ui/         StrideApp (navigation), AppViewModel, Components (cards, charts, ring, week strip)
-  ui/screens/ Week, Day, Trends, Strength, Weight, Settings
+  data/       local JSON store, intervals.icu, Health Connect, backup
+  domain/     Analyzer (plan matching, verdicts, weekly summary, trends), goals, notices, formatting
+  ui/         StrideApp (navigation), AppViewModel, screens
+  widget/ share/ live/ reminder/ garmin/ coach/
 ```

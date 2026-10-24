@@ -51,7 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
-        // BuildConfig.DEBUG / VERSION_CODE drive the in-app update check.
+        // BuildConfig.DEBUG / VERSION_CODE / VERSION_NAME are handed to the modules via AppInfo (StrideApplication).
         buildConfig = true
     }
     packaging {
@@ -63,26 +63,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
-    implementation(composeBom)
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    // Weekly AI coach (Claude API, the user's own key).
-    implementation("com.anthropic:anthropic-java:2.34.0")
-    // Steps, sleep, weight, HRV and resting HR from Health Connect; strength workouts written back.
-    implementation("androidx.health.connect:connect-client:1.1.0")
-
-    testImplementation("junit:junit:4.13.2")
+    // The modules; :health brings :core (shared UI, updates, coach client, host contract) with it.
+    implementation(project(":health"))
+    implementation(project(":core"))
 }
