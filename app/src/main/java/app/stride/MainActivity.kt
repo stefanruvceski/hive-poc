@@ -1,11 +1,13 @@
 package app.stride
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.IntentCompat
 import androidx.compose.runtime.mutableStateOf
 import app.stride.host.Host
 import app.stride.host.ModuleHost
@@ -39,6 +41,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handle(intent: Intent?) {
+        // A picture shared from another app opens in Drawify.
+        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
+            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let { uri ->
+                openRequest.value = OpenRequest(openRequest.value.id + 1, "draw/share:$uri")
+            }
+            return
+        }
         intent?.getStringExtra(Host.EXTRA_OPEN)?.let { target ->
             intent.removeExtra(Host.EXTRA_OPEN)
             openRequest.value = OpenRequest(openRequest.value.id + 1, target)

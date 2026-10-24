@@ -22,7 +22,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 ## Modules (ready for a "super-app" of several apps)
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
   to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon (`ic_hive_*`: same-size hexagons in an uneven comb), shortcuts,
-  FileProvider, backup rules. `Modules.all` = Health, Habits, Money. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
+  FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Drawify. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
   the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`app.stride.core.R`),
@@ -43,6 +43,10 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   locked FX rates, expenses, categories, budgets, goal, levels). Pure logic in `domain/Finance` + `FxParse` (tested); live rates
   from currency-api or NBS (`data/FxClient`, keyless). Tabs Income / Spending / Setup, monthly income reminder.
   No accounts and no cloud: all three apps keep their data on the phone (Google sign-in may come later, for Hive as a whole).
+- `:draw` (`DrawModule`, package `app.stride.draw`): Drawify, ported from `stefanruvceski/drawify` (its own update banner dropped,
+  Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and
+  `OverlayView` (drag / pinch / rotate, corner mode); `TiltPerspective` (gravity → homography), `ImageFilters` (no white,
+  Sobel outline), `BitmapLoader` (EXIF, last image kept). Images shared to Hive (`ACTION_SEND image/*`) open as "draw/share:<uri>".
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
   with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
   Open targets for a module later become "<moduleId>/<target>".
