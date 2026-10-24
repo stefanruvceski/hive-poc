@@ -66,7 +66,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 
 ## In-app updates
 `core/…/update/`: on launch and on every return to the foreground, release builds read
-`https://api.github.com/repos/stefanruvceski/stride/releases` (no token; the repo must stay public), take the
+`https://api.github.com/repos/stefanruvceski/hive/releases` (the repo was renamed from stride; GitHub redirects the old URL, which builds before the rename still use) (no token; the repo must stay public), take the
 highest non-draft `android-b<N>` release with an `.apk` asset and show a banner if N > `BuildConfig.VERSION_CODE`.
 Pure logic in `UpdateLogic.kt` (unit tested); download + FileProvider + installer in `Updater.kt`. Disabled in debug.
 Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new workflow and versionCode must keep increasing.
