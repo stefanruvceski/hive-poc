@@ -27,4 +27,18 @@ class OpenLibraryParseTest {
         assertEquals(FoundBook("No cover", "", null, null, null, null), r[1])
         assertEquals(emptyList<FoundBook>(), OpenLibraryParse.parse("not json"))
     }
+
+    @Test fun matchesTitlesWithoutAccents() {
+        assertEquals("sapta c", OpenLibraryParse.norm("Šapta-č"))
+        assertEquals("dorde", OpenLibraryParse.norm("Đorđe"))
+        val f = listOf(
+            FoundBook("Deep Work: Rules for Focused Success", "Cal Newport", 2016, 296, null, null),
+            FoundBook("Deep Work", "Cal Newport", 2016, 296, "c1", null),
+            FoundBook("Šaptač", "Donato Carrisi", 2009, 400, "c2", null),
+        )
+        assertEquals("c1", OpenLibraryParse.bestMatch(f, "Deep Work")?.cover)
+        assertEquals("c2", OpenLibraryParse.bestMatch(f, "Saptac")?.cover)
+        assertNull(OpenLibraryParse.bestMatch(f, "Nexus"))
+        assertNull(OpenLibraryParse.bestMatch(f, ""))
+    }
 }

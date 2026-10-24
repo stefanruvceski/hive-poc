@@ -7,6 +7,7 @@ import app.stride.books.data.BooksStore
 import app.stride.books.data.OpenLibrary
 import app.stride.books.domain.BookStats
 import app.stride.books.domain.FoundBook
+import app.stride.books.domain.OpenLibraryParse
 import app.stride.books.model.ActiveSession
 import app.stride.books.model.Book
 import app.stride.books.model.BookStatus
@@ -15,6 +16,7 @@ import app.stride.books.model.Quote
 import app.stride.books.model.Session
 import app.stride.model.LayoutPrefs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -103,6 +105,37 @@ class BooksViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun move(id: String, by: Int) = update { BookStats.move(it, id, by) }
+
+    private val _covers = MutableStateFlow<String?>(null)
+    /** Progress of [findCovers] while it runs ("12 of 80"), else its last result, else null. */
+    val covers: StateFlow<String?> = _covers.asStateFlow()
+    private var coversRunning = false
+
+    /** Looks up every book without a cover on Open Library and fills the cover, pages, year and ISBN it finds (only empty fields). */
+    fun findCovers() {
+        if (coversRunning) return
+        val todo = _data.value.books.filter { it.cover.isNullOrBlank() }
+        if (todo.isEmpty()) { _covers.value = "Every book has a cover."; return }
+        coversRunning = true
+        viewModelScope.launch {
+            var found = 0
+            var offline = 0
+            todo.forEachIndexed { i, b ->
+                _covers.value = "Looking up ${i + 1} of ${todo.size}…"
+                val r = withContext(Dispatchers.IO) { OpenLibrary.search("${b.title} ${b.author}".trim()) ?: OpenLibrary.search(b.title) }
+                if (r == null) offline++
+                val hit = r?.let { OpenLibraryParse.bestMatch(it, b.title) }
+                    ?: withContext(Dispatchers.IO) { OpenLibrary.search(b.title) }?.let { OpenLibraryParse.bestMatch(it, b.title) }
+                if (hit != null) {
+                    found++
+                    update { d -> d.copy(books = d.books.map { x -> if (x.id == b.id) x.copy(cover = x.cover ?: hit.cover, pages = x.pages ?: hit.pages, year = x.year ?: hit.year, isbn = x.isbn ?: hit.isbn) else x }) }
+                }
+                delay(250)
+            }
+            coversRunning = false
+            _covers.value = "Found $found of ${todo.size}." + if (offline > 0) " $offline couldn't be looked up (offline?)." else " The rest keep their title cards; add a link by hand in Edit."
+        }
+    }
 
     /** Open Library search; null when offline. */
     suspend fun search(query: String): List<FoundBook>? = withContext(Dispatchers.IO) { OpenLibrary.search(query) }

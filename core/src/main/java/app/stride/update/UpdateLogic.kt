@@ -38,7 +38,7 @@ data class ReleaseInfo(
 
 object UpdateLogic {
     const val TAG_PREFIX = "android-b"
-    const val RELEASES_URL = "https://api.github.com/repos/stefanruvceski/stride/releases?per_page=20"
+    const val RELEASES_URL = "https://api.github.com/repos/stefanruvceski/hive/releases?per_page=20"
 
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
