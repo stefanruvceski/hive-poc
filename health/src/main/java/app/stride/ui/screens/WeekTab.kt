@@ -180,6 +180,14 @@ fun WeekTab(
                         }
                     }
                     section("targets") { item { TargetsCard(Goals.progress(data, monday, today), onEdit = onEditGoals) } }
+                    section("sleep") {
+                        if (weekOffset == 0) {
+                            val night = data.sleep.lastOrNull()?.takeIf { it.date >= today.minusDays(1).toString() }
+                            if (night != null || data.sleep.isEmpty()) item { SectionLabel("Sleep", Modifier.padding(top = 8.dp, start = 4.dp)) }
+                            if (night != null) item { SleepCard(night, data.sleep, LocalDate.parse(night.date)) }
+                            else if (data.sleep.isEmpty()) item { SleepSetupNote(data.settings.healthConnect) }
+                        }
+                    }
                     section("recovery") {
                         if (weekOffset == 0 && recovery != null) {
                             item { SectionLabel("Recovery", Modifier.padding(top = 8.dp, start = 4.dp)) }

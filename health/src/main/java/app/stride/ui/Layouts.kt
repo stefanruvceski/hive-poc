@@ -17,6 +17,7 @@ object Layouts {
             SectionDef("progress", "Week progress"),
             SectionDef("coach", "AI coach"),
             SectionDef("targets", "Weekly targets"),
+            SectionDef("sleep", "Last night's sleep"),
             SectionDef("recovery", "Recovery"),
             SectionDef("plan", "Daily plan"),
             SectionDef("insights", "Summary"),

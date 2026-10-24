@@ -155,6 +155,10 @@ fun DayScreen(
             result.verdict?.let { v -> item { VerdictCard(v) } }
 
             data.sleep.firstOrNull { it.date == date.toString() }?.let { n -> item { SleepCard(n, data.sleep, date) } }
+            if (data.sleep.isEmpty()) {
+                item { SleepSetupNote(data.settings.healthConnect) }
+                item { HealthConnectCard(vm, data) }
+            }
             Recovery.summary(data.wellness, date)?.let { r -> item { RecoveryCard(r, "Recovery · night before", full = true) } }
 
             if (canCheck && plan != null) {

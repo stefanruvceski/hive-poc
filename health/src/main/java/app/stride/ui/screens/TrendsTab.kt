@@ -148,7 +148,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                         }
                     }
                 }
-                section("sleep_stages") { if (data.sleep.isNotEmpty()) item { SleepStagesTrendCard(data.sleep, today) } }
+                section("sleep_stages") { item { if (data.sleep.isNotEmpty()) SleepStagesTrendCard(data.sleep, today) else SleepSetupNote(data.settings.healthConnect) } }
                 section("rhr") {
                     if (data.wellness.isNotEmpty()) item {
                         ChartCard("Resting heart rate", "weekly average, bpm, lower is better") {
@@ -158,8 +158,14 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                 }
                 section("weight") {
                     item {
-                        ChartCard("Weight", "weekly average, kg") {
-                            LineChart(points.map { it.avgWeight }, labels, MaterialTheme.colorScheme.secondary, { fmtKg(it) }, refLine = t.weightGoalKg)
+                        // Every weigh-in over the same 8 weeks, so a few days of entries already draw a line.
+                        val days = remember(points, today) {
+                            val from = points.first().monday
+                            (0..java.time.temporal.ChronoUnit.DAYS.between(from, today)).map { from.plusDays(it) }
+                        }
+                        val byDate = remember(data.weights) { data.weights.associate { it.date to it.kg } }
+                        ChartCard("Weight", "every weigh-in, kg") {
+                            LineChart(days.map { byDate[it.toString()] }, days.map { dateNum(it) }, StrideColors.Amber, { fmtKg(it) }, refLine = t.weightGoalKg)
                         }
                     }
                 }

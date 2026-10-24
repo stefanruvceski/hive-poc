@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-26-sleep-week",
+    "title": "Sleep and weight, easier to see 🌙",
+    "items": [
+      {"icon": "chart", "text": "Last night's sleep chart now sits on the Week tab, above Recovery. Tap any day to see that night."},
+      {"icon": "heart", "text": "No chart yet? The app now tells you what's missing: Health Connect here, and sleep sharing in Garmin Connect."},
+      {"icon": "chart", "text": "The weight chart in Trends shows every weigh-in instead of weekly averages, so daily entries draw a line right away."}
+    ]
+  },
+  {
     "id": "2026-10-26-garmin-sauna",
     "title": "Sauna on your watch 🔥",
     "items": [
