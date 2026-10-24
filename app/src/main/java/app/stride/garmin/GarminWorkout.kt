@@ -15,7 +15,7 @@ object GarminWorkout {
         put("sportTypeKey", "strength_training")
     }
 
-    private fun repsStep(order: Int, reps: Int, kg: Double, category: String?, note: String, warmup: Boolean) = buildJsonObject {
+    private fun repsStep(order: Int, reps: Int, kg: Double, category: String?, exercise: String?, note: String, warmup: Boolean) = buildJsonObject {
         put("type", "ExecutableStepDTO")
         put("stepOrder", order)
         putJsonObject("stepType") {
@@ -28,6 +28,7 @@ object GarminWorkout {
         }
         put("endConditionValue", reps.coerceAtLeast(1).toDouble())
         category?.let { put("category", it) }
+        exercise?.let { put("exerciseName", it) }
         if (kg > 0) {
             put("weightValue", kg)
             putJsonObject("weightUnit") {
@@ -57,14 +58,18 @@ object GarminWorkout {
      * Each exercise: warm-up sets as single steps, then working sets as a repeat group (set + rest)
      * when they're all the same, else one step per set. Rest between sets is [restSeconds].
      */
-    fun build(name: String, session: StrengthSession, restSeconds: Int = 120): JsonObject {
+    fun build(name: String, session: StrengthSession, restSeconds: Int = 120, exactNames: Boolean = true): JsonObject {
         var order = 0
         val steps = buildJsonArray {
             for (e in session.exercises) {
-                val cat = GarminExercises.category(e.name)
+                val exact = if (exactNames) GarminExercises.exact(e.name) else null
+                val cat = exact?.first ?: GarminExercises.category(e.name)
+                val ex = exact?.second
+                val bodyweight = GarminExercises.isBodyweight(e.name)
+                fun kg(v: Double) = if (bodyweight) 0.0 else v
                 val sets = e.expandedSets()
                 sets.filter { it.warmup }.forEach { w ->
-                    add(repsStep(++order, w.reps, w.kg, cat, "${e.name} (warm-up)", warmup = true))
+                    add(repsStep(++order, w.reps, kg(w.kg), cat, ex, "${e.name} (warm-up)", warmup = true))
                 }
                 val work = sets.filter { !it.warmup }
                 if (work.isEmpty()) continue
@@ -80,13 +85,13 @@ object GarminWorkout {
                         put("numberOfIterations", work.size)
                         put("smartRepeat", false)
                         put("workoutSteps", JsonArray(listOf(
-                            repsStep(++order, work[0].reps, work[0].kg, cat, e.name, warmup = false),
+                            repsStep(++order, work[0].reps, kg(work[0].kg), cat, ex, e.name, warmup = false),
                             restStep(++order, restSeconds),
                         )))
                     })
                 } else {
                     work.forEach { s ->
-                        add(repsStep(++order, s.reps, s.kg, cat, e.name, warmup = false))
+                        add(repsStep(++order, s.reps, kg(s.kg), cat, ex, e.name, warmup = false))
                         add(restStep(++order, restSeconds))
                     }
                 }
