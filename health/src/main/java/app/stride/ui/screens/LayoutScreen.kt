@@ -1,5 +1,6 @@
 package app.stride.ui.screens
 
+import app.stride.host.Brand
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -173,7 +174,7 @@ fun NotificationsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
                 item {
                     FCard {
                         Text("Notifications are blocked", style = MaterialTheme.typography.titleMedium)
-                        Text("Android needs your permission before Stride can post anything.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                        Text("Android needs your permission before ${Brand.NAME} can post anything.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
                         Spacer(Modifier.height(8.dp))
                         androidx.compose.material3.Button(onClick = { if (Build.VERSION.SDK_INT >= 33) permission.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text("Allow notifications") }
                     }
@@ -181,7 +182,7 @@ fun NotificationsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
             }
             item {
                 Text(
-                    "Workout, record and target notes need watch data: Stride syncs in the background every 2 hours.",
+                    "Workout, record and target notes need watch data: ${Brand.NAME} syncs in the background every 2 hours.",
                     style = MaterialTheme.typography.bodySmall,
                     color = StrideColors.Dim,
                     modifier = Modifier.padding(horizontal = 4.dp),

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Themed-icon version: kettlebell outline with heartbeat, single color. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M40.5,52 C36.5,41 38.5,30.5 54,30.5 C69.5,30.5 71.5,41 67.5,52" android:strokeWidth="5" android:strokeLineCap="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M54,45 C38.5,45 31,55.5 31,64.5 C31,71.5 34.5,76.5 39.5,78.5 L68.5,78.5 C73.5,76.5 77,71.5 77,64.5 C77,55.5 69.5,45 54,45 Z" android:strokeWidth="5" android:strokeLineJoin="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
-    <path android:pathData="M39,64 L46.5,64 L50,56.5 L55.5,71 L59,64 L69,64" android:strokeWidth="3.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeColor="#FFFFFFFF" android:fillColor="#00000000" />
-</vector>

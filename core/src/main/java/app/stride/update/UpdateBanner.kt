@@ -1,5 +1,6 @@
 package app.stride.update
 
+import app.stride.host.Brand
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -129,11 +130,11 @@ fun UpdateBanner(
         AlertDialog(
             onDismissRequest = onCancelPermission,
             containerColor = StrideColors.Elev,
-            title = { Text("Allow Stride to install updates") },
+            title = { Text("Allow ${Brand.NAME} to install updates") },
             text = {
                 Text(
                     "Android only installs apps from sources you allow. On the next screen, turn on " +
-                        "\"Allow from this source\" for Stride, then go back. The update downloads and the installer opens.\n\n" +
+                        "\"Allow from this source\" for ${Brand.NAME}, then go back. The update downloads and the installer opens.\n\n" +
                         "You only need to do this once.",
                     color = StrideColors.Dim,
                 )

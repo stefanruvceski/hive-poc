@@ -1,5 +1,6 @@
 package app.stride.domain
 
+import app.stride.host.Brand
 import app.stride.model.Activity
 import app.stride.model.AppData
 import app.stride.model.DayKind
@@ -93,7 +94,7 @@ object Notices {
         // 19:00-21:59: a planned workout that isn't done yet.
         if (on(NotifType.EVENING) && hour in 19..21 && training && day.status != DayStatus.DONE) {
             out += Notice(NotifType.EVENING, today.toString(), "Still time for ${plan!!.title}?",
-                "Not done yet today. Did it without the watch? Open Stride and check it off.")
+                "Not done yet today. Did it without the watch? Open ${Brand.NAME} and check it off.")
         }
 
         // 20:00-22:59 on sauna days without sauna logged.
@@ -195,7 +196,7 @@ object Notices {
         }
 
         if (on(NotifType.UPDATE) && latestBuild != null && latestBuild > installedBuild) {
-            out += Notice(NotifType.UPDATE, "$latestBuild", "Stride update", "Build $latestBuild is ready. Open Stride and tap Install.")
+            out += Notice(NotifType.UPDATE, "$latestBuild", "${Brand.NAME} update", "Build $latestBuild is ready. Open ${Brand.NAME} and tap Install.")
         }
         return out
     }

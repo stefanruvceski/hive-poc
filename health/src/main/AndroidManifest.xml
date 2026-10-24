@@ -49,7 +49,7 @@
         <receiver
             android:name="app.stride.widget.TodayWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Today">
+            android:label="Health · Today">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -61,7 +61,7 @@
         <receiver
             android:name="app.stride.widget.WeightWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Weight">
+            android:label="Health · Weight">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -73,7 +73,7 @@
         <receiver
             android:name="app.stride.widget.WeekStripWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Week">
+            android:label="Health · Week">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -85,7 +85,7 @@
         <receiver
             android:name="app.stride.widget.RingsWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Weekly targets">
+            android:label="Health · Weekly targets">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -97,7 +97,7 @@
         <receiver
             android:name="app.stride.widget.RecoveryWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Recovery">
+            android:label="Health · Recovery">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -109,7 +109,7 @@
         <receiver
             android:name="app.stride.widget.NextWorkoutWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Next workout">
+            android:label="Health · Next workout">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -121,7 +121,7 @@
         <receiver
             android:name="app.stride.widget.MonthWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Month">
+            android:label="Health · Month">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -133,7 +133,7 @@
         <receiver
             android:name="app.stride.widget.StrengthWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Strength">
+            android:label="Health · Strength">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -145,7 +145,7 @@
         <receiver
             android:name="app.stride.widget.TotalsWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Week totals">
+            android:label="Health · Week totals">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -157,7 +157,7 @@
         <receiver
             android:name="app.stride.widget.WeightChartWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Weight trend">
+            android:label="Health · Weight trend">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -169,7 +169,7 @@
         <receiver
             android:name="app.stride.widget.WeekListWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Week plan">
+            android:label="Health · Week plan">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -181,7 +181,7 @@
         <receiver
             android:name="app.stride.widget.StartWorkoutWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Start workout">
+            android:label="Health · Start workout">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -193,7 +193,7 @@
         <receiver
             android:name="app.stride.widget.LastRunWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Last run">
+            android:label="Health · Last run">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -205,7 +205,7 @@
         <receiver
             android:name="app.stride.widget.LastSwimWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Last swim">
+            android:label="Health · Last swim">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -217,7 +217,7 @@
         <receiver
             android:name="app.stride.widget.StreakWidgetReceiver"
             android:exported="true"
-            android:label="Stride · Streak">
+            android:label="Health · Streak">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

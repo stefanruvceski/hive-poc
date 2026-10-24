@@ -1,5 +1,6 @@
 package app.stride.share
 
+import app.stride.host.Brand
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -55,7 +56,7 @@ object YearCards {
     }
 
     private fun Canvas.header(f: Fonts, year: Int, page: Int, kicker: String, accent: Int) {
-        t("STRIDE · $year", 80f, 150f, f.black, 30f, TEXT, spacing = 8f)
+        t("${Brand.NAME.uppercase()} · $year", 80f, 150f, f.black, 30f, TEXT, spacing = 8f)
         t("$page / 4", W - 80f, 150f, f.xbold, 28f, DIM, Paint.Align.RIGHT)
         t(kicker.uppercase(), 80f, 300f, f.black, 34f, accent, spacing = 8f)
     }

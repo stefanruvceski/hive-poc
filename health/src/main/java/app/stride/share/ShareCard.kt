@@ -1,5 +1,6 @@
 package app.stride.share
 
+import app.stride.host.Brand
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlurMaskFilter
@@ -154,7 +155,7 @@ object ShareCard {
             d.setBounds(52, (y - 28 - size / 2).toInt(), 52 + size, (y - 28 + size / 2).toInt())
             d.draw(this)
         }
-        text("STRIDE", 158f, y - 16f, f.black, 34f, TEXT, spacing = 10f)
+        text(Brand.NAME.uppercase(), 158f, y - 16f, f.black, 34f, TEXT, spacing = 10f)
         text(right.uppercase(), W - 80f, y - 16f, f.xbold, 26f, DIM, spacing = 3f, align = Paint.Align.RIGHT)
     }
 
