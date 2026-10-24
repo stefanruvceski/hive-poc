@@ -39,6 +39,7 @@ import androidx.health.connect.client.PermissionController
 import app.stride.data.Backup
 import app.stride.data.HealthSync
 import app.stride.model.AppData
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.stride.model.GoalKind
 import app.stride.model.WeeklyGoal
 import app.stride.domain.Goals
@@ -289,6 +290,83 @@ fun BackupCard(vm: AppViewModel, data: AppData) {
             text = { Text("Everything in the app is replaced by the backup. Your API keys stay as they are.") },
             confirmButton = { Button(onClick = { vm.restoreBackup(uri); confirm = null }) { Text("Restore") } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+/**
+ * Garmin Connect for gym workouts: sign in once (tokens stay on the phone, the password is not kept),
+ * then "Send to Garmin" in a workout puts it on the watch.
+ */
+@Composable
+fun GarminCard(vm: AppViewModel) {
+    val ui by vm.garminUi.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.refreshGarmin() }
+    var signIn by remember { mutableStateOf(false) }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    FCard {
+        Text("Garmin Connect (gym workouts)", style = MaterialTheme.typography.titleMedium)
+        Text(
+            if (ui.connected) "Connected as ${ui.account ?: "your account"}. In a workout, tap the watch icon to send it to Garmin; " +
+                "after the watch syncs it's under Workouts and on today's calendar."
+            else "Send strength workouts (exercises, sets, reps, kg) to Garmin Connect and start them on the watch. " +
+                "Unofficial: uses Garmin's own sign-in, which Garmin may change at any time.",
+            style = MaterialTheme.typography.bodySmall,
+            color = StrideColors.Dim,
+        )
+        Spacer(Modifier.height(10.dp))
+        if (ui.connected) {
+            OutlinedButton(onClick = { vm.garminDisconnect() }) { Text("Disconnect") }
+        } else {
+            Button(onClick = { signIn = true }, enabled = !ui.busy) { Text(if (ui.busy) "Signing in…" else "Connect Garmin") }
+        }
+    }
+    if (signIn && !ui.connected && !ui.needsMfa) {
+        var show by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { signIn = false },
+            containerColor = StrideColors.Elev,
+            title = { Text("Sign in to Garmin") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Your password is only sent to Garmin and isn't saved. Stride keeps the sign-in token on this phone.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("E-mail") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        singleLine = true,
+                        visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = { IconButton(onClick = { show = !show }) { Icon(if (show) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "Show") } },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.garminSignIn(email, password)
+                    password = ""
+                    signIn = false
+                }, enabled = email.isNotBlank() && password.isNotBlank()) { Text("Sign in") }
+            },
+            dismissButton = { TextButton(onClick = { signIn = false }) { Text("Cancel") } },
+        )
+    }
+    if (ui.needsMfa) {
+        AlertDialog(
+            onDismissRequest = { vm.garminCancelMfa() },
+            containerColor = StrideColors.Elev,
+            title = { Text("Garmin verification code") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Garmin sent a code to your e-mail or authenticator app.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                    OutlinedTextField(value = code, onValueChange = { code = it.filter { c -> c.isDigit() }.take(8) }, label = { Text("Code") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = { Button(onClick = { vm.garminMfa(code); code = "" }, enabled = code.length >= 6 && !ui.busy) { Text("Verify") } },
+            dismissButton = { TextButton(onClick = { vm.garminCancelMfa() }) { Text("Cancel") } },
         )
     }
 }

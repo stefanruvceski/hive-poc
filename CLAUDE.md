@@ -71,6 +71,10 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   picked folder (SAF tree, `Settings.backupFolder`). Keys are stripped.
 - Trends: Challenges and badges (`domain/Badges.kt`), Sleep and HRV insights (`domain/Insights.kt`), Year in review
   (`domain/YearReview.kt` + `share/YearCards.kt`, 4 story cards, share all).
+- Garmin gym workouts (`garmin/`, unofficial): `GarminClient` signs in like garth (SSO → OAuth1 → OAuth2, consumer key
+  from thegarth S3; only tokens kept in prefs `garmin`, excluded from Android backup), `GarminWorkout` builds the
+  workout-service JSON (repeat groups, reps, kg, rest; tested), `GarminExercises` maps names to FIT categories (tested).
+  Workout screen → watch icon sends the session, scheduled on its date. Settings → Garmin Connect (MFA supported).
 - Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).
 
 ## Design

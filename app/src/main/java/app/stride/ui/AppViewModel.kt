@@ -9,6 +9,8 @@ import app.stride.data.DataEvents
 import app.stride.data.Backup
 import app.stride.data.HealthSync
 import app.stride.coach.CoachClient
+import app.stride.garmin.GarminClient
+import app.stride.garmin.GarminWorkout
 import app.stride.coach.CoachPrompt
 import app.stride.data.Sync
 import app.stride.data.toUserMessage
@@ -250,6 +252,91 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateSettings(f: (Settings) -> Settings) {
         update { d -> d.copy(settings = f(d.settings)) }
+    }
+
+    // ---------------------------------------------------------------- Garmin Connect (gym workouts)
+
+    data class GarminUi(val connected: Boolean, val account: String?, val needsMfa: Boolean = false, val busy: Boolean = false)
+
+    private val garmin by lazy { GarminClient(getApplication()) }
+    private var pendingMfa: GarminClient.PendingMfa? = null
+    private var pendingEmail = ""
+    private val _garmin = MutableStateFlow(GarminUi(false, null))
+    val garminUi: StateFlow<GarminUi> = _garmin.asStateFlow()
+
+    fun refreshGarmin() {
+        _garmin.value = GarminUi(garmin.connected, garmin.account)
+    }
+
+    fun garminSignIn(email: String, password: String) {
+        if (_garmin.value.busy) return
+        viewModelScope.launch {
+            _garmin.value = _garmin.value.copy(busy = true)
+            try {
+                val mfa = garmin.signIn(email, password)
+                pendingEmail = email
+                pendingMfa = mfa
+                if (mfa != null) _garmin.value = _garmin.value.copy(needsMfa = true, busy = false)
+                else {
+                    refreshGarmin()
+                    toast("Garmin connected")
+                }
+            } catch (e: Exception) {
+                _garmin.value = _garmin.value.copy(busy = false)
+                toast(e.message ?: "Garmin sign-in failed")
+            }
+        }
+    }
+
+    fun garminMfa(code: String) {
+        val p = pendingMfa ?: return
+        viewModelScope.launch {
+            _garmin.value = _garmin.value.copy(busy = true)
+            try {
+                garmin.submitMfa(p, code, pendingEmail)
+                pendingMfa = null
+                refreshGarmin()
+                toast("Garmin connected")
+            } catch (e: Exception) {
+                _garmin.value = _garmin.value.copy(busy = false)
+                toast(e.message ?: "Code not accepted")
+            }
+        }
+    }
+
+    fun garminCancelMfa() {
+        pendingMfa = null
+        refreshGarmin()
+    }
+
+    fun garminDisconnect() {
+        garmin.disconnect()
+        refreshGarmin()
+        toast("Garmin disconnected")
+    }
+
+    /** Creates the session as a Garmin strength workout scheduled on its date, ready to start on the watch. */
+    fun sendToGarmin(session: StrengthSession, name: String) {
+        if (!garmin.connected) {
+            toast("Connect Garmin in Settings first.")
+            return
+        }
+        if (session.exercises.isEmpty()) {
+            toast("Add exercises first.")
+            return
+        }
+        if (_garmin.value.busy) return
+        viewModelScope.launch {
+            _garmin.value = _garmin.value.copy(busy = true)
+            try {
+                garmin.sendWorkout(GarminWorkout.build(name, session), session.date)
+                toast("Sent to Garmin · sync the watch, then find it under Workouts or today's calendar")
+            } catch (e: Exception) {
+                toast(e.message ?: "Couldn't send to Garmin")
+            } finally {
+                _garmin.value = _garmin.value.copy(busy = false)
+            }
+        }
     }
 
     fun setShareStyle(s: ShareStyle) {
