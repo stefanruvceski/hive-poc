@@ -43,7 +43,7 @@ class OverlayView @JvmOverloads constructor(
         color = 0xAAFFFFFF.toInt()
         pathEffect = DashPathEffect(floatArrayOf(18f, 12f), 0f)
     }
-    private val handleFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF59E0B.toInt() // Hive amber }
+    private val handleFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF59E0B.toInt() } // Hive amber
     private val handleStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f * density
