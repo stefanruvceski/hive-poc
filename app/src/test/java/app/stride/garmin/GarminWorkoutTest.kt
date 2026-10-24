@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GarminWorkoutTest {
@@ -59,5 +60,25 @@ class GarminWorkoutTest {
         }
         assertEquals(orders.sorted(), orders.distinct().sorted())
         assertEquals((1..orders.size).toList(), orders.sorted())
+    }
+
+    @Test
+    fun exactNamesAndBodyweight() {
+        assertEquals("SQUAT" to "GOBLET_SQUAT", GarminExercises.exact("Goblet or front squat"))
+        assertEquals("LUNGE" to "DUMBBELL_BULGARIAN_SPLIT_SQUAT", GarminExercises.exact("Bulgarian split squat"))
+        assertEquals("BENCH_PRESS" to "CLOSE_GRIP_BARBELL_BENCH_PRESS", GarminExercises.exact("Close-grip floor press"))
+        assertEquals("ROW" to "ONE_ARM_BENT_OVER_ROW", GarminExercises.exact("Single-arm row"))
+        assertEquals(null, GarminExercises.exact("Single-leg Romanian deadlift"))
+        assertTrue(GarminExercises.isBodyweight("Push-ups on kettlebells"))
+        assertTrue(!GarminExercises.isBodyweight("Kettlebell floor press"))
+
+        val push = ExerciseEntry("Push-ups on kettlebells").withSets(List(3) { SetEntry(16.0, 10) })
+        val s = StrengthSession("s", "2026-10-24", DayKind.STRENGTH_UPPER, listOf(push))
+        fun firstSet(w: kotlinx.serialization.json.JsonObject) =
+            w["workoutSegments"]!!.jsonArray[0].jsonObject["workoutSteps"]!!.jsonArray[0].jsonObject["workoutSteps"]!!.jsonArray[0].jsonObject
+        val withNames = firstSet(GarminWorkout.build("Upper", s))
+        assertEquals("PUSH_UP", withNames["exerciseName"]!!.jsonPrimitive.content)
+        assertEquals(null, withNames["weightValue"])
+        assertEquals(null, firstSet(GarminWorkout.build("Upper", s, exactNames = false))["exerciseName"])
     }
 }

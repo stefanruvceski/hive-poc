@@ -233,9 +233,17 @@ class GarminClient(private val context: Context) {
         }
     }
 
-    /** Creates the workout in Garmin Connect and puts it on the calendar for [date]; returns the workout id. */
-    suspend fun sendWorkout(workout: JsonObject, date: String): Long = withContext(Dispatchers.IO) {
-        val created = api("POST", "/workout-service/workout", workout)
+    /**
+     * Creates the workout in Garmin Connect and puts it on the calendar for [date]; returns the workout id.
+     * When Garmin rejects [workout] (e.g. an exercise name it doesn't know), [fallback] is sent instead.
+     */
+    suspend fun sendWorkout(workout: JsonObject, date: String, fallback: JsonObject? = null): Long = withContext(Dispatchers.IO) {
+        val created = try {
+            api("POST", "/workout-service/workout", workout)
+        } catch (e: GarminException) {
+            if (fallback == null || e.message?.contains("HTTP 4") != true || e.message?.contains("HTTP 401") == true) throw e
+            api("POST", "/workout-service/workout", fallback)
+        }
         val id = created?.get("workoutId")?.jsonPrimitive?.long ?: throw GarminException("Garmin didn't confirm the workout.")
         api("POST", "/workout-service/schedule/$id", kotlinx.serialization.json.buildJsonObject { put("date", kotlinx.serialization.json.JsonPrimitive(date)) })
         id

@@ -96,6 +96,7 @@ import androidx.compose.ui.unit.sp
 import app.stride.data.ExerciseLibrary
 import app.stride.data.ExerciseMatcher
 import app.stride.live.LiveWorkout
+import app.stride.garmin.GarminExercises
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -317,7 +318,7 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
             onDismiss = { adding = false },
             onPick = { name, lib ->
                 adding = false
-                val kg = lastWeight(data, name) ?: 16.0
+                val kg = lastWeight(data, name) ?: if (GarminExercises.isBodyweight(name)) 0.0 else 16.0
                 val group = lib?.muscles?.firstOrNull()?.replaceFirstChar { it.uppercase() }.orEmpty()
                 val entry = ExerciseEntry(name, group, dbId = lib?.id, done = false).withSets(List(2) { SetEntry(kg, 8) })
                 commit(session.copy(exercises = session.exercises + entry))
