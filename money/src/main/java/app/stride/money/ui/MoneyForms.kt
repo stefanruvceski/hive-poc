@@ -60,19 +60,19 @@ private fun FormScaffold(title: String, onBack: () -> Unit, content: @Composable
     }
 }
 
-/** Add income: source, amount, currency (the source's by default), date, paid or invoiced, note. */
+/** Add or edit income: source, amount, currency (the source's by default), date, paid or invoiced, note. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddIncomeScreen(d: MoneyData, onSave: (Transaction) -> Unit, onBack: () -> Unit) {
-    val sources = d.sources.filter { !it.archived }
-    var sourceId by remember { mutableStateOf(sources.firstOrNull()?.id ?: "") }
-    var amount by remember { mutableStateOf("") }
-    var currency by remember { mutableStateOf(sources.firstOrNull()?.currency ?: d.baseCurrency) }
-    var date by remember { mutableStateOf(LocalDate.now()) }
-    var status by remember { mutableStateOf(TxStatus.PAID) }
-    var note by remember { mutableStateOf("") }
+fun AddIncomeScreen(d: MoneyData, onSave: (Transaction) -> Unit, onBack: () -> Unit, initial: Transaction? = null, onDelete: (() -> Unit)? = null) {
+    val sources = d.sources.filter { !it.archived || it.id == initial?.sourceId }
+    var sourceId by remember { mutableStateOf(initial?.sourceId ?: sources.firstOrNull()?.id ?: "") }
+    var amount by remember { mutableStateOf(initial?.amount?.let { amountText(it) } ?: "") }
+    var currency by remember { mutableStateOf(initial?.currency ?: sources.firstOrNull()?.currency ?: d.baseCurrency) }
+    var date by remember { mutableStateOf(initial?.date?.let { LocalDate.parse(it) } ?: LocalDate.now()) }
+    var status by remember { mutableStateOf(initial?.status ?: TxStatus.PAID) }
+    var note by remember { mutableStateOf(initial?.note ?: "") }
     val value = parseMoney(amount)
-    FormScaffold("Add income", onBack) {
+    FormScaffold(if (initial != null) "Edit income" else "Add income", onBack) {
         Label("SOURCE")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             sources.forEach { s -> Chip(s.name, sourceId == s.id, Color(s.color)) { sourceId = s.id; currency = s.currency } }
@@ -92,24 +92,28 @@ fun AddIncomeScreen(d: MoneyData, onSave: (Transaction) -> Unit, onBack: () -> U
         OutlinedTextField(note, { note = it }, singleLine = true, placeholder = { Text("e.g. October invoice") }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(16.dp))
         Button(
-            onClick = { onSave(Transaction("", sourceId, date.toString(), value!!, currency, status, note.trim().ifEmpty { null })) },
+            onClick = {
+                val t = Transaction(initial?.id ?: "", sourceId, date.toString(), value!!, currency, status, note.trim().ifEmpty { null })
+                onSave(if (initial != null) t.copy(createdAt = initial.createdAt, fxRate = initial.fxRate, fxRateDate = initial.fxRateDate) else t)
+            },
             enabled = value != null && value > 0 && sourceId.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
-        ) { Text("Save") }
+        ) { Text(if (initial != null) "Save changes" else "Save") }
+        if (onDelete != null) DeleteButton(onDelete)
     }
 }
 
-/** Add an expense: category, amount, currency, date, note. */
+/** Add or edit an expense: category, amount, currency, date, note. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddExpenseScreen(d: MoneyData, onSave: (Expense) -> Unit, onBack: () -> Unit) {
-    val cats = d.categories.filter { !it.archived }
-    var categoryId by remember { mutableStateOf(cats.firstOrNull()?.id ?: "") }
-    var amount by remember { mutableStateOf("") }
-    var currency by remember { mutableStateOf(d.baseCurrency) }
-    var date by remember { mutableStateOf(LocalDate.now()) }
-    var note by remember { mutableStateOf("") }
+fun AddExpenseScreen(d: MoneyData, onSave: (Expense) -> Unit, onBack: () -> Unit, initial: Expense? = null, onDelete: (() -> Unit)? = null) {
+    val cats = d.categories.filter { !it.archived || it.id == initial?.categoryId }
+    var categoryId by remember { mutableStateOf(initial?.categoryId ?: cats.firstOrNull()?.id ?: "") }
+    var amount by remember { mutableStateOf(initial?.amount?.let { amountText(it) } ?: "") }
+    var currency by remember { mutableStateOf(initial?.currency ?: d.baseCurrency) }
+    var date by remember { mutableStateOf(initial?.date?.let { LocalDate.parse(it) } ?: LocalDate.now()) }
+    var note by remember { mutableStateOf(initial?.note ?: "") }
     val value = parseMoney(amount)
-    FormScaffold("Add expense", onBack) {
+    FormScaffold(if (initial != null) "Edit expense" else "Add expense", onBack) {
         Label("CATEGORY")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             cats.forEach { c -> Chip(c.name, categoryId == c.id, Color(c.color)) { categoryId = c.id } }
@@ -124,8 +128,29 @@ fun AddExpenseScreen(d: MoneyData, onSave: (Expense) -> Unit, onBack: () -> Unit
         OutlinedTextField(note, { note = it }, singleLine = true, placeholder = { Text("e.g. weekly shop") }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(16.dp))
         Button(
-            onClick = { onSave(Expense("", categoryId, date.toString(), value!!, currency, note.trim().ifEmpty { null })) },
+            onClick = {
+                val e = Expense(initial?.id ?: "", categoryId, date.toString(), value!!, currency, note.trim().ifEmpty { null })
+                onSave(if (initial != null) e.copy(createdAt = initial.createdAt, fxRate = initial.fxRate, fxRateDate = initial.fxRateDate) else e)
+            },
             enabled = value != null && value > 0 && categoryId.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
-        ) { Text("Save expense") }
+        ) { Text(if (initial != null) "Save changes" else "Save expense") }
+        if (onDelete != null) DeleteButton(onDelete)
     }
+}
+
+private fun amountText(v: Double): String = if (v == Math.floor(v)) "%.0f".format(java.util.Locale.US, v) else v.toString()
+
+/** Delete with a second tap to confirm. */
+@Composable
+private fun DeleteButton(onDelete: () -> Unit) {
+    var confirm by remember { mutableStateOf(false) }
+    Spacer(Modifier.height(8.dp))
+    androidx.compose.material3.OutlinedButton(
+        onClick = { if (confirm) onDelete() else confirm = true },
+        modifier = Modifier.fillMaxWidth(),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+            containerColor = if (confirm) app.stride.ui.theme.StrideColors.Danger else Color.Transparent,
+            contentColor = if (confirm) Color.White else app.stride.ui.theme.StrideColors.Danger,
+        ),
+    ) { Text(if (confirm) "Tap again to delete" else "Delete") }
 }

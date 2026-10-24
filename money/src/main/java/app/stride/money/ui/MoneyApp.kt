@@ -65,19 +65,46 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
     var year by rememberSaveable { mutableStateOf(today.year) }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var form by rememberSaveable { mutableStateOf<String?>(null) }
+    var list by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(open.id) {
         if (open.id == 0) return@LaunchedEffect
         when (open.target) {
             "add-income" -> { tabId = "income"; form = "income" }
             "add-expense" -> { tabId = "spending"; form = "expense" }
+            "all-income" -> list = "income"
+            "all-expenses" -> list = "expenses"
             else -> if (MoneyLayouts.ALL.any { it.id == open.target }) tabId = open.target
         }
     }
     BackHandler(enabled = editing) { editing = false }
-    when (form) {
-        "income" -> { BackHandler { form = null }; AddIncomeScreen(d, { vm.addTransaction(it); form = null }, { form = null }); return }
-        "expense" -> { BackHandler { form = null }; AddExpenseScreen(d, { vm.addExpense(it); form = null }, { form = null }); return }
+    // Forms sit on top of the full lists, so back from an edit returns to the list.
+    val f = form
+    when {
+        f == "income" -> { BackHandler { form = null }; AddIncomeScreen(d, { vm.addTransaction(it); form = null }, { form = null }); return }
+        f == "expense" -> { BackHandler { form = null }; AddExpenseScreen(d, { vm.addExpense(it); form = null }, { form = null }); return }
+        f != null && f.startsWith("edit-income:") -> {
+            val t = d.transactions.firstOrNull { it.id == f.removePrefix("edit-income:") }
+            if (t != null) {
+                BackHandler { form = null }
+                AddIncomeScreen(d, { vm.updateTransaction(it); form = null }, { form = null }, initial = t, onDelete = { vm.deleteTransaction(t.id); form = null })
+                return
+            }
+        }
+        f != null && f.startsWith("edit-expense:") -> {
+            val e = d.expenses.firstOrNull { it.id == f.removePrefix("edit-expense:") }
+            if (e != null) {
+                BackHandler { form = null }
+                AddExpenseScreen(d, { vm.updateExpense(it); form = null }, { form = null }, initial = e, onDelete = { vm.deleteExpense(e.id); form = null })
+                return
+            }
+        }
+    }
+    list?.let { l ->
+        BackHandler { list = null }
+        val inc = l == "income"
+        AllItemsScreen(d, inc, onEdit = { form = (if (inc) "edit-income:" else "edit-expense:") + it }, onAdd = { form = if (inc) "income" else "expense" }, onBack = { list = null })
+        return
     }
 
     val host = SectionHost(tab, layout, editing, onPrefs = vm::setLayout, onLongPress = { editing = true })
@@ -101,9 +128,9 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
             bottomBar = { StrideNavBar(tabs.map { NavItem(it.title, tabIcon(it.id)) }, tabs.indexOf(tab)) { tabId = tabs[it].id } },
         ) { padding ->
             when (tab.id) {
-                "income" -> IncomeTab(vm, d, today, year, { year = it }, { form = "income" }, padding, host)
+                "income" -> IncomeTab(vm, d, today, year, { year = it }, { form = "income" }, padding, host, onAll = { list = "income" }, onEdit = { form = "edit-income:$it" })
                 "reports" -> ReportsTab(d, today, year, { year = it }, padding, host)
-                "spending" -> SpendingTab(vm, d, month, { month = it }, { form = "expense" }, padding, host)
+                "spending" -> SpendingTab(vm, d, month, { month = it }, { form = "expense" }, padding, host, onAll = { list = "expenses" }, onEdit = { form = "edit-expense:$it" })
                 else -> SetupTab(vm, d, fxBusy, padding, host)
             }
         }

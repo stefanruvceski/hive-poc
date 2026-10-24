@@ -44,7 +44,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   from currency-api or NBS (`data/FxClient`, keyless). Tabs Income / Reports / Spending / Setup, monthly income reminder.
   Reports (`domain/Reports`, tested; `ui/ReportsTab`): income / spending / net per month by source or category
   (`StackedBarChart`, tap a month → its items), donut + per-slice trend, running total vs last year and goal pace,
-  savings rate, weekday spending, biggest items, insights.
+  savings rate, weekday spending, biggest items, insights. All income / All expenses (`ui/AllItemsScreen`, filters in
+  `domain/Ledger`, tested): search, year, source or category, status, grouped by month; tap to edit or delete.
   No accounts and no cloud: all three apps keep their data on the phone (Google sign-in may come later, for Hive as a whole).
 - `:draw` (`DrawModule`, package `app.stride.draw`): Drawify, ported from `stefanruvceski/drawify` (its own update banner dropped,
   Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and

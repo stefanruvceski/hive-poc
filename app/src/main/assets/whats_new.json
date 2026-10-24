@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-30-money-all",
+    "title": "Every payment in one place 🧾",
+    "items": [
+      {"icon": "chart", "text": "Money → Income → See all: every payment you've logged, grouped by month with month totals. The same for expenses under Spending."},
+      {"icon": "spark", "text": "Search by note, source, category, amount or date, and filter by year, source or category and paid or invoiced, with the total of what you see."},
+      {"icon": "palette", "text": "Tap any payment or expense to edit or delete it, for example to mark an invoice as paid when the money arrives."}
+    ]
+  },
+  {
     "id": "2026-10-29-money-reports",
     "title": "Money reports 📊",
     "items": [

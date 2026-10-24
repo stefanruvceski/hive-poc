@@ -1,6 +1,7 @@
 package app.stride.money.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +44,7 @@ import java.util.Locale
 
 /** Spending for a month against the category budgets, and the latest expenses. */
 @Composable
-fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (YearMonth) -> Unit, onAdd: () -> Unit, padding: PaddingValues, host: SectionHost) {
+fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (YearMonth) -> Unit, onAdd: () -> Unit, padding: PaddingValues, host: SectionHost, onAll: () -> Unit = {}, onEdit: (String) -> Unit = {}) {
     val base = d.baseCurrency
     val status = Finance.budgetStatus(d, month)
     val sum = Finance.budgetSummary(d, month)
@@ -85,6 +86,9 @@ fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (Ye
                     }
                 }
                 section("expenses") {
+                    if (d.expenses.isNotEmpty()) item {
+                        androidx.compose.material3.OutlinedButton(onClick = onAll, modifier = Modifier.fillMaxWidth()) { Text("See all ${d.expenses.size} expenses →") }
+                    }
                     val list = d.expenses.filter { it.date.startsWith(month.toString()) }.sortedByDescending { it.date }
                     if (list.isNotEmpty()) item {
                         val cats = d.categories.associateBy { it.id }
@@ -92,7 +96,7 @@ fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (Ye
                             Text("Expenses", color = StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             list.forEach { e ->
                                 val c = cats[e.categoryId]
-                                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).clickable { onEdit(e.id) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(Modifier.size(8.dp).clip(CircleShape).background(c?.let { Color(it.color) } ?: StrideColors.Faint))
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
