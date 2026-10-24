@@ -91,7 +91,7 @@ object WidgetArt {
         }
         val path = Path().apply {
             moveTo(x(0), y(values[0]))
-            for (i in 1 until values.size) lineTo(x(i), y(values[i]))
+            app.stride.ui.Curves.monotone(values.indices.map { x(it) }, values.map { y(it) }).forEach { s -> cubicTo(s.c1x, s.c1y, s.c2x, s.c2y, s.x, s.y) }
         }
         val fill = Path(path).apply { lineTo(x(values.lastIndex), heightPx.toFloat()); lineTo(0f, heightPx.toFloat()); close() }
         c.drawPath(fill, paint(0).apply { shader = LinearGradient(0f, 0f, 0f, heightPx.toFloat(), withAlpha(color, 0x55), withAlpha(color, 0), Shader.TileMode.CLAMP) })

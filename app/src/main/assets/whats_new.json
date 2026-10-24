@@ -5,7 +5,8 @@
     "items": [
       {"icon": "chart", "text": "Last night's sleep chart now sits on the Week tab, above Recovery. Tap any day to see that night."},
       {"icon": "heart", "text": "No chart yet? The app now tells you what's missing: Health Connect here, and sleep sharing in Garmin Connect."},
-      {"icon": "chart", "text": "The weight chart in Trends shows every weigh-in instead of weekly averages, so daily entries draw a line right away."}
+      {"icon": "chart", "text": "The weight chart in Trends shows every weigh-in instead of weekly averages, so daily entries draw a line right away."},
+      {"icon": "palette", "text": "Line charts, in the app and in widgets, now draw smooth curves."}
     ]
   },
   {

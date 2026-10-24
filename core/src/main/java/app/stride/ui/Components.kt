@@ -398,7 +398,8 @@ fun LineChart(
         }
         if (pts.size > 1) {
             val line = Path()
-            pts.forEachIndexed { j, (i, v) -> if (j == 0) line.moveTo(x(i), y(v)) else line.lineTo(x(i), y(v)) }
+            line.moveTo(x(pts[0].first), y(pts[0].second))
+            Curves.monotone(pts.map { x(it.first) }, pts.map { y(it.second) }).forEach { c -> line.cubicTo(c.c1x, c.c1y, c.c2x, c.c2y, c.x, c.y) }
             val area = Path().apply {
                 addPath(line)
                 lineTo(x(pts.last().first), bottom)
