@@ -2,7 +2,6 @@ package app.stride.ui
 
 import app.stride.model.AppData
 import app.stride.ui.screens.ringColor
-import app.stride.ui.screens.RingStack
 import app.stride.domain.Rings
 import app.stride.ui.Celebration
 import android.Manifest

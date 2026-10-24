@@ -2,12 +2,7 @@ package app.stride.ui
 
 import app.stride.model.LayoutPrefs
 
-/** A part of a tab the user can hide or move. */
-data class SectionDef(val id: String, val title: String)
-
-data class TabDef(val id: String, val title: String, val sections: List<SectionDef>)
-
-/** Every tab and its sections in their default order. Ids are stored in [LayoutPrefs]; don't rename them. */
+/** Health's tabs and their sections in their default order (the edit logic is the shared [LayoutOps]). Every tab and its sections in their default order. Ids are stored in [LayoutPrefs]; don't rename them. */
 object Layouts {
     val WEEK = TabDef(
         "week", "Week",
@@ -57,53 +52,13 @@ object Layouts {
 
     fun tab(id: String) = ALL.first { it.id == id }
 
-    /** Tabs in the user's order (new tabs at the end), hidden ones included. */
-    fun tabs(p: LayoutPrefs): List<TabDef> {
-        val known = p.tabOrder.mapNotNull { id -> ALL.firstOrNull { it.id == id } }
-        return known + ALL.filter { it !in known }
-    }
-
-    fun visibleTabs(p: LayoutPrefs): List<TabDef> = tabs(p).filter { it.id !in p.hiddenTabs }.ifEmpty { listOf(WEEK) }
-
-    /** Sections of [tab] in the user's order; sections added in later versions go to the end. */
-    fun sections(p: LayoutPrefs, tab: TabDef): List<SectionDef> {
-        val saved = p.order[tab.id].orEmpty().mapNotNull { id -> tab.sections.firstOrNull { it.id == id } }
-        return saved + tab.sections.filter { it !in saved }
-    }
-
-    fun hidden(p: LayoutPrefs, tab: TabDef, s: SectionDef) = "${tab.id}.${s.id}" in p.hidden
-
-    fun toggleSection(p: LayoutPrefs, tab: TabDef, s: SectionDef): LayoutPrefs {
-        val key = "${tab.id}.${s.id}"
-        return p.copy(hidden = if (key in p.hidden) p.hidden - key else p.hidden + key)
-    }
-
-    fun moveSection(p: LayoutPrefs, tab: TabDef, s: SectionDef, by: Int): LayoutPrefs {
-        val list = sections(p, tab).toMutableList()
-        val i = list.indexOf(s)
-        val j = (i + by).coerceIn(0, list.lastIndex)
-        if (i == j) return p
-        list.removeAt(i)
-        list.add(j, s)
-        return p.copy(order = p.order + (tab.id to list.map { it.id }))
-    }
-
-    fun toggleTab(p: LayoutPrefs, tab: TabDef): LayoutPrefs {
-        val hidden = if (tab.id in p.hiddenTabs) p.hiddenTabs - tab.id else p.hiddenTabs + tab.id
-        // At least one tab stays.
-        return if (hidden.containsAll(ALL.map { it.id })) p else p.copy(hiddenTabs = hidden)
-    }
-
-    fun moveTab(p: LayoutPrefs, tab: TabDef, by: Int): LayoutPrefs {
-        val list = tabs(p).toMutableList()
-        val i = list.indexOf(tab)
-        val j = (i + by).coerceIn(0, list.lastIndex)
-        if (i == j) return p
-        list.removeAt(i)
-        list.add(j, tab)
-        return p.copy(tabOrder = list.map { it.id })
-    }
-
-    fun resetTab(p: LayoutPrefs, tab: TabDef): LayoutPrefs =
-        p.copy(order = p.order - tab.id, hidden = p.hidden.filterNot { it.startsWith("${tab.id}.") })
+    fun tabs(p: LayoutPrefs) = LayoutOps.tabs(p, ALL)
+    fun visibleTabs(p: LayoutPrefs) = LayoutOps.visibleTabs(p, ALL)
+    fun sections(p: LayoutPrefs, tab: TabDef) = LayoutOps.sections(p, tab)
+    fun hidden(p: LayoutPrefs, tab: TabDef, s: SectionDef) = LayoutOps.hidden(p, tab, s)
+    fun toggleSection(p: LayoutPrefs, tab: TabDef, s: SectionDef) = LayoutOps.toggleSection(p, tab, s)
+    fun moveSection(p: LayoutPrefs, tab: TabDef, s: SectionDef, by: Int) = LayoutOps.moveSection(p, tab, s, by)
+    fun toggleTab(p: LayoutPrefs, tab: TabDef) = LayoutOps.toggleTab(p, tab, ALL)
+    fun moveTab(p: LayoutPrefs, tab: TabDef, by: Int) = LayoutOps.moveTab(p, tab, by, ALL)
+    fun resetTab(p: LayoutPrefs, tab: TabDef) = LayoutOps.resetTab(p, tab)
 }

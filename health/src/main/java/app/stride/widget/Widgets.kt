@@ -94,40 +94,7 @@ object Widgets {
     }
 }
 
-private val OpenKey = ActionParameters.Key<String>(Widgets.EXTRA_OPEN)
-
 private suspend fun loadData(context: Context): AppData = withContext(Dispatchers.IO) { Store(context).load() }
-
-/** Text grows with the widget: 1.0 at the size the layout was designed for, up to 1.7. */
-@Composable
-private fun scale(baseW: Float, baseH: Float): Float {
-    val s = LocalSize.current
-    if (s.width.value <= 0f || s.height.value <= 0f) return 1f
-    return min(s.width.value / baseW, s.height.value / baseH).coerceIn(0.72f, 1.7f)
-}
-
-private fun style(color: Color, size: TextUnit, bold: Boolean = false, align: TextAlign = TextAlign.Start) =
-    TextStyle(color = ColorProvider(color), fontSize = size, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal, textAlign = align)
-
-private fun sp(v: Float, k: Float) = (v * k).sp
-
-/** Shared widget frame: navy card, rounded, opens the app (at [open]) on tap. */
-@Composable
-private fun Frame(open: String = "week", padding: Int = 14, content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(StrideColors.Elev)
-            .cornerRadius(24.dp)
-            .padding(padding.dp)
-            .clickable(actionStartActivity(Host.component(LocalContext.current), actionParametersOf(OpenKey to open))),
-    ) { content() }
-}
-
-@Composable
-private fun Kicker(text: String, k: Float, color: Color = StrideColors.Faint) {
-    Text(text.uppercase(), style = style(color, sp(10.5f, k), bold = true), maxLines = 1)
-}
 
 private fun emoji(kind: DayKind?): String = when (kind) {
     DayKind.SWIM_EASY, DayKind.SWIM_INTENSE -> "🏊"
@@ -147,8 +114,6 @@ private fun statusColor(d: DayResult): Color = when (d.status) {
     DayStatus.TODAY -> StrideColors.Accent
     DayStatus.UPCOMING, DayStatus.REST -> StrideColors.Faint
 }
-
-private fun density(context: Context) = context.resources.displayMetrics.density
 
 // ---------------------------------------------------------------- Today (1x1 to 4x2)
 

@@ -41,6 +41,9 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     api("com.squareup.okhttp3:okhttp:4.12.0")
+    // Home-screen widgets and background work, used by every module.
+    api("androidx.glance:glance-appwidget:1.1.1")
+    api("androidx.work:work-runtime-ktx:2.9.1")
     // AI coach (Claude API, the user's own key).
     api("com.anthropic:anthropic-java:2.34.0")
 

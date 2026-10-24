@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picker preview with sample data (the real widget is drawn by Glance). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/habits_wp_bg" android:padding="12dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Habits  ·  3/6" android:textColor="#EEF2FF" android:textSize="15sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="🌅 Morning" android:textColor="#9FB0D0" android:textSize="11sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="✓  Early start" android:textColor="#34D399" android:textSize="13sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="✓  Cold shower" android:textColor="#22D3EE" android:textSize="13sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☐  Journal" android:textColor="#EEF2FF" android:textSize="13sp" />
+</LinearLayout>

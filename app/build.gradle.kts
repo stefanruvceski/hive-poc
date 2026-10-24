@@ -65,5 +65,7 @@ android {
 dependencies {
     // The modules; :health brings :core (shared UI, updates, coach client, host contract) with it.
     implementation(project(":health"))
+    implementation(project(":habits"))
+    implementation(project(":money"))
     implementation(project(":core"))
 }

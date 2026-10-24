@@ -369,6 +369,8 @@ fun LineChart(
     refLine: Double? = null,
     /** Shown after the value in the tooltip, e.g. " kg". */
     unit: String = "",
+    /** Extra lines over the same labels (no fill), e.g. motivation next to mood. */
+    more: List<Pair<List<Double?>, Color>> = emptyList(),
 ) {
     val measurer = rememberTextMeasurer()
     val pts = values.mapIndexedNotNull { i, v -> v?.let { i to it } }
@@ -397,7 +399,7 @@ fun LineChart(
                 ) { change, _ -> selected = nearest(change.position.x, size.width.toFloat(), 34.dp.toPx(), 10.dp.toPx()) }
             },
     ) {
-        val all = pts.map { it.second } + listOfNotNull(refLine) + (band?.toList() ?: emptyList())
+        val all = pts.map { it.second } + listOfNotNull(refLine) + (band?.toList() ?: emptyList()) + more.flatMap { it.first.filterNotNull() }
         var lo = all.min()
         var hi = all.max()
         if (hi - lo < 1e-9) { lo -= 1; hi += 1 }
@@ -438,6 +440,16 @@ fun LineChart(
             }
             drawPath(area, Brush.verticalGradient(listOf(color.copy(alpha = 0.28f), color.copy(alpha = 0f)), startY = top, endY = bottom))
             drawPath(line, color, style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        more.forEach { (vals, c) ->
+            val mp = vals.mapIndexedNotNull { i, v -> v?.let { i to it } }
+            if (mp.size > 1) {
+                val l = Path()
+                l.moveTo(x(mp[0].first), y(mp[0].second))
+                Curves.monotone(mp.map { x(it.first) }, mp.map { y(it.second) }).forEach { k -> l.cubicTo(k.c1x, k.c1y, k.c2x, k.c2y, k.x, k.y) }
+                drawPath(l, c, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+            mp.forEach { (i, v) -> drawCircle(c, 2.2.dp.toPx(), Offset(x(i), y(v))) }
         }
         pts.forEach { (i, v) -> drawCircle(color, 2.6.dp.toPx(), Offset(x(i), y(v))) }
         selected?.let { si ->

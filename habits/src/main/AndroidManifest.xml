@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Habits module: its widgets. Merged into the app's manifest. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <receiver
+            android:name="app.stride.habits.widget.HabitsTodayWidgetReceiver"
+            android:exported="true"
+            android:label="Habits · Today">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habits_widget_today" />
+        </receiver>
+
+        <receiver
+            android:name="app.stride.habits.widget.HabitsProgressWidgetReceiver"
+            android:exported="true"
+            android:label="Habits · Progress">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habits_widget_progress" />
+        </receiver>
+    </application>
+</manifest>

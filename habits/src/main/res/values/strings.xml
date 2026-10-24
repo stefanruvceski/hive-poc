@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="habits_widget_today_description">Today\'s habits by part of the day. Tap one to tick it off.</string>
+    <string name="habits_widget_progress_description">How much of today is done, your best streak and what\'s next.</string>
+</resources>
