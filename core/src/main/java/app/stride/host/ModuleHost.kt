@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,7 +63,8 @@ import java.util.Locale
 @Composable
 fun ModuleHost(modules: List<AppModule>, open: OpenRequest) {
     var current by rememberSaveable { mutableStateOf<String?>(null) }
-    var forward by rememberSaveable { mutableStateOf(OpenRequest(0, "")) }
+    // Plain remember: OpenRequest can't go into saved instance state (rememberSaveable crashed on launch).
+    var forward by remember { mutableStateOf(OpenRequest(0, "")) }
     LaunchedEffect(open.id) {
         if (open.id == 0) return@LaunchedEffect
         val id = open.target.substringBefore('/', "")
