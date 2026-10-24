@@ -96,7 +96,7 @@ fun DateField(value: java.time.LocalDate, onChange: (java.time.LocalDate) -> Uni
         modifier.fillMaxWidth().clip(shape).background(StrideColors.Elev2).border(1.dp, StrideColors.Border, shape).clickable { open = true }.padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
         Text(
-            "${value.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.US)}, ${value.dayOfMonth} ${value.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.US)} ${value.year}",
+            "${value.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.US)}, ${app.stride.format.Dates.full(value)}",
             color = StrideColors.Text, fontSize = 15.sp,
         )
     }

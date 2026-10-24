@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.format.Dates
 import app.stride.habits.domain.HabitStats
 import app.stride.habits.domain.Routine
 import app.stride.habits.model.Habit
@@ -138,7 +139,7 @@ private fun TrendChart(d: HabitsData, h: Habit, today: LocalDate) {
                 }
                 if (series.size > 1) {
                     val delta = series.last().value - series.first().value
-                    Text("${if (delta > 0) "▲" else if (delta < 0) "▼" else "•"} ${Routine.formatAmount(kotlin.math.abs(delta))}$unit since ${series.first().date.dayOfMonth}.${series.first().date.monthValue}.", color = StrideColors.Dim, fontSize = 12.sp)
+                    Text("${if (delta > 0) "▲" else if (delta < 0) "▼" else "•"} ${Routine.formatAmount(kotlin.math.abs(delta))}$unit since ${Dates.full(series.first().date)}", color = StrideColors.Dim, fontSize = 12.sp)
                 }
             }
             listOf(30 to "30D", 90 to "90D", 365 to "1Y", 0 to "All").forEach { (r, label) ->
@@ -154,7 +155,7 @@ private fun TrendChart(d: HabitsData, h: Habit, today: LocalDate) {
             val start = series.first().date
             val days = generateSequence(start) { it.plusDays(1) }.takeWhile { !it.isAfter(series.last().date) }.toList()
             val byDay = series.associate { it.date to it.value }
-            LineChart(days.map { byDay[it] }, days.map { "${it.dayOfMonth}.${it.monthValue}." }, h.tint(), { Routine.formatAmount(it, 1) }, refLine = h.target?.takeIf { it > 0 }, unit = unit)
+            LineChart(days.map { byDay[it] }, days.map { Dates.short(it) }, h.tint(), { Routine.formatAmount(it, 1) }, refLine = h.target?.takeIf { it > 0 }, unit = unit)
             if (series.size > 1) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatTile("Low", Routine.formatAmount(series.minOf { it.value }) + unit)

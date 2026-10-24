@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.format.Dates
 import app.stride.money.domain.Finance
 import app.stride.money.domain.Ledger
 import app.stride.money.model.MoneyData
@@ -144,7 +145,7 @@ fun AllItemsScreen(d: MoneyData, income: Boolean, onEdit: (String) -> Unit, onAd
                         Column(Modifier.weight(1f)) {
                             Text(r.title, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                             Text(
-                                r.date + (if (r.invoiced) " · invoiced" else "") + (r.note?.let { " · $it" } ?: ""),
+                                Dates.full(r.date) + (if (r.invoiced) " · invoiced" else "") + (r.note?.let { " · $it" } ?: ""),
                                 color = if (r.invoiced) StrideColors.Amber else StrideColors.Faint, fontSize = 11.sp, maxLines = 1,
                             )
                         }

@@ -175,6 +175,7 @@ fun SetupTab(vm: MoneyViewModel, d: MoneyData, fxBusy: Boolean, padding: Padding
                         }
                     }
                 }
+                section("dates") { item { app.stride.format.DateFormatCard() } }
                 section("fx") {
                     val codes = Finance.foreignCodes(d)
                     if (codes.isNotEmpty()) item {

@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.format.Dates
 import app.stride.money.domain.Finance
 import app.stride.money.domain.Reports
 import app.stride.money.domain.Reports.Kind
@@ -302,7 +303,7 @@ private fun ItemRow(it: Reports.Item, base: String) {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(it.title, color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(it.date + (it.note?.let { n -> " · $n" } ?: ""), color = StrideColors.Faint, fontSize = 11.sp, maxLines = 1)
+            Text(Dates.full(it.date) + (it.note?.let { n -> " · $n" } ?: ""), color = StrideColors.Faint, fontSize = 11.sp, maxLines = 1)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(Finance.money(it.amount, it.currency), color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)

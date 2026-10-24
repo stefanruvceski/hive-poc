@@ -1,5 +1,6 @@
 package app.stride.domain
 
+import app.stride.format.Dates
 import java.time.LocalDate
 import java.util.Locale
 import kotlin.math.abs
@@ -12,14 +13,12 @@ private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Au
 fun dayShort(d: LocalDate) = DAYS_SHORT[d.dayOfWeek.value - 1]
 fun dayLong(d: LocalDate) = DAYS_LONG[d.dayOfWeek.value - 1]
 fun dowShort(dow: Int) = DAYS_SHORT[(dow - 1).coerceIn(0, 6)]
-fun dateShort(d: LocalDate) = "${MONTHS[d.monthValue - 1]} ${d.dayOfMonth}"
-fun dateNum(d: LocalDate) = "${d.monthValue}/${d.dayOfMonth}"
+/** "31 Oct" (or "Oct 31" with US dates): follows the Hive date format setting. */
+fun dateShort(d: LocalDate) = Dates.text(d)
+/** "31.10." / "10-31" / "10/31". */
+fun dateNum(d: LocalDate) = Dates.short(d)
 
-fun weekRange(monday: LocalDate): String {
-    val sunday = monday.plusDays(6)
-    return if (monday.month == sunday.month) "${MONTHS[monday.monthValue - 1]} ${monday.dayOfMonth}–${sunday.dayOfMonth}"
-    else "${dateShort(monday)} – ${dateShort(sunday)}"
-}
+fun weekRange(monday: LocalDate): String = Dates.range(monday, monday.plusDays(6))
 
 /** 42:10 or 1:02:10 */
 fun fmtDur(sec: Double?): String {
