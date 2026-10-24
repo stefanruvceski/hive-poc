@@ -55,11 +55,28 @@ object GarminWorkout {
         put("endConditionValue", seconds.toDouble())
     }
 
+    /** A timed step after the last exercise; the watch counts the sauna minutes down and buzzes at the end. */
+    private fun saunaStep(order: Int, minutes: Int) = buildJsonObject {
+        put("type", "ExecutableStepDTO")
+        put("stepOrder", order)
+        putJsonObject("stepType") {
+            put("stepTypeId", 2)
+            put("stepTypeKey", "cooldown")
+        }
+        putJsonObject("endCondition") {
+            put("conditionTypeId", 2)
+            put("conditionTypeKey", "time")
+        }
+        put("endConditionValue", minutes * 60.0)
+        put("description", "Sauna $minutes min")
+    }
+
     /**
      * Each exercise: warm-up sets as single steps, then working sets as a repeat group (set + rest)
-     * when they're all the same, else one step per set. Rest between sets is [restSeconds].
+     * when they're all the same, else one step per set. Rest between sets is [restSeconds]. When the session
+     * has sauna checked, a timed sauna step follows the last exercise (unless [sauna] is false).
      */
-    fun build(name: String, session: StrengthSession, restSeconds: Int = 120, exactNames: Boolean = true): JsonObject {
+    fun build(name: String, session: StrengthSession, restSeconds: Int = 120, exactNames: Boolean = true, sauna: Boolean = true): JsonObject {
         var order = 0
         val steps = buildJsonArray {
             for (e in session.exercises) {
@@ -97,10 +114,12 @@ object GarminWorkout {
                     }
                 }
             }
+            if (sauna && session.sauna && session.saunaMinutes > 0) add(saunaStep(++order, session.saunaMinutes))
         }
         return buildJsonObject {
             put("workoutName", name.take(80))
-            put("description", "From ${Brand.NAME}: " + session.exercises.joinToString(", ") { it.name }.take(500))
+            put("description", "From ${Brand.NAME}: " + (session.exercises.map { it.name } + listOfNotNull("sauna ${session.saunaMinutes} min".takeIf { sauna && session.sauna && session.saunaMinutes > 0 }))
+                .joinToString(", ").take(500))
             put("sportType", sport())
             put("workoutSegments", buildJsonArray {
                 add(buildJsonObject {

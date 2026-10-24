@@ -102,7 +102,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Garmin gym workouts (`garmin/`, unofficial): `GarminClient` signs in like garth (SSO → OAuth1 → OAuth2, consumer key
   from thegarth S3; only tokens kept in prefs `garmin`, excluded from Android backup), `GarminWorkout` builds the
   workout-service JSON (repeat groups, reps, kg, rest; tested), `GarminExercises` maps names to FIT categories and, where known, exact exercise names (tested; on a 4xx the
-  upload is retried without exact names); bodyweight exercises go without weight.
+  upload is retried without exact names); bodyweight exercises go without weight; a checked sauna becomes a timed step after the last exercise (dropped on the last retry).
   Workout screen → watch icon sends the session, scheduled on its date. Settings → Garmin Connect (MFA supported).
 - Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).
 

@@ -1,5 +1,12 @@
 [
   {
+    "id": "2026-10-26-garmin-sauna",
+    "title": "Sauna on your watch 🔥",
+    "items": [
+      {"icon": "watch", "text": "When sauna is on for a workout, the Garmin workout gets a sauna timer after the last exercise, counting your minutes."}
+    ]
+  },
+  {
     "id": "2026-10-26-hive",
     "title": "Tend is now Hive 🐝",
     "items": [

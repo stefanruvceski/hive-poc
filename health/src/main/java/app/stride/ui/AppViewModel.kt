@@ -329,7 +329,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _garmin.value = _garmin.value.copy(busy = true)
             try {
-                garmin.sendWorkout(GarminWorkout.build(name, session), session.date, fallback = GarminWorkout.build(name, session, exactNames = false))
+                garmin.sendWorkout(
+                    GarminWorkout.build(name, session), session.date,
+                    // Exact exercise names are a guess at Garmin's catalog, so retry without them, then without the sauna step.
+                    fallbacks = listOf(GarminWorkout.build(name, session, exactNames = false), GarminWorkout.build(name, session, exactNames = false, sauna = false)),
+                )
                 toast("Sent to Garmin · sync the watch, then find it under Workouts or today's calendar")
             } catch (e: Exception) {
                 toast(e.message ?: "Couldn't send to Garmin")

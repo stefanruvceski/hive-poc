@@ -422,6 +422,8 @@ private fun WorkoutList(
                 if (session.sauna) {
                     Spacer(Modifier.height(8.dp))
                     NumCell("minutes", session.saunaMinutes.toDouble(), decimal = false, modifier = Modifier.fillMaxWidth()) { onSauna(true, it.toInt()) }
+                    Spacer(Modifier.height(4.dp))
+                    Text("Sent to the watch as a timer after the last exercise.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
                 }
             }
         }
