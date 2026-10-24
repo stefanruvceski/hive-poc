@@ -283,7 +283,7 @@ private fun OverdueCard(vm: HabitsViewModel, overdue: List<Todo>, today: LocalDa
             ) {
                 Text(t.title, color = StrideColors.Text, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f))
                 val dt = LocalDate.parse(t.date)
-                Text("${dt.month.getDisplayName(DateStyle.SHORT, Locale.US)} ${dt.dayOfMonth}", color = StrideColors.Faint, fontSize = 11.sp)
+                Text(app.stride.format.Dates.text(dt), color = StrideColors.Faint, fontSize = 11.sp)
                 TextButton(onClick = { vm.moveTodo(t.id, today) }) { Text("→ Today", fontSize = 12.sp) }
                 IconButton(onClick = { vm.toggleTodo(t.id) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Check, "Done", tint = StrideColors.Dim) }
                 IconButton(onClick = { vm.deleteTodo(t.id) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Close, "Delete", tint = StrideColors.Faint) }

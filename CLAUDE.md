@@ -32,7 +32,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   (hold-to-edit sections, per-module tab lists) + `ui/TabsAndSections.kt` (`TabsAndSectionsScreen`: hide / reorder tabs and
   sections for any module; Health, Habits and Money use it), `ui/Rings.kt` (`RingStack`), `ui/Heatmap.kt` (`YearHeatmap`), `ui/Controls.kt`
   (`PeriodNav`, `ThinBar`, `Segment`, `Chip`, `DateField`), `ui/Components.kt` (cards, `LineChart` with tap tooltips and `more`
-  series, `BarChart`, `ProgressRing`, `ui/MoreCharts.kt` (`StackedBarChart` with tap select, `DonutChart`), `WeekStrip`, `StatTile`, nav bar), `ui/Celebration.kt`, `data/JsonStore` (one JSON file per
+  series, `BarChart`, `ProgressRing`, `ui/MoreCharts.kt` (`StackedBarChart` with tap select, `DonutChart`), `WeekStrip`, `StatTile`, nav bar), `ui/Celebration.kt`, `format/Dates` (Hive-wide date style EU / ISO / US, prefs `hive_prefs`; always format dates with it; `DateFormatCard` in Hive settings (home gear), Health settings and Money setup), `data/JsonStore` (one JSON file per
   module, atomic writes), `notify/Notifier` (post + post-once dedupe), `widget/WidgetKit.kt` + `WidgetArt` (Glance frame, text
   scaling, ring/line/month bitmaps). Glance and WorkManager come from core.
 - `:habits` (`HabitsModule`, package `app.stride.habits`): Streakli's habit tracker, ported from `stefanruvceski/habit-tracker`

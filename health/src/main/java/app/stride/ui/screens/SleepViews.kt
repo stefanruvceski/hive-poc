@@ -238,8 +238,8 @@ fun SleepStagesTrendCard(nights: List<SleepNight>, today: LocalDate) {
         }
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth()) {
-            Text(recent.first().date.substring(5).replace('-', '/'), style = TextStyle(fontSize = 10.sp), color = StrideColors.Faint, modifier = Modifier.weight(1f))
-            Text(recent.last().date.substring(5).replace('-', '/'), style = TextStyle(fontSize = 10.sp), color = StrideColors.Faint)
+            Text(app.stride.format.Dates.full(recent.first().date), style = TextStyle(fontSize = 10.sp), color = StrideColors.Faint, modifier = Modifier.weight(1f))
+            Text(app.stride.format.Dates.full(recent.last().date), style = TextStyle(fontSize = 10.sp), color = StrideColors.Faint)
         }
         Spacer(Modifier.height(10.dp))
         val avg = { f: (Sleep.Stats) -> Int -> stats.map(f).average().toInt() }

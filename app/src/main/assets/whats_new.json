@@ -1,5 +1,13 @@
 [
   {
+    "id": "2026-10-31-date-format",
+    "title": "European dates 📅",
+    "items": [
+      {"icon": "palette", "text": "Dates now read the European way (31.10.2026, 31 Oct) in every app."},
+      {"icon": "apps", "text": "Prefer ISO or US? Tap the gear on the home screen (or Health settings / Money setup) and pick a date format."}
+    ]
+  },
+  {
     "id": "2026-10-30-layout-everywhere",
     "title": "Arrange every app your way 🧩",
     "items": [

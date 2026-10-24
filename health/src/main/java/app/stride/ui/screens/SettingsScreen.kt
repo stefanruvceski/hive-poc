@@ -229,6 +229,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout
                 }
             }
 
+            item { app.stride.format.DateFormatCard() }
             item { SectionLabel("Daily rings", Modifier.padding(start = 4.dp, top = 8.dp)) }
             item { DailyRingsEditor(vm, data) }
             item { SectionLabel("Weekly targets", Modifier.padding(start = 4.dp, top = 8.dp)) }

@@ -22,9 +22,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
@@ -92,9 +94,15 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
     val prefs = remember { context.getSharedPreferences("hive_home", android.content.Context.MODE_PRIVATE) }
     var order by remember { mutableStateOf(HomeOrder.decode(prefs.getString("apps", null))) }
     var editing by rememberSaveable { mutableStateOf(false) }
+    var settings by rememberSaveable { mutableStateOf(false) }
     fun save(o: HomeOrder) { order = o; prefs.edit().putString("apps", o.encode()).apply() }
     val ids = modules.map { it.id }
     BackHandler(enabled = editing) { editing = false }
+    if (settings) {
+        BackHandler { settings = false }
+        HiveSettingsScreen { settings = false }
+        return
+    }
     val updates: UpdateViewModel = viewModel()
     val update by updates.state.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.onForeground(context) }
@@ -123,7 +131,10 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
                         Text(Brand.NAME, style = MaterialTheme.typography.titleMedium, color = StrideColors.Accent)
                     }
                     if (editing) androidx.compose.material3.Button(onClick = { editing = false }) { Text("Done") }
-                    else androidx.compose.material3.IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, "Edit apps", tint = StrideColors.Dim) }
+                    else {
+                        androidx.compose.material3.IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, "Edit apps", tint = StrideColors.Dim) }
+                        androidx.compose.material3.IconButton(onClick = { settings = true }) { Icon(Icons.Filled.Settings, "Hive settings", tint = StrideColors.Dim) }
+                    }
                 }
             }
         }
@@ -197,5 +208,26 @@ private fun ComingSoon() {
         Icon(Icons.Filled.AddCircleOutline, null, tint = StrideColors.Faint)
         Spacer(Modifier.width(12.dp))
         Text("More apps can join the hive later.", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Faint)
+    }
+}
+
+/** Settings that apply to the whole of Hive (each app keeps its own settings inside it). */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun HiveSettingsScreen(onBack: () -> Unit) {
+    androidx.compose.material3.Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { Text("Hive settings") },
+                navigationIcon = { androidx.compose.material3.IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+            )
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            app.stride.format.DateFormatCard()
+            Text("${Brand.NAME} · version ${AppInfo.versionName} (build ${AppInfo.versionCode})", style = MaterialTheme.typography.bodySmall, color = StrideColors.Faint, modifier = Modifier.padding(start = 4.dp))
+        }
     }
 }

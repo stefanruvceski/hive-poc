@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.format.Dates
 import app.stride.money.domain.Finance
 import app.stride.money.model.MoneyData
 import app.stride.money.model.TxStatus
@@ -198,7 +199,7 @@ fun IncomeTab(vm: MoneyViewModel, d: MoneyData, today: LocalDate, year: Int, onY
                                     Column(Modifier.weight(1f)) {
                                         Text(src?.name ?: "—", color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                                         Text(
-                                            "${t.date} · ${t.status.name.lowercase()}${t.note?.let { " · $it" } ?: ""}",
+                                            "${Dates.full(t.date)} · ${t.status.name.lowercase()}${t.note?.let { " · $it" } ?: ""}",
                                             color = if (t.status == TxStatus.PAID) StrideColors.Faint else StrideColors.Amber, fontSize = 11.sp, maxLines = 1,
                                         )
                                     }

@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.stride.format.Dates
 import app.stride.money.domain.Finance
 import app.stride.money.model.MoneyData
 import app.stride.ui.FCard
@@ -101,7 +102,7 @@ fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (Ye
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(c?.name ?: "—", color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                        Text(e.date + (e.note?.let { " · $it" } ?: ""), color = StrideColors.Faint, fontSize = 11.sp, maxLines = 1)
+                                        Text(Dates.full(e.date) + (e.note?.let { " · $it" } ?: ""), color = StrideColors.Faint, fontSize = 11.sp, maxLines = 1)
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(Finance.money(e.amount, e.currency), color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
