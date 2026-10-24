@@ -39,6 +39,7 @@ import app.stride.domain.WorkoutComparison
 import app.stride.domain.GoalProgress
 import app.stride.model.GoalKind
 import app.stride.ui.GlassCard
+import app.stride.ui.onLongPressOpen
 import app.stride.ui.theme.StrideColors
 
 /** One color per kind of weekly target, the same in the app and the widget. */
@@ -57,10 +58,10 @@ fun goalArgb(kind: GoalKind): Int = when (kind) {
 /** Apple-style activity rings for the user's weekly targets (outermost first). */
 @Composable
 fun TargetsCard(goals: List<GoalProgress>, onEdit: () -> Unit) {
-    GlassCard(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    GlassCard(Modifier.fillMaxWidth().onLongPressOpen("weekly-targets", onEdit)) {
+        Row(verticalAlignment = Alignment.Bottom) {
             Text("Weekly targets", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
-            androidx.compose.material3.TextButton(onClick = onEdit) { Text("Edit") }
+            Text("hold to edit", style = TextStyle(fontSize = 11.sp), color = StrideColors.Faint)
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
