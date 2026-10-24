@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Stride"
-include(":app", ":core", ":health", ":habits", ":money", ":draw")
+include(":app", ":core", ":health", ":habits", ":money", ":books", ":draw")

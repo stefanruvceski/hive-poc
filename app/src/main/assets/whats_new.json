@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-11-01-books",
+    "title": "New app: Books 📚",
+    "items": [
+      {"icon": "apps", "text": "Books joins Hive: what you're reading, everything you've finished with ratings and notes, and the queue of what's next (to read, to buy, dropped)."},
+      {"icon": "spark", "text": "Add a book by title, author or ISBN (Open Library fills in pages and the cover), or by hand. Each book has a core idea, key concepts, notes and an after-reading checklist."},
+      {"icon": "chart", "text": "Reading sessions with a timer, pages per hour and a daily-minutes ring; Stats shows books per month and year, the yearly goal, reading days, topics and your top rated."},
+      {"icon": "palette", "text": "Quotes with page, theme and your own take; a quote of the day, search and favourites. Export / import in Books settings."}
+    ]
+  },
+  {
     "id": "2026-10-31-date-format",
     "title": "European dates 📅",
     "items": [

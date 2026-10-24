@@ -22,7 +22,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 ## Modules (ready for a "super-app" of several apps)
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
   to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon (`ic_hive_*`: same-size hexagons in an uneven comb), shortcuts,
-  FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Drawify. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
+  FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Books, Drawify. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`; order and hidden apps in `host/HomeOrder`, tested, prefs `hive_home`, edited with the pencil or a long press); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
   the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`ic_stat_hive`, the comb; `app.stride.core.R`),
@@ -48,6 +48,12 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   savings rate, weekday spending, biggest items, insights. All income / All expenses (`ui/AllItemsScreen`, filters in
   `domain/Ledger`, tested): search, year, source or category, status, grouped by month; tap to edit or delete.
   No accounts and no cloud: all three apps keep their data on the phone (Google sign-in may come later, for Hive as a whole).
+- `:books` (`BooksModule`, package `app.stride.books`, amber): reading tracker modelled on the user's Notion Books / Quotes
+  databases. `books.json` (`BooksData`: books with status to buy / to read / reading / finished / dropped, rating 1–10, dates,
+  topics, format, language, pages, core idea, concepts, notes, after-reading checklist; quotes with page, themes, "my take",
+  favourite; sessions; the running `ActiveSession`). Pure logic in `domain/BookStats` + `OpenLibraryParse` (tested); search and
+  covers from Open Library (keyless, `data/OpenLibrary`, Coil). Tabs Library / Stats / Quotes / Up next (`BooksLayouts`),
+  sub-screens as a route stack in `BooksApp` (book page, forms, session timer, all books, settings with JSON export / import).
 - `:draw` (`DrawModule`, package `app.stride.draw`): Drawify, ported from `stefanruvceski/drawify` (its own update banner dropped,
   Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and
   `OverlayView` (drag / pinch / rotate, corner mode); `TiltPerspective` (gravity → homography), `ImageFilters` (no white,
