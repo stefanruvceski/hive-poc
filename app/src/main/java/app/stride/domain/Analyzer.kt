@@ -195,29 +195,45 @@ object Analyzer {
     fun workReps(intervals: List<Interval>?): List<Interval> =
         intervals.orEmpty().filter { (it.type ?: "").uppercase() == "WORK" && (it.distance ?: 0.0) > 0 && (it.movingTime ?: 0.0) > 0 }
 
+    /**
+     * The main set: reps of the most common distance (rounded to 25 m, ±15%). Longer or odd lengths
+     * (a 500 m warm-up, a 200 m cool-down, a stray 50) are left out of the pace comparison.
+     */
+    fun mainSet(reps: List<Interval>): List<Interval> {
+        if (reps.size < 2) return reps
+        val modal = reps.groupingBy { ((it.distance!! / 25.0).roundToInt() * 25).coerceAtLeast(25) }.eachCount()
+            .maxWith(compareBy<Map.Entry<Int, Int>> { it.value }.thenBy { -it.key }).key
+        return reps.filter { abs(it.distance!! - modal) <= modal * 0.15 }
+    }
+
+    private fun median(v: List<Double>): Double = v.sorted().let { if (it.size % 2 == 1) it[it.size / 2] else (it[it.size / 2 - 1] + it[it.size / 2]) / 2 }
+
     private fun intenseSwim(a: Activity, intervals: List<Interval>?): Verdict {
         val lines = mutableListOf<String>()
         lines += "${fmtMeters(a.distance)} total · max HR ${fmtHr(a.maxHr)}"
-        val reps = workReps(intervals)
+        val all = workReps(intervals)
+        val reps = mainSet(all)
         if (reps.size < 2) {
             val hint = if (intervals == null) "Open the day to analyze the reps." else "intervals.icu didn't detect reps in this workout."
             return Verdict(Level.OK, "Done", lines + hint)
         }
         val paces = reps.map { it.movingTime!! / (it.distance!! / 100.0) }
-        val dist = reps.map { it.distance!! }.average().roundToInt()
-        val best = paces.min()
-        val worst = paces.max()
-        val firstHalf = paces.take(paces.size / 2).average()
-        val secondHalf = paces.drop(paces.size / 2).average()
+        val dist = (reps.map { it.distance!! }.average() / 25).roundToInt() * 25
+        // Medians, so one mis-detected length (a glide counted as a 15 s rep) doesn't swing the verdict.
+        val firstHalf = median(paces.take(paces.size / 2))
+        val secondHalf = median(paces.drop(paces.size / 2))
         val fade = (secondHalf - firstHalf) / firstHalf * 100
-        val spread = (worst - best) / best * 100
-        lines += "${reps.size} × $dist m · fastest ${fmtDur(best)}/100 m, slowest ${fmtDur(worst)}/100 m"
-        lines += "Second half of reps ${abs(fade).roundToInt()}% ${if (fade >= 0) "slower" else "faster"}"
+        val others = all - reps.toSet()
+        lines += "Main set ${reps.size} × $dist m · typical ${fmtDur(median(paces))}/100 m" +
+            if (others.isNotEmpty()) " (not counted: ${others.joinToString(", ") { "${it.distance!!.roundToInt()} m" }})" else ""
+        lines += "Second half of the main set ${abs(fade).roundToInt()}% ${if (fade >= 0) "slower" else "faster"}"
+        val tip = if (dist > 25) {
+            "Start the first rep at ~95% so you can hold pace to the end, or rest longer between reps. If you fade within each rep, try shorter reps (25 m)."
+        } else {
+            "Start the first reps at ~95% so the last ones stay as fast, or take a few more seconds of rest between reps."
+        }
         return when {
-            fade > 10 || spread > 18 -> Verdict(
-                Level.WARN, "Pace fades across reps", lines,
-                "Start the first rep at ~95% so you can hold pace to the end, or rest longer between reps. If power drops in the second half of each length, try 25 m reps.",
-            )
+            fade > 10 -> Verdict(Level.WARN, "Pace fades across reps", lines, tip)
             fade > 5 -> Verdict(Level.OK, "Slight pace fade across reps", lines)
             else -> Verdict(Level.GOOD, "Even reps, excellent", lines)
         }

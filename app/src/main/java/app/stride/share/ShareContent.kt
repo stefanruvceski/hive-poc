@@ -93,7 +93,7 @@ object ShareContent {
         act ?: return null
 
         if (DayKind.SWIM_EASY.matches(act.type)) {
-            val reps = Analyzer.workReps(intervals[act.id])
+            val reps = Analyzer.mainSet(Analyzer.workReps(intervals[act.id]))
             return withContext(Dispatchers.Default) {
                 ShareCard.swim(
                     context,
