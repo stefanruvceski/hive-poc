@@ -96,6 +96,9 @@ import androidx.compose.ui.unit.sp
 import app.stride.data.ExerciseLibrary
 import app.stride.data.ExerciseMatcher
 import app.stride.live.LiveWorkout
+import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.stride.data.LibraryExercise
 import app.stride.domain.Deload
 import app.stride.domain.Progression
@@ -186,6 +189,8 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
     var adding by remember { mutableStateOf(false) }
     var pickingPicture by remember { mutableStateOf(false) }
     val timer = rememberRestTimer()
+    val garminUi by vm.garminUi.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.refreshGarmin() }
 
     // Lock-screen notification with the current set and rest; follows every change to the session.
     LaunchedEffect(stored, timer.endAt, data.settings.liveWorkout) {
@@ -235,7 +240,15 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
                             open = null
                             commit(session.copy(exercises = session.exercises.filterIndexed { j, _ -> j != i }))
                         }) { Icon(Icons.Filled.Delete, "Remove exercise") }
-                    } else if (stored != null) {
+                    } else {
+                        if (garminUi.connected) {
+                            if (garminUi.busy) CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp)
+                            else IconButton(onClick = { vm.sendToGarmin(session, data.planFor(date)?.title ?: shortKind(session.kind)) }) {
+                                Icon(Icons.Filled.Watch, "Send to Garmin")
+                            }
+                        }
+                    }
+                    if (current == null && stored != null) {
                         IconButton(onClick = { LiveWorkout.stop(context); vm.deleteStrength(stored.id); vm.toast("Workout deleted"); onBack() }) {
                             Icon(Icons.Filled.Delete, "Delete workout")
                         }
