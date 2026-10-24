@@ -151,6 +151,7 @@ fun NotificationsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     val groups = listOf(
         "Plan" to listOf(NotifType.PLAN_REVIEW, NotifType.MORNING, NotifType.PRE_WORKOUT, NotifType.EVENING, NotifType.SAUNA, NotifType.REST_DAY, NotifType.MISSED),
+        "Daily rings" to listOf(NotifType.RINGS_CLOSED, NotifType.RINGS_EVENING),
         "Workouts and progress" to listOf(NotifType.COACH, NotifType.BADGE, NotifType.WORKOUT_DONE, NotifType.PERSONAL_BEST, NotifType.TARGET_HIT, NotifType.WEEK_RECAP, NotifType.MONTH_RECAP),
         "Recovery and health" to listOf(NotifType.LOW_RECOVERY, NotifType.BEDTIME, NotifType.DELOAD, NotifType.WEIGH_IN),
         "App" to listOf(NotifType.NO_DATA, NotifType.UPDATE),

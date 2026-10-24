@@ -5,7 +5,8 @@
     "items": [
       {"icon": "chart", "text": "New daily rings at the top of the Week tab, like Apple Health: steps, training time and sleep to start, with a small ring for every day of the week."},
       {"icon": "palette", "text": "Pick up to 4 rings and set each target: steps, training time, workout calories, today's plan, Zone 2, intense minutes, kg lifted, swim, run, sleep, sauna or a weigh-in. Hold the card to edit."},
-      {"icon": "heart", "text": "Weekly targets stay for what adds up over the week. The rings widget now shows today's rings."}
+      {"icon": "heart", "text": "Weekly targets stay for what adds up over the week. The rings widget now shows today's rings."},
+      {"icon": "bell", "text": "A notification when you close all your rings, and at 20:00 a reminder of what's left (both switchable in Settings → Notifications)."}
     ]
   },
   {

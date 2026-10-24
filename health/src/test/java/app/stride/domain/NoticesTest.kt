@@ -99,4 +99,25 @@ class NoticesTest {
         assertTrue(Notices.due(AppData(), at(1, 12), latestBuild = 40, installedBuild = 33).any { it.type == NotifType.UPDATE })
         assertFalse(Notices.due(AppData(), at(1, 12), latestBuild = 33, installedBuild = 33).any { it.type == NotifType.UPDATE })
     }
+
+    @Test
+    fun dailyRings() {
+        // Default rings: steps 8,000, training 45 min, sleep 7.5 h.
+        val open = AppData(wellness = listOf(Wellness("2026-10-20", steps = 6100.0, sleepSecs = 8 * 3600.0)))
+        val evening = Notices.due(open, at(1, 20, 15)).first { it.type == NotifType.RINGS_EVENING }
+        assertEquals("2 rings to close", evening.title)
+        assertTrue(evening.text, evening.text.startsWith("1,900 steps · 45 min training time"))
+        assertFalse(NotifType.RINGS_EVENING in types(open, at(1, 18, 0)))
+        assertFalse(NotifType.RINGS_CLOSED in types(open, at(1, 20, 15)))
+
+        val done = AppData(
+            wellness = listOf(Wellness("2026-10-20", steps = 9000.0, sleepSecs = 8 * 3600.0)),
+            activities = listOf(Activity("r", "2026-10-20T07:00:00", "Run", movingTime = 3000.0)),
+        )
+        assertTrue(NotifType.RINGS_CLOSED in types(done, at(1, 12, 0)))
+        assertFalse(NotifType.RINGS_EVENING in types(done, at(1, 20, 15)))
+        // Only sleep left open: nothing to do about it in the evening.
+        val sleepOnly = done.copy(wellness = listOf(Wellness("2026-10-20", steps = 9000.0, sleepSecs = 5 * 3600.0)))
+        assertFalse(NotifType.RINGS_EVENING in types(sleepOnly, at(1, 20, 15)))
+    }
 }

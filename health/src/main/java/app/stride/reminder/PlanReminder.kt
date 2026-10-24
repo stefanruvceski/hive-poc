@@ -116,8 +116,8 @@ object PlanReminder {
 
     private fun channel(t: NotifType): Pair<String, String> = when (t) {
         NotifType.PLAN_REVIEW -> "plan_review" to "Weekly plan review"
-        NotifType.MORNING, NotifType.PRE_WORKOUT, NotifType.EVENING, NotifType.SAUNA, NotifType.REST_DAY, NotifType.MISSED -> "daily" to "Daily plan"
-        NotifType.WORKOUT_DONE, NotifType.PERSONAL_BEST, NotifType.TARGET_HIT, NotifType.WEEK_RECAP, NotifType.MONTH_RECAP -> "progress" to "Workouts and progress"
+        NotifType.MORNING, NotifType.PRE_WORKOUT, NotifType.EVENING, NotifType.SAUNA, NotifType.REST_DAY, NotifType.MISSED, NotifType.RINGS_EVENING -> "daily" to "Daily plan"
+        NotifType.WORKOUT_DONE, NotifType.PERSONAL_BEST, NotifType.TARGET_HIT, NotifType.RINGS_CLOSED, NotifType.WEEK_RECAP, NotifType.MONTH_RECAP -> "progress" to "Workouts and progress"
         NotifType.LOW_RECOVERY, NotifType.BEDTIME, NotifType.DELOAD, NotifType.WEIGH_IN -> "health" to "Recovery and health"
         NotifType.NO_DATA, NotifType.UPDATE -> "app" to "App and sync"
         NotifType.COACH, NotifType.BADGE -> "progress" to "Workouts and progress"

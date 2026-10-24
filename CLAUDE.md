@@ -55,7 +55,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Layout: users hide/reorder tabs and sections (`Settings.layout`, ids in `ui/Layouts.kt`, never rename them). Long-press
   any tab → edit mode (`ui/Layout.kt`, `SectionHost`); Settings → Tabs and sections. New sections: add a `SectionDef`
   and a `section("id") { ... }` block in the tab.
-- Notifications: `model.NotifType` (18 types, each switchable in Settings → Notifications, `Settings.notifyOn`), pure
+- Notifications: `model.NotifType` (22 types, incl. "All rings closed" and the 20:00 rings reminder; each switchable in Settings → Notifications, `Settings.notifyOn`), pure
   rules in `domain/Notices.kt` (unit tested), posted by `reminder/PlanReminder.kt` (dedupe set in prefs). The worker
   also syncs intervals.icu every ~2 h (`data/Sync.kt`, shared with the app; `Store.update` under `Store.LOCK`) and
   checks for updates twice a day.
