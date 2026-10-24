@@ -221,19 +221,15 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout
                     Spacer(Modifier.height(6.dp))
                     NumField("goal in kg (optional)", goal, Modifier.fillMaxWidth(), decimal = true) { goal = it }
                     Spacer(Modifier.height(14.dp))
-                    Text("Weekly targets", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NumField("Zone 2 min", zone2, Modifier.weight(1f)) { zone2 = it }
-                        NumField("sauna min", saunaTarget, Modifier.weight(1f)) { saunaTarget = it }
-                    }
-                    Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Warm-up sets in workouts", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                         Switch(checked = warmups, onCheckedChange = { warmups = it })
                     }
                 }
             }
+
+            item { SectionLabel("Weekly targets", Modifier.padding(start = 4.dp, top = 8.dp)) }
+            item { WeeklyGoalsCard(vm, data) }
 
             item {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {

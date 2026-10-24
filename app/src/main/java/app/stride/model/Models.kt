@@ -151,7 +151,17 @@ data class Settings(
     val backupFolder: String? = null,
     /** When the last automatic backup was written (ISO date-time). */
     val lastBackup: String? = null,
+    /** Weekly targets shown as rings (up to 4); null = the defaults (plan, Zone 2, sauna). */
+    val weeklyGoals: List<WeeklyGoal>? = null,
 ) {
+    /** The weekly targets in use: the user's pick, else plan + Zone 2 + sauna from [targets]. */
+    val goals: List<WeeklyGoal>
+        get() = weeklyGoals ?: listOf(
+            WeeklyGoal(GoalKind.PLAN, 0.0),
+            WeeklyGoal(GoalKind.ZONE2, targets.zone2Minutes.toDouble()),
+            WeeklyGoal(GoalKind.SAUNA, targets.saunaMinutes.toDouble()),
+        )
+
     fun notifyOn(t: NotifType): Boolean = notifications[t.id] ?: when (t) {
         NotifType.PLAN_REVIEW -> planReminder
         NotifType.MORNING -> morningReminder
@@ -183,6 +193,33 @@ enum class NotifType(val id: String, val title: String, val description: String,
     COACH("coach", "Weekly AI coach", "Sunday 19:00 · review of the week and advice for next week (needs an Anthropic API key)"),
     BADGE("badge", "Badges", "When you earn a badge or finish a monthly challenge"),
 }
+
+/**
+ * What a weekly target can measure. [cumulative] targets add up over the week (a notification when
+ * reached); the others are averages. [step] is the +/- step in Settings. Never rename: stored by name.
+ */
+@Serializable
+enum class GoalKind(val title: String, val unit: String, val default: Double, val step: Double, val group: String, val cumulative: Boolean = true) {
+    PLAN("Plan", "workouts", 0.0, 1.0, "Training"),
+    WORKOUTS("Workouts", "workouts", 5.0, 1.0, "Training"),
+    MINUTES("Training time", "min", 300.0, 15.0, "Training"),
+    ZONE2("Zone 2", "min", 150.0, 10.0, "Training"),
+    INTENSE("Intense (zones 4-5)", "min", 30.0, 5.0, "Training"),
+    STRENGTH("Strength sessions", "sessions", 3.0, 1.0, "Training"),
+    LIFTED("Kg lifted", "kg", 6000.0, 500.0, "Training"),
+    SWIM("Swim", "km", 4.0, 0.5, "Cardio"),
+    RUN("Run", "km", 10.0, 1.0, "Cardio"),
+    SAUNA("Sauna", "min", 57.0, 5.0, "Health"),
+    SLEEP("Sleep (average)", "h", 7.5, 0.25, "Health", cumulative = false),
+    STEPS("Steps (daily average)", "steps", 8000.0, 500.0, "Health", cumulative = false),
+    WEIGH_INS("Weigh-ins", "times", 3.0, 1.0, "Health"),
+    EARLY("Workouts before 07:00", "workouts", 3.0, 1.0, "Habits"),
+    REST("Rest days", "days", 1.0, 1.0, "Habits"),
+}
+
+/** One weekly target: what and how much ([amount] is ignored for PLAN, which comes from the week's plan). */
+@Serializable
+data class WeeklyGoal(val kind: GoalKind, val amount: Double)
 
 /** Visible tabs and sections; ids come from ui/Layout.kt. Empty lists mean the default order. */
 @Serializable

@@ -39,6 +39,25 @@ import androidx.health.connect.client.PermissionController
 import app.stride.data.Backup
 import app.stride.data.HealthSync
 import app.stride.model.AppData
+import app.stride.model.GoalKind
+import app.stride.model.WeeklyGoal
+import app.stride.domain.Goals
+import app.stride.domain.fmtGoal
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.draw.clip
 import app.stride.ui.AppViewModel
 import app.stride.ui.FCard
 import app.stride.ui.theme.StrideColors
@@ -124,6 +143,105 @@ fun HealthConnectCard(vm: AppViewModel, data: AppData) {
                 TextButton(onClick = { vm.syncHealth(silent = false) }) { Text("Sync now") }
             }
         }
+    }
+}
+
+/**
+ * Pick up to [Goals.MAX] weekly targets and how much of each; they become the rings on the Week tab
+ * and in the Weekly targets widget. Changes save right away.
+ */
+@Composable
+fun WeeklyGoalsCard(vm: AppViewModel, data: AppData) {
+    val goals = data.settings.goals
+    var adding by remember { mutableStateOf(false) }
+    fun save(list: List<WeeklyGoal>) = vm.updateSettings { it.copy(weeklyGoals = list) }
+    FCard {
+        Text(
+            "Up to ${Goals.MAX} targets, shown as rings on the Week tab and in the widget. Plan follows the week's plan.",
+            style = MaterialTheme.typography.bodySmall,
+            color = StrideColors.Dim,
+        )
+        goals.forEachIndexed { i, g ->
+            if (i > 0) HorizontalDivider(color = StrideColors.Border)
+            Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(goalColor(g.kind)))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(g.kind.title, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (g.kind == GoalKind.PLAN) "workouts in this week's plan" else "${fmtGoal(g.kind, g.amount)} ${g.kind.unit} a week" +
+                            if (!g.kind.cumulative) " (average)" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StrideColors.Dim,
+                    )
+                }
+                if (g.kind != GoalKind.PLAN) {
+                    IconButton(onClick = { save(goals.mapIndexed { j, x -> if (j == i) x.copy(amount = (x.amount - x.kind.step).coerceAtLeast(x.kind.step)) else x }) }) {
+                        Icon(Icons.Filled.Remove, "Less")
+                    }
+                    IconButton(onClick = { save(goals.mapIndexed { j, x -> if (j == i) x.copy(amount = x.amount + x.kind.step) else x }) }) {
+                        Icon(Icons.Filled.Add, "More")
+                    }
+                }
+                IconButton(onClick = { save(goals.filterIndexed { j, _ -> j != i }) }, enabled = goals.size > 1) {
+                    Icon(Icons.Filled.Close, "Remove", tint = StrideColors.Faint)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { adding = true }, enabled = goals.size < Goals.MAX) { Text("Add target") }
+            TextButton(onClick = { vm.updateSettings { it.copy(weeklyGoals = null) } }) { Text("Reset") }
+        }
+    }
+    if (adding) {
+        val used = goals.map { it.kind }.toSet()
+        AlertDialog(
+            onDismissRequest = { adding = false },
+            containerColor = StrideColors.Elev,
+            title = { Text("Add a weekly target") },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                    GoalKind.entries.filter { it !in used }.groupBy { it.group }.forEach { (group, kinds) ->
+                        item { Text(group.uppercase(), style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) }
+                        items(kinds) { k ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    save(goals + WeeklyGoal(k, k.default))
+                                    adding = false
+                                }.padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(Modifier.size(10.dp).clip(CircleShape).background(goalColor(k)))
+                                Spacer(Modifier.width(10.dp))
+                                Text(k.title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Text(if (k == GoalKind.PLAN) "from plan" else "${fmtGoal(k, k.default)} ${k.unit}", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { adding = false }) { Text("Close") } },
+        )
+    }
+}
+
+/** Full-screen editor for weekly targets, opened from the Week tab's targets card. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun GoalsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit) {
+    androidx.compose.material3.Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { Text("Weekly targets") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+            )
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).padding(16.dp)) { WeeklyGoalsCard(vm, data) }
     }
 }
 

@@ -54,6 +54,7 @@ import app.stride.ui.screens.DayScreen
 import app.stride.ui.screens.LayoutScreen
 import app.stride.ui.screens.NotificationsScreen
 import app.stride.ui.screens.YearReviewScreen
+import app.stride.ui.screens.GoalsScreen
 import app.stride.ui.theme.StrideColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
@@ -84,6 +85,7 @@ sealed interface Overlay {
     data object Layout : Overlay
     data object Notifications : Overlay
     data class Year(val year: Int) : Overlay
+    data object Goals : Overlay
 }
 
 private fun tabIcon(id: String) = when (id) {
@@ -234,6 +236,7 @@ fun StrideApp(
                         padding = padding,
                         host = host,
                         coachBusy = coachBusy,
+                        onEditGoals = { push(Overlay.Goals) },
                         onAskCoach = { vm.askCoach(it) },
                     )
                     "trends" -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) }, host = host, onYear = { push(Overlay.Year(it)) })
@@ -255,6 +258,7 @@ fun StrideApp(
             is Overlay.Layout -> LayoutScreen(vm = vm, data = data, onBack = pop)
             is Overlay.Notifications -> NotificationsScreen(vm = vm, data = data, onBack = pop)
             is Overlay.Year -> YearReviewScreen(data = data, year = top.year, onClose = pop)
+            is Overlay.Goals -> GoalsScreen(vm = vm, data = data, onBack = pop)
             is Overlay.Day -> DayScreen(
                 vm = vm, data = data, date = top.date, today = today, intervals = intervals,
                 onBack = pop,

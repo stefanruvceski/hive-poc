@@ -21,7 +21,7 @@ object WidgetArt {
     fun rings(values: List<Pair<Int, Float>>, sizePx: Int): Bitmap {
         val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        val stroke = sizePx / 9f
+        val stroke = sizePx / (values.size.coerceAtLeast(1) * 2.36f + 2.2f)
         values.forEachIndexed { i, (color, v) ->
             val inset = stroke / 2 + i * stroke * 1.18f
             val r = RectF(inset, inset, sizePx - inset, sizePx - inset)

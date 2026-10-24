@@ -36,39 +36,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.domain.MetricDelta
 import app.stride.domain.WorkoutComparison
-import app.stride.domain.WeeklyTargets
+import app.stride.domain.GoalProgress
+import app.stride.model.GoalKind
 import app.stride.ui.GlassCard
 import app.stride.ui.theme.StrideColors
 
-private val Zone2Color = Color(0xFF22D3EE)
-private val SaunaColor = Color(0xFFF472B6)
-private val PlanColor = Color(0xFF34D399)
+/** One color per kind of weekly target, the same in the app and the widget. */
+internal fun goalColor(kind: GoalKind): Color = Color(goalArgb(kind))
 
-/** Apple-style activity rings for the week: plan (outer), Zone 2 (middle), sauna (inner). */
+fun goalArgb(kind: GoalKind): Int = when (kind) {
+    GoalKind.PLAN, GoalKind.WORKOUTS -> 0xFF34D399.toInt()
+    GoalKind.ZONE2, GoalKind.SWIM -> 0xFF22D3EE.toInt()
+    GoalKind.SAUNA, GoalKind.LIFTED -> 0xFFF472B6.toInt()
+    GoalKind.INTENSE, GoalKind.RUN -> 0xFFF59E0B.toInt()
+    GoalKind.STRENGTH, GoalKind.MINUTES -> 0xFFA78BFA.toInt()
+    GoalKind.SLEEP, GoalKind.REST -> 0xFF60A5FA.toInt()
+    GoalKind.STEPS, GoalKind.EARLY, GoalKind.WEIGH_INS -> 0xFFFACC15.toInt()
+}
+
+/** Apple-style activity rings for the user's weekly targets (outermost first). */
 @Composable
-fun TargetsCard(t: WeeklyTargets) {
-    val rings = listOf(
-        Triple(PlanColor, if (t.planTotal == 0) 0f else t.planDone.toFloat() / t.planTotal, "Plan" to "${t.planDone}/${t.planTotal} workouts"),
-        Triple(Zone2Color, t.zone2Min.toFloat() / t.zone2Target.coerceAtLeast(1), "Zone 2" to "${t.zone2Min}/${t.zone2Target} min"),
-        Triple(SaunaColor, t.saunaMin.toFloat() / t.saunaTarget.coerceAtLeast(1), "Sauna" to "${t.saunaMin}/${t.saunaTarget} min"),
-    )
+fun TargetsCard(goals: List<GoalProgress>, onEdit: () -> Unit) {
     GlassCard(Modifier.fillMaxWidth()) {
-        Text("Weekly targets", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold))
-        Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Rings(rings.map { it.first to it.second }, Modifier.size(120.dp))
+            Text("Weekly targets", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = onEdit) { Text("Edit") }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Rings(goals.map { goalColor(it.kind) to it.fraction }, Modifier.size(120.dp))
             Spacer(Modifier.width(18.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                rings.forEach { (color, f, text) ->
+            Column(verticalArrangement = Arrangement.spacedBy(if (goals.size > 3) 6.dp else 10.dp)) {
+                goals.forEach { g ->
+                    val color = goalColor(g.kind)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(10.dp).clip(CircleShape).background(color))
                         Spacer(Modifier.width(8.dp))
                         Column {
-                            Text(text.first.uppercase(), style = TextStyle(fontSize = 10.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = color)
+                            Text(g.kind.title.uppercase(), style = TextStyle(fontSize = 10.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = color, maxLines = 1)
                             Text(
-                                text.second + if (f >= 1f) "  ✓" else "",
-                                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold),
+                                g.label + if (g.reached) "  ✓" else "",
+                                style = TextStyle(fontSize = if (goals.size > 3) 14.sp else 15.sp, fontWeight = FontWeight.ExtraBold),
                                 color = StrideColors.Text,
+                                maxLines = 1,
                             )
                         }
                     }
@@ -78,11 +88,12 @@ fun TargetsCard(t: WeeklyTargets) {
     }
 }
 
-/** Concentric rings; a value over 1 laps the ring with a darker overlap like Apple's. */
+/** Concentric rings; a value over 1 laps the ring with a darker overlap like Apple's. Strokes thin out for 4 rings. */
 @Composable
 private fun Rings(values: List<Pair<Color, Float>>, modifier: Modifier) {
     Canvas(modifier) {
-        val stroke = size.minDimension / 9
+        val n = values.size.coerceAtLeast(1)
+        val stroke = size.minDimension / (n * 2.36f + 2.2f)
         values.forEachIndexed { i, (color, v) ->
             val inset = stroke / 2 + i * (stroke + stroke * 0.18f)
             val arcSize = Size(size.width - inset * 2, size.height - inset * 2)

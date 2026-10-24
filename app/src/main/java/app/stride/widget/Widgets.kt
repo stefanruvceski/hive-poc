@@ -62,6 +62,9 @@ import app.stride.domain.mondayOf
 import app.stride.domain.pace100
 import app.stride.domain.paceKm
 import app.stride.domain.weeklyTargets
+import app.stride.domain.Goals
+import app.stride.domain.fmtGoal
+import app.stride.ui.screens.goalArgb
 import app.stride.model.Activity
 import app.stride.model.AppData
 import app.stride.model.DayKind
@@ -314,18 +317,9 @@ class RingsWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val today = LocalDate.now()
-        val t = weeklyTargets(loadData(context), mondayOf(today), today)
-        val rings = listOf(
-            0xFF34D399.toInt() to (if (t.planTotal == 0) 0f else t.planDone.toFloat() / t.planTotal),
-            0xFF22D3EE.toInt() to t.zone2Min.toFloat() / t.zone2Target.coerceAtLeast(1),
-            0xFFF472B6.toInt() to t.saunaMin.toFloat() / t.saunaTarget.coerceAtLeast(1),
-        )
-        val bmp = WidgetArt.rings(rings, (96 * density(context)).toInt())
-        val lines = listOf(
-            Triple(Color(0xFF34D399), "Plan", "${t.planDone}/${t.planTotal}"),
-            Triple(Color(0xFF22D3EE), "Zone 2", "${t.zone2Min}/${t.zone2Target}m"),
-            Triple(Color(0xFFF472B6), "Sauna", "${t.saunaMin}/${t.saunaTarget}m"),
-        )
+        val goals = Goals.progress(loadData(context), mondayOf(today), today)
+        val bmp = WidgetArt.rings(goals.map { goalArgb(it.kind) to it.fraction }, (96 * density(context)).toInt())
+        val lines = goals.map { g -> Triple(Color(goalArgb(g.kind)), g.kind.title, "${fmtGoal(g.kind, g.current)}/${fmtGoal(g.kind, g.target)}") }
         provideContent { RingsContent(bmp, lines) }
     }
 }
