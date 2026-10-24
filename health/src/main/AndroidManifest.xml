@@ -38,7 +38,7 @@
         <service
             android:name="app.stride.live.StartWorkoutTile"
             android:exported="true"
-            android:icon="@drawable/ic_stat_stride"
+            android:icon="@drawable/ic_stat_hive"
             android:label="Start workout"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

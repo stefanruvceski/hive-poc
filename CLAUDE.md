@@ -25,13 +25,13 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Drawify. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
-  the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`app.stride.core.R`),
+  the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`ic_stat_hive`, the comb; `app.stride.core.R`),
   and the host contract in `host/`: `AppModule`, `Host` (open the app via `Host.openIntent` / `Host.component`, never a
   direct `MainActivity` reference), `OpenRequest`, `AppInfo` (library modules have no `BuildConfig` of their own).
 - Shared in `:core` for every module (use these before writing new ones): `ui/Layout.kt` + `LayoutOps` + `model/LayoutPrefs`
   (hold-to-edit sections, per-module tab lists), `ui/Rings.kt` (`RingStack`), `ui/Heatmap.kt` (`YearHeatmap`), `ui/Controls.kt`
   (`PeriodNav`, `ThinBar`, `Segment`, `Chip`, `DateField`), `ui/Components.kt` (cards, `LineChart` with tap tooltips and `more`
-  series, `BarChart`, `ProgressRing`, `WeekStrip`, `StatTile`, nav bar), `ui/Celebration.kt`, `data/JsonStore` (one JSON file per
+  series, `BarChart`, `ProgressRing`, `ui/MoreCharts.kt` (`StackedBarChart` with tap select, `DonutChart`), `WeekStrip`, `StatTile`, nav bar), `ui/Celebration.kt`, `data/JsonStore` (one JSON file per
   module, atomic writes), `notify/Notifier` (post + post-once dedupe), `widget/WidgetKit.kt` + `WidgetArt` (Glance frame, text
   scaling, ring/line/month bitmaps). Glance and WorkManager come from core.
 - `:habits` (`HabitsModule`, package `app.stride.habits`): Streakli's habit tracker, ported from `stefanruvceski/habit-tracker`
@@ -41,7 +41,10 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   (`reminder/HabitReminder`, every 15 min), widgets Today (tap to tick) and Progress, a once-a-day "Day closed" celebration.
 - `:money` (`MoneyModule`, package `app.stride.money`): Streakli's Finance. `money.json` (`MoneyData`: sources, transactions with
   locked FX rates, expenses, categories, budgets, goal, levels). Pure logic in `domain/Finance` + `FxParse` (tested); live rates
-  from currency-api or NBS (`data/FxClient`, keyless). Tabs Income / Spending / Setup, monthly income reminder.
+  from currency-api or NBS (`data/FxClient`, keyless). Tabs Income / Reports / Spending / Setup, monthly income reminder.
+  Reports (`domain/Reports`, tested; `ui/ReportsTab`): income / spending / net per month by source or category
+  (`StackedBarChart`, tap a month → its items), donut + per-slice trend, running total vs last year and goal pace,
+  savings rate, weekday spending, biggest items, insights.
   No accounts and no cloud: all three apps keep their data on the phone (Google sign-in may come later, for Hive as a whole).
 - `:draw` (`DrawModule`, package `app.stride.draw`): Drawify, ported from `stefanruvceski/drawify` (its own update banner dropped,
   Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and
