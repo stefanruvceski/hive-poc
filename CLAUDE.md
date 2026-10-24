@@ -11,8 +11,22 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 - Local: `gradle assembleRelease` with Gradle 8.11.1, JDK 17, Android SDK 36 (no wrapper committed; add one with `gradle wrapper --gradle-version 8.11.1` if useful).
 - Signing: no keystore exists yet and none may be committed. `app/build.gradle.kts` reads `STRIDE_KEYSTORE_PATH` and `STRIDE_KEYSTORE_PASSWORD` (alias `stride`). CI must decode the keystore from secrets `STRIDE_KEYSTORE_BASE64` + `STRIDE_KEYSTORE_PASSWORD`, like Streakli does. Once the first release is out, never change the key, or updates won't install over the old app.
 
+## Modules (ready for a "super-app" of several apps)
+- `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
+  to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon, shortcuts,
+  FileProvider, backup rules. `ModuleHost` shows the only module full screen, or a home grid when there are several.
+- `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
+  the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`app.stride.core.R`),
+  and the host contract in `host/`: `AppModule`, `Host` (open the app via `Host.openIntent` / `Host.component`, never a
+  direct `MainActivity` reference), `OpenRequest`, `AppInfo` (library modules have no `BuildConfig` of their own).
+- `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
+  with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
+  Open targets for a module later become "<moduleId>/<target>".
+- Kotlin packages stay `app.stride.*` in every module; only resources moved (use the module's R, e.g. `app.stride.core.R`).
+  Manifest entries in library modules use fully qualified class names.
+
 ## In-app updates
-`app/stride/update/`: on launch and on every return to the foreground, release builds read
+`core/…/update/`: on launch and on every return to the foreground, release builds read
 `https://api.github.com/repos/stefanruvceski/stride/releases` (no token; the repo must stay public), take the
 highest non-draft `android-b<N>` release with an `.apk` asset and show a banner if N > `BuildConfig.VERSION_CODE`.
 Pure logic in `UpdateLogic.kt` (unit tested); download + FileProvider + installer in `Updater.kt`. Disabled in debug.
