@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -82,4 +84,33 @@ fun Chip(text: String, selected: Boolean, color: Color = StrideColors.Accent, on
     Box(
         Modifier.clip(RoundedCornerShape(50)).background(if (selected) color else StrideColors.Elev2).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
     ) { Text(text, color = if (selected) StrideColors.Bg else StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+}
+
+/** A date button that opens the system-style date picker (Streakli's DateField). */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun DateField(value: java.time.LocalDate, onChange: (java.time.LocalDate) -> Unit, modifier: Modifier = Modifier) {
+    var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier.fillMaxWidth().clip(shape).background(StrideColors.Elev2).border(1.dp, StrideColors.Border, shape).clickable { open = true }.padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Text(
+            "${value.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.US)}, ${value.dayOfMonth} ${value.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.US)} ${value.year}",
+            color = StrideColors.Text, fontSize = 15.sp,
+        )
+    }
+    if (open) {
+        val state = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = value.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { open = false },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    state.selectedDateMillis?.let { onChange(java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate()) }
+                    open = false
+                }) { Text("OK") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { open = false }) { Text("Cancel") } },
+        ) { androidx.compose.material3.DatePicker(state = state) }
+    }
 }
