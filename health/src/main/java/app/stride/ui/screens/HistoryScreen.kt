@@ -115,7 +115,7 @@ fun ExerciseHistoryScreen(data: AppData, name: String, onBack: () -> Unit) {
                     Text("Top weight", style = MaterialTheme.typography.titleMedium)
                     Text("kg, heaviest working set per session", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
                     Spacer(Modifier.height(12.dp))
-                    LineChart(recent.map { it.topKg }, labels, StrideColors.Accent, { fmtKg(it) })
+                    LineChart(recent.map { it.topKg }, labels, StrideColors.Accent, { fmtKg(it) }, unit = " kg")
                 }
             }
             item {

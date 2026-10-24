@@ -36,6 +36,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlin.math.abs
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -359,6 +367,8 @@ fun LineChart(
     modifier: Modifier = Modifier,
     band: Pair<Double, Double>? = null,
     refLine: Double? = null,
+    /** Shown after the value in the tooltip, e.g. " kg". */
+    unit: String = "",
 ) {
     val measurer = rememberTextMeasurer()
     val pts = values.mapIndexedNotNull { i, v -> v?.let { i to it } }
@@ -366,7 +376,27 @@ fun LineChart(
         EmptyChart(modifier, 170)
         return
     }
-    Canvas(modifier.fillMaxWidth().height(170.dp)) {
+    // Tap or drag across the chart: the nearest point gets a guide line and a "label · value" tooltip.
+    var selected by remember(values) { mutableStateOf<Int?>(null) }
+    fun nearest(px: Float, width: Float, padL: Float, padR: Float): Int {
+        val n = values.size
+        val i = if (n <= 1) 0 else ((px - padL) / (width - padL - padR) * (n - 1)).roundToInt()
+        return pts.minBy { abs(it.first - i) }.first
+    }
+    Canvas(
+        modifier.fillMaxWidth().height(170.dp)
+            .pointerInput(values) {
+                detectTapGestures { o ->
+                    val i = nearest(o.x, size.width.toFloat(), 34.dp.toPx(), 10.dp.toPx())
+                    selected = if (selected == i) null else i
+                }
+            }
+            .pointerInput(values) {
+                detectHorizontalDragGestures(
+                    onDragStart = { o -> selected = nearest(o.x, size.width.toFloat(), 34.dp.toPx(), 10.dp.toPx()) },
+                ) { change, _ -> selected = nearest(change.position.x, size.width.toFloat(), 34.dp.toPx(), 10.dp.toPx()) }
+            },
+    ) {
         val all = pts.map { it.second } + listOfNotNull(refLine) + (band?.toList() ?: emptyList())
         var lo = all.min()
         var hi = all.max()
@@ -410,6 +440,23 @@ fun LineChart(
             drawPath(line, color, style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         pts.forEach { (i, v) -> drawCircle(color, 2.6.dp.toPx(), Offset(x(i), y(v))) }
+        selected?.let { si ->
+            val v = values.getOrNull(si) ?: return@let
+            val px = x(si)
+            drawLine(StrideColors.Dim.copy(alpha = 0.6f), Offset(px, top), Offset(px, bottom), strokeWidth = 1.dp.toPx())
+            drawCircle(color.copy(alpha = 0.25f), 8.dp.toPx(), Offset(px, y(v)))
+            drawCircle(StrideColors.Text, 4.5.dp.toPx(), Offset(px, y(v)))
+            drawCircle(color, 3.dp.toPx(), Offset(px, y(v)))
+            val tip = measurer.measure(listOf(labels.getOrNull(si).orEmpty(), format(v) + unit).filter { it.isNotEmpty() }.joinToString(" · "),
+                TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = StrideColors.Text))
+            val bw = tip.size.width + 16.dp.toPx()
+            val bh = tip.size.height + 8.dp.toPx()
+            val bx = (px - bw / 2).coerceIn(0f, size.width - bw)
+            val by = (y(v) - bh - 12.dp.toPx()).let { if (it < 0f) y(v) + 12.dp.toPx() else it }
+            drawRoundRect(StrideColors.Elev2, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
+            drawRoundRect(color.copy(alpha = 0.6f), Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2), style = Stroke(1.dp.toPx()))
+            drawText(tip, topLeft = Offset(bx + 8.dp.toPx(), by + 4.dp.toPx()))
+        }
 
         val idx = if (n <= 3) (0 until n).toList() else listOf(0, n / 2, n - 1)
         idx.forEach { i ->

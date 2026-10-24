@@ -92,7 +92,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                 section("swim_pace") {
                     item {
                         ChartCard("Easy swim", "pace per 100 m, lower is better") {
-                            LineChart(points.map { it.easySwimPace100 }, labels, accent, { fmtDur(it) })
+                            LineChart(points.map { it.easySwimPace100 }, labels, accent, { fmtDur(it) }, unit = " /100 m")
                         }
                     }
                 }
@@ -101,7 +101,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                         ChartCard("Run: average HR", "target zone ${t.runHrLow}–${t.runHrHigh} bpm") {
                             LineChart(
                                 points.map { it.runAvgHr }, labels, StrideColors.Bad, { "${it.roundToInt()}" },
-                                band = t.runHrLow.toDouble() to t.runHrHigh.toDouble(),
+                                band = t.runHrLow.toDouble() to t.runHrHigh.toDouble(), unit = " bpm",
                             )
                         }
                     }
@@ -109,14 +109,14 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                 section("run_pace") {
                     item {
                         ChartCard("Run: pace", "min/km") {
-                            LineChart(points.map { it.runPaceKm }, labels, StrideColors.Warn, { fmtDur(it) })
+                            LineChart(points.map { it.runPaceKm }, labels, StrideColors.Warn, { fmtDur(it) }, unit = " /km")
                         }
                     }
                 }
                 section("intense_swim") {
                     item {
                         ChartCard("Intense swim", "max heart rate") {
-                            LineChart(points.map { it.intenseMaxHr }, labels, StrideColors.Zones[5], { "${it.roundToInt()}" })
+                            LineChart(points.map { it.intenseMaxHr }, labels, StrideColors.Zones[5], { "${it.roundToInt()}" }, unit = " bpm")
                         }
                     }
                 }
@@ -137,7 +137,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                 section("hrv") {
                     if (data.wellness.isNotEmpty()) item {
                         ChartCard("HRV", "weekly average, ms, higher is better") {
-                            LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.hrv } }, labels, MetricColors.Fitness, { "${it.roundToInt()}" })
+                            LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.hrv } }, labels, MetricColors.Fitness, { "${it.roundToInt()}" }, unit = " ms")
                         }
                     }
                 }
@@ -152,7 +152,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                 section("rhr") {
                     if (data.wellness.isNotEmpty()) item {
                         ChartCard("Resting heart rate", "weekly average, bpm, lower is better") {
-                            LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.restingHR } }, labels, MetricColors.Heart, { "${it.roundToInt()}" })
+                            LineChart(points.map { Recovery.weekAverage(data.wellness, it.monday) { w -> w.restingHR } }, labels, MetricColors.Heart, { "${it.roundToInt()}" }, unit = " bpm")
                         }
                     }
                 }
@@ -165,7 +165,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                         }
                         val byDate = remember(data.weights) { data.weights.associate { it.date to it.kg } }
                         ChartCard("Weight", "every weigh-in, kg") {
-                            LineChart(days.map { byDate[it.toString()] }, days.map { dateNum(it) }, StrideColors.Amber, { fmtKg(it) }, refLine = t.weightGoalKg)
+                            LineChart(days.map { byDate[it.toString()] }, days.map { dateNum(it) }, StrideColors.Amber, { fmtKg(it) }, refLine = t.weightGoalKg, unit = " kg")
                         }
                     }
                 }
