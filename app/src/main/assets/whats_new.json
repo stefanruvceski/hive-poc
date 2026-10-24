@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-25-sleep",
+    "title": "Your nights, in detail 🌙",
+    "items": [
+      {"icon": "chart", "text": "A new sleep chart on each day: awake, REM, light and deep sleep across the night."},
+      {"icon": "heart", "text": "A sleep score with efficiency, time to fall asleep, time awake, regularity and sleep debt."},
+      {"icon": "spark", "text": "Trends shows your last 14 nights by stage. Needs Health Connect turned on in Settings."}
+    ]
+  },
+  {
     "id": "2026-10-25-tend",
     "title": "Welcome to Tend 🌱",
     "items": [

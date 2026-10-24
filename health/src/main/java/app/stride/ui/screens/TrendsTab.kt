@@ -148,6 +148,7 @@ fun TrendsTab(data: AppData, today: LocalDate, padding: PaddingValues, onDay: (L
                         }
                     }
                 }
+                section("sleep_stages") { if (data.sleep.isNotEmpty()) item { SleepStagesTrendCard(data.sleep, today) } }
                 section("rhr") {
                     if (data.wellness.isNotEmpty()) item {
                         ChartCard("Resting heart rate", "weekly average, bpm, lower is better") {

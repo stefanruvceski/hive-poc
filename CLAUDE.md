@@ -77,6 +77,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   canvas + World Imagery and tile.openstreetmap.org (darkened), with fallbacks; CARTO was dropped (it now wants a key).
   1080x1920 bitmaps drawn with android.graphics (fonts in `res/font`, OFL): run/walk with
   the GPS route (`/activity/{id}/streams?types=latlng`, lat in `data`, lng in `data2`), strength, swim. Day screen → Share.
+- Sleep: nights with stages from Health Connect (`AppData.sleep`, `SleepNight`/`SleepStage`, main session per wake
+  date, 120 days). Stages are the watch's; `domain/Sleep.kt` (tested) adds efficiency, latency, WASO, awakenings,
+  stage shares vs 13-23% deep / 20-25% REM, Sleep Regularity Index, bedtime spread, 7-day debt and a 0-100 score
+  (duration 40, efficiency 20, continuity 10, deep 15, REM 15; renormalized without stages). UI in
+  `ui/screens/SleepViews.kt`: hypnogram card on the Day screen, "Sleep stages" section in Trends.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 

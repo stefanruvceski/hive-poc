@@ -38,6 +38,7 @@ object Layouts {
             SectionDef("time", "Total time"),
             SectionDef("hrv", "HRV"),
             SectionDef("sleep", "Sleep"),
+            SectionDef("sleep_stages", "Sleep stages"),
             SectionDef("rhr", "Resting heart rate"),
             SectionDef("weight", "Weight"),
         ),

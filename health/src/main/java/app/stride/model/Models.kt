@@ -434,4 +434,24 @@ data class AppData(
     val coach: Map<String, String> = emptyMap(),
     /** Strength session ids already written to Health Connect. */
     val hcExported: List<String> = emptyList(),
+    /** Nights with sleep stages (from Health Connect), keyed by the date you wake up; 120 days. */
+    val sleep: List<SleepNight> = emptyList(),
+)
+
+@Serializable
+enum class SleepStageKind { AWAKE, LIGHT, DEEP, REM, ASLEEP }
+
+/** One stretch of a night; times are epoch seconds. ASLEEP = asleep without a stage (devices that don't stage). */
+@Serializable
+data class SleepStage(val start: Long, val end: Long, val kind: SleepStageKind)
+
+/** One night as the watch recorded it; [offsetMinutes] is the time zone at bedtime, for clock labels. */
+@Serializable
+data class SleepNight(
+    val date: String,
+    val start: Long,
+    val end: Long,
+    val stages: List<SleepStage> = emptyList(),
+    val offsetMinutes: Int = 0,
+    val source: String = "",
 )

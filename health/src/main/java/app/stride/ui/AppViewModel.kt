@@ -204,8 +204,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (!silent) toast("Health Connect isn't available on this phone.")
                     return@launch
                 }
-                val days = HealthSync.read(app)
-                update { d -> HealthSync.merge(d, days) }
+                val read = HealthSync.read(app)
+                update { d -> HealthSync.merge(d, read.days, read.nights) }
                 val written = HealthSync.writeStrength(app, _data.value)
                 if (written.isNotEmpty()) update { d -> d.copy(hcExported = (d.hcExported + written).takeLast(500)) }
                 if (!silent) toast("Health Connect synced" + if (written.isNotEmpty()) " · ${written.size} workouts written" else "")
