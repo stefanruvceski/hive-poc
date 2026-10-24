@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
@@ -44,6 +45,7 @@ import java.time.YearMonth
 private fun tabIcon(id: String) = when (id) {
     "income" -> Icons.Filled.Savings
     "spending" -> Icons.Filled.ShoppingCart
+    "reports" -> Icons.Filled.BarChart
     else -> Icons.Filled.Tune
 }
 
@@ -100,6 +102,7 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
         ) { padding ->
             when (tab.id) {
                 "income" -> IncomeTab(vm, d, today, year, { year = it }, { form = "income" }, padding, host)
+                "reports" -> ReportsTab(d, today, year, { year = it }, padding, host)
                 "spending" -> SpendingTab(vm, d, month, { month = it }, { form = "expense" }, padding, host)
                 else -> SetupTab(vm, d, fxBusy, padding, host)
             }

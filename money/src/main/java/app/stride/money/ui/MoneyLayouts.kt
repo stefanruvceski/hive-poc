@@ -16,7 +16,19 @@ object MoneyLayouts {
             SectionDef("recent", "Recent income"),
         ),
     )
+    val REPORTS = TabDef(
+        "reports", "Reports",
+        listOf(
+            SectionDef("summary", "Totals and averages"),
+            SectionDef("monthly", "By month"),
+            SectionDef("breakdown", "By source or category"),
+            SectionDef("cumulative", "Running total"),
+            SectionDef("insights", "Insights"),
+            SectionDef("weekday", "Spending by weekday"),
+            SectionDef("biggest", "Biggest items"),
+        ),
+    )
     val SPENDING = TabDef("spending", "Spending", listOf(SectionDef("budgets", "Budgets"), SectionDef("expenses", "Recent expenses")))
     val SETUP = TabDef("setup", "Setup", listOf(SectionDef("currency", "Totals currency"), SectionDef("goal", "Yearly goal"), SectionDef("sources", "Income sources"), SectionDef("categories", "Categories and limits"), SectionDef("fx", "Exchange rates"), SectionDef("reminder", "Monthly reminder")))
-    val ALL = listOf(INCOME, SPENDING, SETUP)
+    val ALL = listOf(INCOME, REPORTS, SPENDING, SETUP)
 }

@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-29-money-reports",
+    "title": "Money reports 📊",
+    "items": [
+      {"icon": "chart", "text": "A new Reports tab in Money: income, spending or net for any year, month by month, with each source or category in its own color. Tap a month to see everything in it."},
+      {"icon": "spark", "text": "By source and by category: totals, share of the year, monthly average, and the trend of each one when you tap it."},
+      {"icon": "palette", "text": "Running total against last year and your goal pace, savings rate, spending by weekday, the biggest payments and expenses, and insights in plain words."}
+    ]
+  },
+  {
     "id": "2026-10-28-drawify",
     "title": "Drawify joins the hive ✏️",
     "items": [
