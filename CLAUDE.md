@@ -1,7 +1,7 @@
-# Tend (repo "stride"): notes for Claude Code
+# Hive (repo "stride"): notes for Claude Code
 
 Personal Android app for Stefan (Pixel 10 Pro). Everything user-facing is in English.
-The app is called **Tend** (`host/Brand.NAME` + `@string/app_name` in core); Stride lives on inside it as the
+The app is called **Hive** (formerly Tend) (`host/Brand.NAME` + `@string/app_name` in core); Stride lives on inside it as the
 **Health** module. The repo, package (`app.stride`), release tags and `Stride.apk` keep the old name on purpose:
 renaming them would break updates.
 
@@ -21,7 +21,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 
 ## Modules (ready for a "super-app" of several apps)
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
-  to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon, shortcuts,
+  to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon (`ic_hive_*`: same-size hexagons in an uneven comb), shortcuts,
   FileProvider, backup rules. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Launcher name; keep in sync with app.stride.host.Brand.NAME. -->
-    <string name="app_name">Tend</string>
+    <string name="app_name">Hive</string>
 </resources>
