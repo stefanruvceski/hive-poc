@@ -67,6 +67,7 @@ dependencies {
     implementation(project(":health"))
     implementation(project(":habits"))
     implementation(project(":money"))
+    implementation(project(":books"))
     implementation(project(":draw"))
     implementation(project(":core"))
 }
