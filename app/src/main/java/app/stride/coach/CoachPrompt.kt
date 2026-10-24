@@ -14,7 +14,7 @@ import app.stride.domain.pace100
 import app.stride.domain.paceKm
 import app.stride.domain.weekPlan
 import app.stride.domain.weekRange
-import app.stride.domain.weeklyTargets
+import app.stride.domain.Goals
 import app.stride.model.AppData
 import app.stride.model.DayKind
 import java.time.LocalDate
@@ -35,12 +35,11 @@ object CoachPrompt {
     fun user(data: AppData, monday: LocalDate, today: LocalDate): String {
         val week = Analyzer.week(monday, today, data)
         val prev = Analyzer.week(monday.minusWeeks(1), today, data)
-        val t = weeklyTargets(data, monday, today)
         val sb = StringBuilder()
         sb.appendLine("Week ${weekRange(monday)} (${monday.year}).")
         sb.appendLine("Done ${week.summary.done} of ${week.summary.planned} planned workouts (last week ${prev.summary.done}/${prev.summary.planned}).")
         sb.appendLine("Totals: ${week.summary.minutes} min with the watch, swim ${week.summary.swimMeters.roundToInt()} m, run ${String.format(Locale.US, "%.1f", week.summary.runMeters / 1000)} km.")
-        sb.appendLine("Targets: Zone 2 ${t.zone2Min}/${t.zone2Target} min, sauna ${t.saunaMin}/${t.saunaTarget} min.")
+        sb.appendLine("Weekly targets: " + Goals.progress(data, monday, today).joinToString(", ") { "${it.kind.title} ${it.label}" } + ".")
         sb.appendLine()
         sb.appendLine("Days:")
         for (d in week.days) {

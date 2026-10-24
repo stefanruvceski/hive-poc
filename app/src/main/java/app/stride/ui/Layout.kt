@@ -21,6 +21,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,29 +118,67 @@ fun EditBar(title: String, hidden: Boolean, canUp: Boolean, canDown: Boolean, on
  * pointer in the Initial pass, so it works over buttons and clickable cards; a scroll or a
  * normal tap cancels it.
  */
-fun Modifier.longPressToEdit(enabled: Boolean, onLongPress: () -> Unit): Modifier = if (!enabled) this else pointerInput(Unit) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val slop = viewConfiguration.touchSlop
-        var cancelled = false
-        val timedOut = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-            while (true) {
-                val ev = awaitPointerEvent(PointerEventPass.Initial)
-                val c = ev.changes.firstOrNull { it.id == down.id }
-                if (c == null || !c.pressed || (c.position - down.position).getDistance() > slop) {
-                    cancelled = true
-                    break
+fun Modifier.longPressToEdit(enabled: Boolean, onLongPress: () -> Unit): Modifier = if (!enabled) this else composed {
+    val targets = LocalLongPressTargets.current
+    val haptics = LocalHapticFeedback.current
+    val origin = remember { arrayOf(Offset.Zero) }
+    val action by rememberUpdatedState(onLongPress)
+    onGloballyPositioned { origin[0] = it.positionInRoot() }.pointerInput(Unit) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val slop = viewConfiguration.touchSlop
+            var cancelled = false
+            val timedOut = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                while (true) {
+                    val ev = awaitPointerEvent(PointerEventPass.Initial)
+                    val c = ev.changes.firstOrNull { it.id == down.id }
+                    if (c == null || !c.pressed || (c.position - down.position).getDistance() > slop) {
+                        cancelled = true
+                        break
+                    }
                 }
-            }
-        } == null
-        if (timedOut && !cancelled) {
-            onLongPress()
-            // Swallow the rest of this touch so the card under the finger doesn't also open.
-            while (true) {
-                val ev = awaitPointerEvent(PointerEventPass.Initial)
-                ev.changes.forEach { it.consume() }
-                if (ev.changes.none { it.pressed }) break
+            } == null
+            if (timedOut && !cancelled) {
+                // A card with its own long-press action (e.g. weekly targets) wins over section editing.
+                val own = targets.find(origin[0] + down.position)
+                if (own != null) {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    own()
+                } else {
+                    action()
+                }
+                // Swallow the rest of this touch so the card under the finger doesn't also open.
+                while (true) {
+                    val ev = awaitPointerEvent(PointerEventPass.Initial)
+                    ev.changes.forEach { it.consume() }
+                    if (ev.changes.none { it.pressed }) break
+                }
             }
         }
     }
+}
+
+/** Cards that open something of their own on a long press, by their place on screen. */
+class LongPressTargets {
+    private val regions = mutableMapOf<Any, Pair<Rect, () -> Unit>>()
+
+    fun set(key: Any, bounds: Rect, action: () -> Unit) {
+        regions[key] = bounds to action
+    }
+
+    fun remove(key: Any) {
+        regions.remove(key)
+    }
+
+    fun find(p: Offset): (() -> Unit)? = regions.values.firstOrNull { it.first.contains(p) }?.second
+}
+
+val LocalLongPressTargets = staticCompositionLocalOf { LongPressTargets() }
+
+/** Long-pressing this element runs [action] instead of entering section edit mode. */
+fun Modifier.onLongPressOpen(key: Any, action: () -> Unit): Modifier = composed {
+    val targets = LocalLongPressTargets.current
+    val current by rememberUpdatedState(action)
+    DisposableEffect(key) { onDispose { targets.remove(key) } }
+    onGloballyPositioned { targets.set(key, it.boundsInRoot()) { current() } }
 }

@@ -44,7 +44,9 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   reuse). The picker is a full-screen browser: search as you type (prefix match), equipment and muscle-group chips.
 - `domain/Training.kt`: records (history per exercise), warm-ups (~40%/70% bells, `SetEntry.warmup`, excluded
   from volume/records/progression), deload (suggested after 5 steady weeks or an HRV drop; `AppData.deloadWeeks`,
-  ~70% bells), weekly targets (Zone 2 = HR zone 2 minutes, sauna minutes, plan), weight trend/ETA, day swaps.
+  ~70% bells), weight trend/ETA, day swaps.
+- Weekly targets: `Settings.weeklyGoals` (up to 4 `WeeklyGoal(GoalKind, amount)`, null = plan + Zone 2 + sauna),
+  progress in `domain/Goals.kt` (tested); rings on the Week tab (Edit → `GoalsScreen`), Settings and the rings widget.
 - Reminders (`reminder/PlanReminder.kt`, WorkManager every 15 min): Sunday 18:00 plan review, 06:00 today + recovery,
   19:00 if a planned workout isn't done; each once per day/week.
 - Share images (`share/`): the preview (`ui/screens/ShareSheet.kt`) lets the user pick colors, map (dark/streets/

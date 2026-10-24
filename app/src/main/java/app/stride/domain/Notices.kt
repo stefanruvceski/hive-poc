@@ -4,6 +4,7 @@ import app.stride.model.Activity
 import app.stride.model.AppData
 import app.stride.model.DayKind
 import app.stride.model.NotifType
+import app.stride.model.GoalKind
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -134,32 +135,28 @@ object Notices {
             if (on(NotifType.PERSONAL_BEST)) personalBest(data, a)?.let { out += Notice(NotifType.PERSONAL_BEST, a.id, "🏆 Personal best", it) }
         }
 
-        // Weekly targets reached (each once per week).
+        // Weekly targets reached (each once per week; averages like sleep don't "finish" mid-week).
         if (on(NotifType.TARGET_HIT) && hour in 7..22) {
-            val t = weeklyTargets(data, monday, today)
-            if (t.planTotal > 0 && t.planDone >= t.planTotal) {
-                out += Notice(NotifType.TARGET_HIT, monday.toString(), "Week plan done ✓", "All ${t.planTotal} workouts this week. Great consistency.", ":plan")
-            }
-            if (t.zone2Target > 0 && t.zone2Min >= t.zone2Target) {
-                out += Notice(NotifType.TARGET_HIT, monday.toString(), "Zone 2 target reached", "${t.zone2Min} of ${t.zone2Target} min in heart-rate zone 2 this week.", ":zone2")
-            }
-            if (t.saunaTarget > 0 && t.saunaMin >= t.saunaTarget) {
-                out += Notice(NotifType.TARGET_HIT, monday.toString(), "Sauna target reached", "${t.saunaMin} of ${t.saunaTarget} min of sauna this week.", ":sauna")
+            Goals.progress(data, monday, today).filter { it.reached && it.kind.cumulative }.forEach { g ->
+                val (title, text) = if (g.kind == GoalKind.PLAN) {
+                    "Week plan done ✓" to "All ${fmtGoal(g.kind, g.target)} workouts this week. Great consistency."
+                } else {
+                    "${g.kind.title} target reached" to "${fmtGoal(g.kind, g.current)} of ${fmtGoal(g.kind, g.target)} ${g.kind.unit} this week."
+                }
+                out += Notice(NotifType.TARGET_HIT, monday.toString(), title, text, ":${g.kind.name.lowercase()}")
             }
         }
 
         // Sunday 20:00+: the week in one line.
         if (on(NotifType.WEEK_RECAP) && now.dayOfWeek == DayOfWeek.SUNDAY && hour >= 20) {
             val w = Analyzer.week(monday, today, data).summary
-            val t = weeklyTargets(data, monday, today)
             out += Notice(NotifType.WEEK_RECAP, monday.toString(), "Week recap · ${w.done}/${w.planned} done",
-                listOfNotNull(
+                (listOfNotNull(
                     "${w.minutes} min",
                     w.swimMeters.takeIf { it > 0 }?.let { "swim ${it.roundToInt()} m" },
                     w.runMeters.takeIf { it > 0 }?.let { "run ${String.format(Locale.US, "%.1f", it / 1000)} km" },
-                    "Zone 2 ${t.zone2Min}/${t.zone2Target} min",
-                    "sauna ${t.saunaMin}/${t.saunaTarget} min",
-                ).joinToString(" · "))
+                ) + Goals.progress(data, monday, today).filter { it.kind != GoalKind.PLAN }.map { "${it.kind.title} ${it.label}" + if (it.reached) " ✓" else "" })
+                    .joinToString(" · "))
         }
 
         // 1st of the month, 09:00+: last month.

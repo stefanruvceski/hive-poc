@@ -61,7 +61,7 @@ import app.stride.domain.dayLong
 import app.stride.domain.restDayToSwap
 import app.stride.domain.workoutComparison
 import app.stride.domain.weekPlan
-import app.stride.domain.weeklyTargets
+import app.stride.domain.Goals
 import app.stride.domain.DayResult
 import app.stride.domain.DayStatus
 import app.stride.domain.WeekResult
@@ -98,6 +98,7 @@ fun WeekTab(
     host: SectionHost,
     coachBusy: Boolean = false,
     onAskCoach: (LocalDate) -> Unit = {},
+    onEditGoals: () -> Unit = onSettings,
 ) {
     val nextMonday = mondayOf(today).plusWeeks(1)
     // From Friday on, until next week's plan is approved.
@@ -178,7 +179,7 @@ fun WeekTab(
                             )
                         }
                     }
-                    section("targets") { item { TargetsCard(weeklyTargets(data, monday, today)) } }
+                    section("targets") { item { TargetsCard(Goals.progress(data, monday, today), onEdit = onEditGoals) } }
                     section("recovery") {
                         if (weekOffset == 0 && recovery != null) {
                             item { SectionLabel("Recovery", Modifier.padding(top = 8.dp, start = 4.dp)) }
