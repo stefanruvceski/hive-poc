@@ -29,7 +29,7 @@ object Notifier {
         manager.createNotificationChannel(NotificationChannel(channel, channelName, NotificationManager.IMPORTANCE_DEFAULT))
         val pending = PendingIntent.getActivity(context, id, Host.openIntent(context, open), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(context, channel)
-            .setSmallIcon(R.drawable.ic_stat_stride)
+            .setSmallIcon(R.drawable.ic_stat_hive)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

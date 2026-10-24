@@ -88,7 +88,7 @@ object LiveWorkout {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val b = NotificationCompat.Builder(c, CHANNEL)
-            .setSmallIcon(R.drawable.ic_stat_stride)
+            .setSmallIcon(R.drawable.ic_stat_hive)
             .setContentTitle("${p.entry.name} · $setLabel")
             .setContentText(if (resting) "Rest, then $kg" else kg)
             .setSubText("${shortKind(s.kind)} · ${LiveSet.progressLabel(s)}")
@@ -121,7 +121,7 @@ object LiveWorkout {
         val manager = c.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL_REST, "Rest over", NotificationManager.IMPORTANCE_HIGH))
         val n = NotificationCompat.Builder(c, CHANNEL_REST)
-            .setSmallIcon(R.drawable.ic_stat_stride)
+            .setSmallIcon(R.drawable.ic_stat_hive)
             .setContentTitle("Rest over")
             .setContentText("Next set")
             .setAutoCancel(true)
