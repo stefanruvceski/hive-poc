@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tend: a sprout (two leaves on a stem) growing from the ground, emerald to cyan.
+     Fits the 66dp adaptive-icon safe zone (21..87). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54,77 L54,50" android:strokeWidth="5" android:strokeLineCap="round" android:strokeColor="#FF34D399" android:fillColor="#00000000" />
+    <path android:pathData="M54,60 C45,60 35.5,53.5 34.5,41 C47,41 54,48.5 54,60 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="36" android:startY="30" android:endX="74" android:endY="80"
+                android:startColor="#FF6EE7B7" android:endColor="#FF22D3EE" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,52 C54,39 61.5,30 75,29 C75,43 66.5,52 54,52 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="36" android:startY="30" android:endX="74" android:endY="80"
+                android:startColor="#FF6EE7B7" android:endColor="#FF22D3EE" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M38,80 Q54,73 70,80" android:strokeWidth="4.5" android:strokeLineCap="round" android:strokeColor="#FF22D3EE" android:fillColor="#00000000" />
+</vector>

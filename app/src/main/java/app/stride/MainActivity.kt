@@ -11,6 +11,7 @@ import app.stride.host.Host
 import app.stride.host.ModuleHost
 import app.stride.host.OpenRequest
 import app.stride.ui.theme.StrideTheme
+import app.stride.whatsnew.WhatsNewGate
 
 /** The one activity: hosts the modules and turns intents (widgets, notifications, shortcuts) into open requests. */
 class MainActivity : ComponentActivity() {
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             StrideTheme {
                 ModuleHost(Modules.all, openRequest.value)
+                WhatsNewGate()
             }
         }
     }

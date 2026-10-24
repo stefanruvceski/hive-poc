@@ -19,7 +19,7 @@ class StartWorkoutTile : TileService() {
         val today = LocalDate.now()
         val plan = runCatching { Analyzer.day(today, today, Store(this).load()).plan }.getOrNull()
         tile.label = "Start workout"
-        if (Build.VERSION.SDK_INT >= 29) tile.subtitle = plan?.title ?: "Stride"
+        if (Build.VERSION.SDK_INT >= 29) tile.subtitle = plan?.title ?: "Health"
         tile.state = if (plan?.kind?.isStrength == true) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.updateTile()
     }

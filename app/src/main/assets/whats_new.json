@@ -1,0 +1,11 @@
+[
+  {
+    "id": "2026-10-25-tend",
+    "title": "Welcome to Tend 🌱",
+    "items": [
+      {"icon": "apps", "text": "Stride is now Health, the first app inside Tend. More apps, like Habits, will join it here."},
+      {"icon": "heart", "text": "Opening the app shows your new home screen with today's plan. Widgets, notifications and shortcuts still go straight into Health."},
+      {"icon": "spark", "text": "After every update you'll see what's new right here, so you never miss a feature."}
+    ]
+  }
+]

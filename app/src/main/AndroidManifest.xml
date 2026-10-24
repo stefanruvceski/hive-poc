@@ -12,7 +12,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:label="Stride"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Stride">
         <activity
@@ -24,7 +24,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Health Connect shows Stride's privacy note from here (Android 13 and older). -->
+            <!-- Health Connect shows the privacy note from here (Android 13 and older). -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>

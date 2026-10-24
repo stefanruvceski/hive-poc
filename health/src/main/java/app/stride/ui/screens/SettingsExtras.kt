@@ -1,5 +1,6 @@
 package app.stride.ui.screens
 
+import app.stride.host.Brand
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -331,7 +332,7 @@ fun GarminCard(vm: AppViewModel) {
             title = { Text("Sign in to Garmin") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Your password is only sent to Garmin and isn't saved. Stride keeps the sign-in token on this phone.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                    Text("Your password is only sent to Garmin and isn't saved. ${Brand.NAME} keeps the sign-in token on this phone.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
                     OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("E-mail") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(
                         value = password,

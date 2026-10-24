@@ -1,5 +1,6 @@
 package app.stride.data
 
+import app.stride.host.Brand
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -22,7 +23,7 @@ object Backup {
      */
     fun restore(text: String, current: AppData): AppData {
         val d = runCatching { StrideJson.decodeFromString(AppData.serializer(), text) }.getOrNull()
-            ?: throw IllegalArgumentException("This file isn't a Stride backup.")
+            ?: throw IllegalArgumentException("This file isn't a ${Brand.NAME} backup.")
         if (d.strength.isEmpty() && d.activities.isEmpty() && d.weights.isEmpty() && d.weekPlans.isEmpty()) {
             throw IllegalArgumentException("This backup has no workouts, weights or plans in it.")
         }

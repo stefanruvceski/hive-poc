@@ -197,7 +197,7 @@ fun StrideApp(
                             navigationIcon = {
                                 if (onHome != null) IconButton(onClick = onHome) { Icon(Icons.Filled.Apps, "All apps") }
                             },
-                            title = { Text(if (tab.id == "week") "Stride" else tab.title, style = MaterialTheme.typography.headlineSmall) },
+                            title = { Text(if (tab.id == "week") "Health" else tab.title, style = MaterialTheme.typography.headlineSmall) },
                             colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                             actions = {
                                 if (syncing) {

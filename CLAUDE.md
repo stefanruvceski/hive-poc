@@ -1,6 +1,14 @@
-# Stride: notes for Claude Code
+# Tend (repo "stride"): notes for Claude Code
 
 Personal Android app for Stefan (Pixel 10 Pro). Everything user-facing is in English.
+The app is called **Tend** (`host/Brand.NAME` + `@string/app_name` in core); Stride lives on inside it as the
+**Health** module. The repo, package (`app.stride`), release tags and `Stride.apk` keep the old name on purpose:
+renaming them would break updates.
+
+## What's new after updates
+`app/src/main/assets/whats_new.json` (newest first, unique `id`s, icons listed in `whatsnew/WhatsNew.kt`). On the
+first launch after an update `WhatsNewGate` shows the unseen entries; an update without a new entry shows a short
+"polished under the hood" note. **Add an entry for every user-visible change**; fixes/refactors need none.
 
 ## Status
 The code was written without a compiler (no Maven access where it was written). It has never been built.
@@ -14,7 +22,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 ## Modules (ready for a "super-app" of several apps)
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
   to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon, shortcuts,
-  FileProvider, backup rules. `ModuleHost` shows the only module full screen, or a home grid when there are several.
+  FileProvider, backup rules. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
+  `HomeSummary`); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
   the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`app.stride.core.R`),
   and the host contract in `host/`: `AppModule`, `Host` (open the app via `Host.openIntent` / `Host.component`, never a

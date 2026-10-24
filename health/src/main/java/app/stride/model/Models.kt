@@ -1,5 +1,6 @@
 package app.stride.model
 
+import app.stride.host.Brand
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
@@ -189,7 +190,7 @@ enum class NotifType(val id: String, val title: String, val description: String,
     BEDTIME("bedtime", "Bedtime", "22:00 · after a short night (under 7 h)", defaultOn = false),
     DELOAD("deload", "Deload suggestion", "Monday · when a lighter week is due"),
     NO_DATA("no_data", "Watch not syncing", "No watch workouts for 3 days while workouts were planned"),
-    UPDATE("update", "App update", "A new Stride version is out"),
+    UPDATE("update", "App update", "A new ${Brand.NAME} version is out"),
     COACH("coach", "Weekly AI coach", "Sunday 19:00 · review of the week and advice for next week (needs an Anthropic API key)"),
     BADGE("badge", "Badges", "When you earn a badge or finish a monthly challenge"),
 }

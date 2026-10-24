@@ -1,5 +1,6 @@
 package app.stride.garmin
 
+import app.stride.host.Brand
 import app.stride.model.StrengthSession
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -99,7 +100,7 @@ object GarminWorkout {
         }
         return buildJsonObject {
             put("workoutName", name.take(80))
-            put("description", "From Stride: " + session.exercises.joinToString(", ") { it.name }.take(500))
+            put("description", "From ${Brand.NAME}: " + session.exercises.joinToString(", ") { it.name }.take(500))
             put("sportType", sport())
             put("workoutSegments", buildJsonArray {
                 add(buildJsonObject {

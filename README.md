@@ -1,6 +1,6 @@
-# Stride
+# Tend (formerly Stride)
 
-Android training diary for a weekly plan based on Huberman's Protocols (swimming, running, kettlebells, sauna).
+A personal Android "home" for several small apps. The first one, **Health** (formerly Stride), is a training diary for a weekly plan based on Huberman's Protocols (swimming, running, kettlebells, sauna).
 Pulls workouts from a Garmin watch through intervals.icu. Visual design matches Streakli
 (`stefanruvceski/habit-tracker`, `apps/mobile`): dark navy, bordered cards, emerald accent.
 

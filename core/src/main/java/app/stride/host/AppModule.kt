@@ -13,13 +13,19 @@ interface AppModule {
     /** Stable id, also the prefix of open targets ("health/workout"). Never rename. */
     val id: String
     val title: String
+    /** One line under the title on the home screen. */
+    val subtitle: String
     val icon: ImageVector
     val accent: Color
 
     /** Called once when the app process starts (schedule background work, create channels, …). */
     fun onAppStart(context: Context) {}
 
-    /** The module's whole UI. [open] carries deep links; [onHome] is null when this module is the only one. */
+    /** The module's whole UI. [open] carries deep links; [onHome] goes back to the home screen. */
     @Composable
     fun Content(open: OpenRequest, onHome: (() -> Unit)?)
+
+    /** Optional live line(s) on the module's home card, e.g. today's plan. */
+    @Composable
+    fun HomeSummary() {}
 }
