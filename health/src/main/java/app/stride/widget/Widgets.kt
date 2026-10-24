@@ -1,5 +1,8 @@
 package app.stride.widget
 
+import app.stride.ui.screens.ringArgb
+import app.stride.domain.fmtRing
+import app.stride.domain.Rings
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -63,9 +66,6 @@ import app.stride.domain.mondayOf
 import app.stride.domain.pace100
 import app.stride.domain.paceKm
 import app.stride.domain.weeklyTargets
-import app.stride.domain.Goals
-import app.stride.domain.fmtGoal
-import app.stride.ui.screens.goalArgb
 import app.stride.model.Activity
 import app.stride.model.AppData
 import app.stride.model.DayKind
@@ -312,15 +312,16 @@ private fun WeekStripContent(days: List<DayResult>, today: LocalDate, done: Int,
     }
 }
 
-// ---------------------------------------------------------------- Weekly target rings (2x2)
+// ---------------------------------------------------------------- Daily rings (2x2)
 
 class RingsWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val today = LocalDate.now()
-        val goals = Goals.progress(loadData(context), mondayOf(today), today)
-        val bmp = WidgetArt.rings(goals.map { goalArgb(it.kind) to it.fraction }, (96 * density(context)).toInt())
-        val lines = goals.map { g -> Triple(Color(goalArgb(g.kind)), g.kind.title, "${fmtGoal(g.kind, g.current)}/${fmtGoal(g.kind, g.target)}") }
+        // Daily rings, like Apple Health: what's left to close today.
+        val rings = Rings.progress(loadData(context), today, today)
+        val bmp = WidgetArt.rings(rings.map { ringArgb(it.kind) to it.fraction }, (96 * density(context)).toInt())
+        val lines = rings.map { r -> Triple(Color(ringArgb(r.kind)), r.kind.title, if (r.restDay) "rest" else "${fmtRing(r.kind, r.current)}/${fmtRing(r.kind, r.target)}") }
         provideContent { RingsContent(bmp, lines) }
     }
 }
@@ -336,15 +337,15 @@ private fun RingsContent(bmp: android.graphics.Bitmap, lines: List<Triple<Color,
     Frame(open = "week", padding = 12) {
         if (wide) {
             Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(bmp), "Weekly targets", GlanceModifier.size((LocalSize.current.height.value - 24).coerceAtLeast(40f).dp))
+                Image(ImageProvider(bmp), "Today's rings", GlanceModifier.size((LocalSize.current.height.value - 24).coerceAtLeast(40f).dp))
                 Spacer(GlanceModifier.width(12.dp))
                 Column { lines.forEach { (c, l, v) -> RingLine(c, l, v, k * 1.1f) } }
             }
         } else {
-            Kicker("Weekly targets", k)
+            Kicker("Today's rings", k)
             Spacer(GlanceModifier.height(4.dp))
             Box(GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                Image(ImageProvider(bmp), "Weekly targets", GlanceModifier.size((86 * k).dp))
+                Image(ImageProvider(bmp), "Today's rings", GlanceModifier.size((86 * k).dp))
             }
             Row(GlanceModifier.fillMaxWidth()) {
                 lines.forEach { (c, _, v) ->

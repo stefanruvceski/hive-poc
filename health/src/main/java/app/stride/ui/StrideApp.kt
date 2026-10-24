@@ -1,5 +1,10 @@
 package app.stride.ui
 
+import app.stride.model.AppData
+import app.stride.ui.screens.ringColor
+import app.stride.ui.screens.RingStack
+import app.stride.domain.Rings
+import app.stride.ui.Celebration
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -274,5 +279,34 @@ fun StrideApp(
             snackbar,
             Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = if (overlays.isEmpty()) 84.dp else 16.dp),
         )
+        RingsCelebration(data, today)
+    }
+}
+
+/** Once a day, the moment today's rings are all closed while the app is open (or the next time it opens). */
+@Composable
+private fun RingsCelebration(data: AppData, today: LocalDate) {
+    val context = LocalContext.current
+    val rings = remember(data, today) { Rings.progress(data, today, today) }
+    val prefs = remember { context.getSharedPreferences("hive_ui", android.content.Context.MODE_PRIVATE) }
+    var show by remember { mutableStateOf(false) }
+    LaunchedEffect(rings) {
+        if (Rings.allClosed(rings) && prefs.getString("rings_celebrated", null) != today.toString()) {
+            prefs.edit().putString("rings_celebrated", today.toString()).apply()
+            show = true
+        }
+    }
+    if (show) {
+        val streak = remember(data, today) {
+            generateSequence(today.minusDays(1)) { it.minusDays(1) }.take(365)
+                .takeWhile { Rings.allClosed(Rings.progress(data, it, today)) }.count() + 1
+        }
+        Celebration(
+            title = "All rings closed!",
+            subtitle = if (streak > 1) "$streak days in a row. Keep it going." else rings.joinToString(" · ") { it.kind.title },
+            onDone = { show = false },
+        ) {
+            RingStack(rings.map { ringColor(it.kind) to it.fraction }, Modifier.size(180.dp))
+        }
     }
 }

@@ -133,6 +133,21 @@ private fun HypnogramCanvas(blocks: List<Pair<Triple<Int, Float, Float>, SleepSt
 }
 
 /** Last night: score ring, the key numbers and the hypnogram. */
+/** Shown while there are no nights with stages yet: says what's missing so the sleep chart can appear. */
+@Composable
+fun SleepSetupNote(healthConnectOn: Boolean) {
+    GlassCard(Modifier.fillMaxWidth(), tint = Color(0xFF8B5CF6)) {
+        Text("SLEEP CHART", style = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = Color(0xFFA78BFA))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (!healthConnectOn) "Sleep stages come from your watch through Health Connect. Turn on Health Connect in Settings and allow sleep."
+            else "Health Connect is on, but it has no sleep stages yet. In the Garmin Connect app, turn on Health Connect under connected apps " +
+                "and allow sleep, sync the watch, then tap Sync now in Settings → Health Connect.",
+            style = MaterialTheme.typography.bodyMedium, color = StrideColors.Dim,
+        )
+    }
+}
+
 @Composable
 fun SleepCard(night: SleepNight, all: List<SleepNight>, today: LocalDate) {
     val st = Sleep.stats(night)

@@ -3,7 +3,7 @@
     <string name="widget_today_description">Today\'s plan, and once it\'s done, the key numbers of the workout.</string>
     <string name="widget_weight_description">Latest weight, change over 7 days and recent trend.</string>
     <string name="widget_week_strip_description">The seven days of this week with what\'s done.</string>
-    <string name="widget_rings_description">Plan, Zone 2 and sauna rings for this week.</string>
+    <string name="widget_rings_description">Today\'s rings: close them every day.</string>
     <string name="widget_recovery_description">Readiness from last night\'s HRV, sleep and resting heart rate.</string>
     <string name="widget_next_description">Your next planned workout and when it is.</string>
     <string name="widget_month_description">This month as a calendar of done and missed days.</string>

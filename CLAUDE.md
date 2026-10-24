@@ -55,7 +55,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - Layout: users hide/reorder tabs and sections (`Settings.layout`, ids in `ui/Layouts.kt`, never rename them). Long-press
   any tab → edit mode (`ui/Layout.kt`, `SectionHost`); Settings → Tabs and sections. New sections: add a `SectionDef`
   and a `section("id") { ... }` block in the tab.
-- Notifications: `model.NotifType` (18 types, each switchable in Settings → Notifications, `Settings.notifyOn`), pure
+- Notifications: `model.NotifType` (22 types, incl. "All rings closed" and the 20:00 rings reminder; each switchable in Settings → Notifications, `Settings.notifyOn`), pure
   rules in `domain/Notices.kt` (unit tested), posted by `reminder/PlanReminder.kt` (dedupe set in prefs). The worker
   also syncs intervals.icu every ~2 h (`data/Sync.kt`, shared with the app; `Store.update` under `Store.LOCK`) and
   checks for updates twice a day.
@@ -68,6 +68,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - `domain/Training.kt`: records (history per exercise), warm-ups (~40%/70% bells, `SetEntry.warmup`, excluded
   from volume/records/progression), deload (suggested after 5 steady weeks or an HRV drop; `AppData.deloadWeeks`,
   ~70% bells), weight trend/ETA, day swaps.
+- Daily rings (Apple Health style): `Settings.dailyRings` (up to 4 `DailyRing(RingKind, amount)`, null = steps 8,000 +
+  training 45 min + sleep 7.5 h), progress per day in `domain/Rings.kt` (tested; PLAN follows the day's plan, rest day =
+  closed). Week tab section "rings" (`DailyRingsCard`: the day's rings + a Mon–Sun row of small rings), editor
+  `DailyRingsEditor` in Settings and the Rings and targets screen; the rings widget shows today's rings.
+  Once a day, when all rings close, `RingsCelebration` (StrideApp) plays `core/ui/Celebration` (confetti, pulse, rings spin in; reusable).
 - Weekly targets: `Settings.weeklyGoals` (up to 4 `WeeklyGoal(GoalKind, amount)`, null = plan + Zone 2 + sauna),
   progress in `domain/Goals.kt` (tested); rings on the Week tab (Edit → `GoalsScreen`), Settings and the rings widget.
 - Reminders (`reminder/PlanReminder.kt`, WorkManager every 15 min): Sunday 18:00 plan review, 06:00 today + recovery,
@@ -81,7 +86,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   date, 120 days). Stages are the watch's; `domain/Sleep.kt` (tested) adds efficiency, latency, WASO, awakenings,
   stage shares vs 13-23% deep / 20-25% REM, Sleep Regularity Index, bedtime spread, 7-day debt and a 0-100 score
   (duration 40, efficiency 20, continuity 10, deep 15, REM 15; renormalized without stages). UI in
-  `ui/screens/SleepViews.kt`: hypnogram card on the Day screen, "Sleep stages" section in Trends.
+  `ui/screens/SleepViews.kt`: hypnogram card on the Day screen and the Week tab ("sleep" section), "Sleep stages" section in Trends; `SleepSetupNote` explains what is missing while there are no nights.
 - Recovery: wellness (sleep, HRV, resting HR, …) kept in `AppData.wellness` (120 days); `domain/Recovery.kt`
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 

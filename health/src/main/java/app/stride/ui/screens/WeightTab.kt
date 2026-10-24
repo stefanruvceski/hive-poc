@@ -124,6 +124,7 @@ fun WeightTab(vm: AppViewModel, data: AppData, today: LocalDate, padding: Paddin
                                     MaterialTheme.colorScheme.primary,
                                     { fmtKg(it) },
                                     refLine = goal,
+                                    unit = " kg",
                                 )
                             }
                         }

@@ -6,6 +6,7 @@ import app.stride.model.AppData
 import app.stride.model.DayKind
 import app.stride.model.NotifType
 import app.stride.model.GoalKind
+import app.stride.model.RingKind
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -134,6 +135,26 @@ object Notices {
                 out += Notice(NotifType.WORKOUT_DONE, a.id, (if (v != null) "✓ " else "") + name, v?.headline ?: summaryLine(a))
             }
             if (on(NotifType.PERSONAL_BEST)) personalBest(data, a)?.let { out += Notice(NotifType.PERSONAL_BEST, a.id, "🏆 Personal best", it) }
+        }
+
+        // Daily rings: a cheer when all are closed, else at 20:00 what's still open (sleep and the plan
+        // can't be fixed in the evening, and the plan has its own 19:00 reminder).
+        if ((on(NotifType.RINGS_CLOSED) || on(NotifType.RINGS_EVENING)) && hour in 7..22) {
+            val rings = Rings.progress(data, today, today)
+            if (Rings.allClosed(rings)) {
+                if (on(NotifType.RINGS_CLOSED)) {
+                    out += Notice(NotifType.RINGS_CLOSED, today.toString(), "All rings closed 🎉", rings.joinToString(" · ") { "${it.kind.title} ${it.label}" })
+                }
+            } else if (on(NotifType.RINGS_EVENING) && hour in 20..22) {
+                val left = rings.filter { !it.closed && it.kind != RingKind.SLEEP && it.kind != RingKind.PLAN }
+                if (left.isNotEmpty()) {
+                    out += Notice(
+                        NotifType.RINGS_EVENING, today.toString(),
+                        if (left.size == 1) "One ring to close" else "${left.size} rings to close",
+                        left.joinToString(" · ") { r -> if (r.kind == RingKind.WEIGH_IN) "weigh in" else "${fmtRing(r.kind, r.target - r.current)} ${r.kind.unit} ${r.kind.title.lowercase().takeIf { r.kind.unit != it } ?: ""}".trim() } + " left today.",
+                    )
+                }
+            }
         }
 
         // Weekly targets reached (each once per week; averages like sleep don't "finish" mid-week).
