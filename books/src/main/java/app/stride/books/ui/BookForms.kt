@@ -48,6 +48,7 @@ import app.stride.ui.DateField
 import app.stride.ui.FCard
 import app.stride.ui.theme.StrideColors
 import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 
 /** Find a book on Open Library (title, author or ISBN) or start with an empty form. */
@@ -330,6 +331,16 @@ fun BooksSettingsScreen(vm: BooksViewModel, d: BooksData, onLayout: () -> Unit, 
                     OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) { Text("Import") }
                 }
                 Text("Import adds books that aren't here yet and keeps what you have.", color = StrideColors.Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp).clickable(onClick = onImport))
+            }
+        }
+        item {
+            val covers by vm.covers.collectAsStateWithLifecycle()
+            val missing = d.books.count { it.cover.isNullOrBlank() }
+            FCard {
+                Text("Covers and pages", color = StrideColors.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("$missing book${if (missing == 1) "" else "s"} without a cover. Look them up on Open Library to fill in covers, page counts and years (nothing you entered is changed).", color = StrideColors.Dim, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+                OutlinedButton(onClick = vm::findCovers, enabled = missing > 0 && covers?.startsWith("Looking") != true, modifier = Modifier.fillMaxWidth()) { Text("Find covers") }
+                covers?.let { Text(it, color = if (it.startsWith("Looking")) BooksAccent else StrideColors.Dim, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
             }
         }
         item {

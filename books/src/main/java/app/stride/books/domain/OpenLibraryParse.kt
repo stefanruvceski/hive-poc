@@ -29,6 +29,19 @@ object OpenLibraryParse {
 
     fun coverUrl(id: Int) = "https://covers.openlibrary.org/b/id/$id-M.jpg"
 
+    /** Lower case, no accents (đ → d), letters and digits only: for comparing titles across editions and scripts. */
+    fun norm(s: String): String = java.text.Normalizer.normalize(s.lowercase().replace('đ', 'd'), java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{Mn}+"), "").replace(Regex("[^a-z0-9]+"), " ").trim()
+
+    /** The result that is this [title] (same title, or one starts with the other) and has a cover; null if none. */
+    fun bestMatch(found: List<FoundBook>, title: String): FoundBook? {
+        val t = norm(title)
+        if (t.isEmpty()) return null
+        val withCover = found.filter { it.cover != null }
+        return withCover.firstOrNull { norm(it.title) == t }
+            ?: withCover.firstOrNull { val n = norm(it.title); n.isNotEmpty() && (n.startsWith(t) || t.startsWith(n)) }
+    }
+
     fun parse(body: String): List<FoundBook> = runCatching {
         val docs = json.parseToJsonElement(body).jsonObject["docs"] as? JsonArray ?: return emptyList()
         docs.mapNotNull { el ->
