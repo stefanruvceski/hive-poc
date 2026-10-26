@@ -18,6 +18,12 @@ interface AppModule {
     val icon: ImageVector
     val accent: Color
 
+    /**
+     * What the Hive backup carries for this module: names of files or folders in the app's files dir
+     * (e.g. "habits.json"). Keys and tokens never live in these files.
+     */
+    val dataFiles: List<String> get() = emptyList()
+
     /** Called once when the app process starts (schedule background work, create channels, …). */
     fun onAppStart(context: Context) {}
 

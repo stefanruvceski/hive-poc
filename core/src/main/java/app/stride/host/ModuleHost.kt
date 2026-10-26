@@ -2,6 +2,7 @@ package app.stride.host
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -147,6 +148,8 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
                 onCancelPermission = updates::cancelPermission,
             )
         }
+        // A fresh install with no data yet: offer to bring everything back from a Hive backup.
+        item { app.stride.backup.RestoreOffer() }
         if (editing) {
             item { Text("Move apps up or down and switch off the ones you don't use. Their data stays.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim, modifier = Modifier.padding(horizontal = 4.dp)) }
             val sorted = order.sorted(ids)
@@ -225,8 +228,9 @@ private fun HiveSettingsScreen(onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(padding).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             app.stride.format.DateFormatCard()
+            app.stride.backup.BackupCard()
             Text("${Brand.NAME} · version ${AppInfo.versionName} (build ${AppInfo.versionCode})", style = MaterialTheme.typography.bodySmall, color = StrideColors.Faint, modifier = Modifier.padding(start = 4.dp))
         }
     }

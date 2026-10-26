@@ -27,6 +27,7 @@ object BooksModule : AppModule {
     override val subtitle = "Library, quotes, reading sessions and stats"
     override val icon: ImageVector = Icons.AutoMirrored.Filled.MenuBook
     override val accent = Color(0xFFF59E0B)
+    override val dataFiles = listOf("books.json")
 
     @Composable
     override fun Content(open: OpenRequest, onHome: (() -> Unit)?) {

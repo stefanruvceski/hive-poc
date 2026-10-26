@@ -19,11 +19,19 @@ open class JsonStore<T>(
 ) {
     private val file = File(context.filesDir, fileName)
 
-    fun load(): T = try {
-        if (file.exists()) StrideJson.decodeFromString(serializer, file.readText()) else empty()
-    } catch (e: Exception) {
-        empty()
-    }
+    fun load(): T = afterRead(
+        try {
+            if (file.exists()) StrideJson.decodeFromString(serializer, file.readText()) else empty()
+        } catch (e: Exception) {
+            empty()
+        },
+    )
+
+    /** Hook for stores that keep part of their data elsewhere (e.g. keys outside the file and its backups). */
+    protected open fun afterRead(data: T): T = data
+
+    /** The counterpart of [afterRead]: what actually goes into the file. */
+    protected open fun beforeWrite(data: T): T = data
 
     /** Read-modify-write under the lock, for background work. */
     fun update(f: (T) -> T): T = synchronized(lock) {
@@ -36,7 +44,7 @@ open class JsonStore<T>(
 
     private fun write(data: T) {
         val tmp = File(file.parentFile, "$fileName.tmp")
-        tmp.writeText(StrideJson.encodeToString(serializer, data))
+        tmp.writeText(StrideJson.encodeToString(serializer, beforeWrite(data)))
         if (!tmp.renameTo(file)) {
             file.writeText(tmp.readText())
             tmp.delete()

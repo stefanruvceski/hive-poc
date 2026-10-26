@@ -28,6 +28,7 @@ object MoneyModule : AppModule {
     override val subtitle = "Income, spending, budgets and a yearly goal"
     override val icon: ImageVector = Icons.Filled.AccountBalanceWallet
     override val accent = Color(0xFF60A5FA)
+    override val dataFiles = listOf("money.json")
 
     override fun onAppStart(context: android.content.Context) {
         app.stride.money.reminder.MoneyReminder.schedule(context)

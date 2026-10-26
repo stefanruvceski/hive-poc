@@ -32,6 +32,7 @@ object WalletModule : AppModule {
     override val subtitle = "Receipts from their QR code, loyalty cards"
     override val icon: ImageVector = Icons.Filled.AccountBalanceWallet
     override val accent = WalletAccent
+    override val dataFiles = listOf("wallet.json", "wallet_cards")
 
     @Composable
     override fun Content(open: OpenRequest, onHome: (() -> Unit)?) {

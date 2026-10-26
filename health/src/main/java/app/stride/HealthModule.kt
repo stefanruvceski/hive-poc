@@ -40,6 +40,7 @@ object HealthModule : AppModule {
     override val subtitle = "Training, recovery, sleep and weight"
     override val icon: ImageVector = Icons.Filled.Favorite
     override val accent = StrideColors.Accent
+    override val dataFiles = listOf("stride.json")
 
     override fun onAppStart(context: Context) {
         PlanReminder.schedule(context)
