@@ -5,6 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.stride.money.data.FxClient
 import app.stride.money.data.MoneyStore
+import app.stride.finance.FeedExpense
+import app.stride.finance.FinanceHub
+import app.stride.money.domain.Feed
 import app.stride.money.domain.Finance
 import app.stride.money.model.Budget
 import app.stride.money.model.Expense
@@ -20,7 +23,10 @@ import app.stride.model.LayoutPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,6 +40,10 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
     private val saveLock = Mutex()
     private val _data = MutableStateFlow(MoneyData())
     val data: StateFlow<MoneyData> = _data.asStateFlow()
+    private val _feed = MutableStateFlow<List<FeedExpense>>(emptyList())
+    /** Money as the screens show it: typed expenses plus the receipts from Wallet (never stored here). */
+    val view: StateFlow<MoneyData> = combine(_data, _feed) { d, f -> Feed.view(d, f) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, MoneyData())
     private val _fxBusy = MutableStateFlow(false)
     val fxBusy: StateFlow<Boolean> = _fxBusy.asStateFlow()
 
@@ -56,8 +66,26 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
             }
             _data.value = d
             refreshFx(false)
+            // Wallet's receipts: loaded once Money's own data is in, and again whenever Wallet saves.
+            FinanceHub.version.collect { loadFeed() }
         }
     }
+
+    private suspend fun loadFeed() {
+        val f = withContext(Dispatchers.IO) { runCatching { FinanceHub.spending?.expenses(getApplication<Application>()) }.getOrNull().orEmpty() }
+        _feed.value = f
+        // New kinds of spending get a category once (an existing one of the same name, else a new one).
+        val now = Instant.now().toString()
+        if (Feed.mapKinds(_data.value, f, { "probe" }, now) !== _data.value) update { cur -> Feed.mapKinds(cur, f, { id("cat") }, now) }
+    }
+
+    /** Which category a kind of receipt spending goes under (Setup › Receipts from Wallet). */
+    fun mapKind(kind: String, categoryId: String) = update { d -> d.copy(kindMap = d.kindMap + (kind to categoryId)) }
+
+    fun setReceipts(on: Boolean) = update { d -> d.copy(settings = d.settings.copy(receipts = on)) }
+
+    /** The receipts' kinds as seen so far: kind → (label, count). */
+    val feedKinds: List<Pair<String, String>> get() = _feed.value.map { it.kind to it.kindLabel }.distinct()
 
     private fun id(prefix: String) = "${prefix}_${UUID.randomUUID().toString().take(12)}"
 

@@ -81,7 +81,7 @@ class GroupingTest {
     private fun r(id: String, time: String, total: Double, company: String) =
         Receipt(id, "", ReceiptStatus.OK, company = company, total = total, time = time)
 
-    @Test fun weeksShopsCategories() {
+    @Test fun monthsAndSearch() {
         val rs = listOf(
             r("a", "2026-10-08T10:10:03", 20.01, "Omv Srbija Doo"),
             r("b", "2026-10-12T20:58:39", 3001.50, "Naftna Industrija Srbije A.D. Novi Sad"),
@@ -89,14 +89,10 @@ class GroupingTest {
             r("d", "2026-10-19T08:56:24", 3001.50, "Naftna Industrija Srbije A.D. Novi Sad"),
             r("e", "2026-09-30T14:05:29", 8677.70, "Lukoil Srbija"),
         )
-        val w = ReceiptStats.weeks(rs, java.time.YearMonth.of(2026, 10))
-        assertEquals(listOf("01–07", "08–14", "15–21", "22–28", "29–31"), w.map { it.first })
-        assertEquals(23912.51, w[1].second, 1e-6)
-        assertEquals(3001.50, w[2].second, 1e-6)
         val oct = ReceiptStats.inMonth(rs, java.time.YearMonth.of(2026, 10))
-        assertEquals(listOf("Decathlon", "NIS", "OMV"), ReceiptStats.byShop(oct).map { it.first })
-        assertEquals(2, ReceiptStats.byShop(oct)[1].second)
-        assertEquals(listOf(Category.SPORT, Category.FUEL), ReceiptStats.byCategory(oct).map { it.first })
+        assertEquals(4, oct.size)
+        assertEquals(listOf(java.time.YearMonth.of(2026, 10), java.time.YearMonth.of(2026, 9)), ReceiptStats.byMonth(rs).map { it.first })
+        assertEquals(listOf(Category.FUEL, Category.SPORT, Category.FUEL), oct.drop(1).map { Brands.category(it) })
         assertEquals(1, ReceiptStats.search(rs, "nis").count { it.id == "b" })
     }
 }

@@ -112,6 +112,8 @@ fun AddExpenseScreen(d: MoneyData, onSave: (Expense) -> Unit, onBack: () -> Unit
     var currency by remember { mutableStateOf(initial?.currency ?: d.baseCurrency) }
     var date by remember { mutableStateOf(initial?.date?.let { LocalDate.parse(it) } ?: LocalDate.now()) }
     var note by remember { mutableStateOf(initial?.note ?: "") }
+    var company by remember { mutableStateOf(initial?.company) }
+    val companies = app.stride.money.domain.Feed.companies(d)
     val value = parseMoney(amount)
     FormScaffold(if (initial != null) "Edit expense" else "Add expense", onBack) {
         Label("CATEGORY")
@@ -126,10 +128,17 @@ fun AddExpenseScreen(d: MoneyData, onSave: (Expense) -> Unit, onBack: () -> Unit
         DateField(date, { date = it })
         Label("NOTE (OPTIONAL)")
         OutlinedTextField(note, { note = it }, singleLine = true, placeholder = { Text("e.g. weekly shop") }, modifier = Modifier.fillMaxWidth())
+        if (companies.isNotEmpty() || company != null) {
+            Label("FOR")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Chip("Personal", company == null) { company = null }
+                (companies + listOfNotNull(company)).distinct().forEach { c -> Chip(c, company == c) { company = c } }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
-                val e = Expense(initial?.id ?: "", categoryId, date.toString(), value!!, currency, note.trim().ifEmpty { null })
+                val e = Expense(initial?.id ?: "", categoryId, date.toString(), value!!, currency, note.trim().ifEmpty { null }, company = company)
                 onSave(if (initial != null) e.copy(createdAt = initial.createdAt, fxRate = initial.fxRate, fxRateDate = initial.fxRateDate) else e)
             },
             enabled = value != null && value > 0 && categoryId.isNotEmpty(), modifier = Modifier.fillMaxWidth(),

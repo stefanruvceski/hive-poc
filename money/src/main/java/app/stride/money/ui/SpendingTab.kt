@@ -43,7 +43,7 @@ import java.time.YearMonth
 import java.time.format.TextStyle as DateStyle
 import java.util.Locale
 
-/** Spending for a month against the category budgets, and the latest expenses. */
+/** Spending for a month against the category budgets, and the latest expenses: typed ones and Wallet's receipts. */
 @Composable
 fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (YearMonth) -> Unit, onAdd: () -> Unit, padding: PaddingValues, host: SectionHost, onAll: () -> Unit = {}, onEdit: (String) -> Unit = {}) {
     val base = d.baseCurrency
@@ -102,13 +102,18 @@ fun SpendingTab(vm: MoneyViewModel, d: MoneyData, month: YearMonth, onMonth: (Ye
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(c?.name ?: "—", color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                        Text(Dates.full(e.date) + (e.note?.let { " · $it" } ?: ""), color = StrideColors.Faint, fontSize = 11.sp, maxLines = 1)
+                                        Text(
+                                            Dates.full(e.date) + (e.note?.let { " · $it" } ?: "") + (e.company?.let { " · $it" } ?: "") + if (e.open != null) " · 🧾 receipt" else "",
+                                            color = StrideColors.Faint, fontSize = 11.sp, maxLines = 1,
+                                        )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(Finance.money(e.amount, e.currency), color = StrideColors.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                         if (e.currency != base) Text("≈ ${Finance.money(Finance.expenseBase(d, e), base)}", color = StrideColors.Faint, fontSize = 10.sp)
                                     }
-                                    IconButton(onClick = { vm.deleteExpense(e.id) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Close, "Delete", tint = StrideColors.Faint) }
+                                    // Receipts belong to Wallet: tap opens them there; only typed expenses are deleted here.
+                                    if (e.open == null) IconButton(onClick = { vm.deleteExpense(e.id) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Close, "Delete", tint = StrideColors.Faint) }
+                                    else Spacer(Modifier.width(32.dp))
                                 }
                             }
                         }

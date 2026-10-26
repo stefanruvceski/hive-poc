@@ -96,6 +96,10 @@ data class Expense(
     val createdAt: String = "",
     val fxRate: Double? = null,
     val fxRateDate: String? = null,
+    /** Business or personal: the company it was for, null = personal (the same tag Wallet's receipts carry). */
+    val company: String? = null,
+    /** Set only on spending that comes from another module (a Wallet receipt): where to open it. Never stored. */
+    val open: String? = null,
 )
 
 /** A category's monthly cap in the base currency (≤ 0 = track only). */
@@ -108,7 +112,14 @@ val DEFAULT_LEVELS = listOf(
 )
 
 @Serializable
-data class MoneySettings(val layout: LayoutPrefs = LayoutPrefs(), val monthlyReminder: Boolean = false, val reminderDay: Int = 1, val reminderHour: Int = 10)
+data class MoneySettings(
+    val layout: LayoutPrefs = LayoutPrefs(),
+    val monthlyReminder: Boolean = false,
+    val reminderDay: Int = 1,
+    val reminderHour: Int = 10,
+    /** Count the receipts scanned in Wallet as spending. */
+    val receipts: Boolean = true,
+)
 
 /** Everything the Money app stores (money.json): income, spending, budgets, rates, goal and levels. */
 @Serializable
@@ -126,4 +137,6 @@ data class MoneyData(
     val budgets: List<Budget> = emptyList(),
     val settings: MoneySettings = MoneySettings(),
     val seeded: Boolean = false,
+    /** Which category another module's kind of spending goes under ("FUEL" → a category id), set once and editable. */
+    val kindMap: Map<String, String> = emptyMap(),
 )

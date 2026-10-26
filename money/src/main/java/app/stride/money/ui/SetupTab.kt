@@ -156,6 +156,36 @@ fun SetupTab(vm: MoneyViewModel, d: MoneyData, fxBusy: Boolean, padding: Padding
                         }
                     }
                 }
+                section("receipts") {
+                    item {
+                        var open by remember { mutableStateOf<String?>(null) }
+                        FCard {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Receipts from Wallet", color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Scanned receipts count as spending here, in budgets and reports. Wallet keeps the receipt itself.", color = StrideColors.Dim, fontSize = 12.sp)
+                                }
+                                androidx.compose.material3.Switch(checked = d.settings.receipts, onCheckedChange = { vm.setReceipts(it) })
+                            }
+                            val kinds = vm.feedKinds
+                            if (d.settings.receipts && kinds.isNotEmpty()) {
+                                Spacer(Modifier.height(10.dp))
+                                Label("WHERE EACH KIND OF RECEIPT GOES")
+                                kinds.forEach { (kind, label) ->
+                                    val cat = d.categories.firstOrNull { it.id == d.kindMap[kind] }
+                                    Row(Modifier.fillMaxWidth().clickable { open = if (open == kind) null else kind }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text(label, color = StrideColors.Text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                        Text("→ ${cat?.name ?: "choose"}", color = cat?.let { Color(it.color) } ?: StrideColors.Faint, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                    if (open == kind) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                                        d.categories.filter { !it.archived }.forEach { c -> Chip(c.name, c.id == cat?.id, Color(c.color)) { vm.mapKind(kind, c.id); open = null } }
+                                    }
+                                }
+                                Text("A category picked on a receipt in Wallet wins over these.", color = StrideColors.Faint, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                            }
+                        }
+                    }
+                }
                 section("reminder") {
                     item {
                         val st = d.settings
