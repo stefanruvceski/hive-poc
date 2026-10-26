@@ -54,7 +54,20 @@ data class Receipt(
     val note: String = "",
     val error: String? = null,
     val addedAt: String = "",
+    /** The buyer's PIB when the receipt was issued to a company ("ИД купца: 10:…"); null = personal. */
+    val buyerTin: String? = null,
+    /** The user set who it's for by hand; fetching again keeps their choice. */
+    val ownerManual: Boolean = false,
+    val warranties: List<Warranty> = emptyList(),
 )
+
+/** A warranty on something bought with a receipt; it runs from the receipt's date. */
+@Serializable
+data class Warranty(val id: String, val item: String, val months: Int, val note: String = "")
+
+/** A company receipts can be issued to, named by the user (receipts only carry its PIB). */
+@Serializable
+data class Company(val pib: String, val name: String)
 
 @Serializable
 enum class CardFormat(val label: String) {
@@ -83,7 +96,7 @@ data class LoyaltyCard(
     val name: String,
     val number: String,
     val format: CardFormat = CardFormat.CODE_128,
-    val color: Long = 0xFF38BDF8,
+    val color: Long = 0xFF0A84FF,
     val note: String = "",
     val addedAt: String = "",
     /** Last time it was opened at a till; the most used cards come first. */
@@ -97,4 +110,5 @@ data class WalletData(
     val version: Int = 1,
     val receipts: List<Receipt> = emptyList(),
     val cards: List<LoyaltyCard> = emptyList(),
+    val companies: List<Company> = emptyList(),
 )

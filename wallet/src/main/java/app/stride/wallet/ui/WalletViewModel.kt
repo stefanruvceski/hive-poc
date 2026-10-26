@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import app.stride.wallet.data.FiscalClient
 import app.stride.wallet.data.WalletStore
 import app.stride.wallet.domain.FiscalParse
+import app.stride.wallet.model.Company
 import app.stride.wallet.model.LoyaltyCard
 import app.stride.wallet.model.Receipt
 import app.stride.wallet.model.ReceiptStatus
 import app.stride.wallet.model.WalletData
+import app.stride.wallet.model.Warranty
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             _data.value = withContext(Dispatchers.IO) { store.load() }
+            backfillBuyers()
             retryPending()
         }
     }
@@ -85,6 +88,31 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Reads the receipts that were scanned offline. */
     fun retryPending() = _data.value.receipts.filter { it.status == ReceiptStatus.PENDING }.forEach { fetch(it.id) }
+
+    /** Receipts saved before buyers were read: take the buyer's PIB from their printed text. */
+    private fun backfillBuyers() {
+        val todo = _data.value.receipts.filter { !it.ownerManual && it.buyerTin == null && it.journal != null }
+            .mapNotNull { r -> FiscalParse.buyerTinIn(r.journal!!)?.let { r.id to it } }.toMap()
+        if (todo.isNotEmpty()) update { d -> d.copy(receipts = d.receipts.map { r -> todo[r.id]?.let { r.copy(buyerTin = it) } ?: r }) }
+    }
+
+    /** Who a receipt is for, set by hand: a company's PIB, or null for personal. */
+    fun setOwner(id: String, pib: String?) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(buyerTin = pib?.trim()?.ifEmpty { null }, ownerManual = true) else it }) }
+
+    /** Names a company by its PIB (an empty name forgets it). */
+    fun nameCompany(pib: String, name: String) = update { d ->
+        val rest = d.companies.filter { it.pib != pib }
+        d.copy(companies = if (name.isBlank()) rest else rest + Company(pib, name.trim()))
+    }
+
+    fun addWarranty(receiptId: String, item: String, months: Int) {
+        val w = Warranty(id("wty"), item.trim(), months)
+        update { d -> d.copy(receipts = d.receipts.map { if (it.id == receiptId) it.copy(warranties = it.warranties + w) else it }) }
+    }
+
+    fun deleteWarranty(id: String, warrantyId: String) = update { d ->
+        d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(warranties = it.warranties.filter { w -> w.id != warrantyId }) else it })
+    }
 
     fun setNote(id: String, note: String) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(note = note) else it }) }
 

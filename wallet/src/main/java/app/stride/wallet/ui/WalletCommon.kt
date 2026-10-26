@@ -3,6 +3,17 @@ package app.stride.wallet.ui
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import app.stride.ui.GlassCard
+import app.stride.ui.glowBackground
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
@@ -16,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -40,17 +50,44 @@ import app.stride.wallet.model.CardFormat
 /** Wallet's accent (sky blue). */
 val WalletAccent = Color(0xFF38BDF8)
 
-/** Card colors to pick from; the first few match common Serbian shop and fuel brands. */
+/** Card colors to pick from (Apple's system palette); the glass tile softens them over the navy. */
 val CARD_COLORS = listOf(
-    0xFFE30613, 0xFF0050AA, 0xFFFFD500, 0xFF00843D, 0xFFF39200, 0xFF6D2077,
-    0xFF0E7490, 0xFF1F2937, 0xFFDB2777, 0xFF65A30D, 0xFF38BDF8, 0xFF9CA3AF,
+    0xFF0A84FF, 0xFFFF453A, 0xFFFF9F0A, 0xFFFFD60A, 0xFF30D158, 0xFF66D4CF,
+    0xFF64D2FF, 0xFF5E5CE6, 0xFFBF5AF2, 0xFFFF375F, 0xFFAC8E68, 0xFF8E8E93,
 )
 
-/** Dark text on light card colors, white on dark ones. */
-fun onCard(color: Long): Color {
-    val c = Color(color)
-    val lum = 0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
-    return if (lum > 0.6f) Color(0xFF111827) else Color.White
+private val GlassShape = RoundedCornerShape(22.dp)
+
+/** Wallet's backdrop: Hive's navy with soft sky and indigo glows behind the glass. */
+fun Modifier.walletGlow(primary: Color = WalletAccent): Modifier = glowBackground(primary, Color(0xFF5E5CE6))
+
+/** A glass card (Hive's [GlassCard]) that can be tapped. */
+@Composable
+fun Glass(modifier: Modifier = Modifier, tint: Color = Color.White, onClick: (() -> Unit)? = null, padding: Int = 16, content: @Composable ColumnScope.() -> Unit) {
+    GlassCard(
+        modifier.fillMaxWidth().clip(GlassShape).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        tint = tint, shape = GlassShape, contentPadding = padding, content = content,
+    )
+}
+
+/** A glass list row: icon, text and a trailing value. */
+@Composable
+fun GlassRow(onClick: () -> Unit, tint: Color = Color.White, content: @Composable RowScope.() -> Unit) {
+    Glass(tint = tint, onClick = onClick, padding = 12) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, content = content)
+    }
+}
+
+/** A small glass pill for filters (selected = tinted glass with a bright edge). */
+@Composable
+fun GlassPill(text: String, selected: Boolean, tint: Color = WalletAccent, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Box(
+        Modifier.clip(shape)
+            .background(if (selected) tint.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.06f))
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = if (selected) 0.45f else 0.18f), Color.White.copy(alpha = 0.04f))), shape)
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
+    ) { Text(text, color = if (selected) StrideColors.Text else StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
 }
 
 fun rsd(v: Double) = "${ReceiptStats.amount(v)} RSD"
@@ -88,16 +125,18 @@ fun WalletScreen(
     title: String,
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
+    glow: Color = WalletAccent,
     content: LazyListScope.() -> Unit,
 ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        modifier = Modifier.walletGlow(glow),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = actions,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
     ) { p ->

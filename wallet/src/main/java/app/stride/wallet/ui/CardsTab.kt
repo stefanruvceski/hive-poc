@@ -5,6 +5,13 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,7 +56,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.stride.ui.FCard
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.Barcodes
 import app.stride.wallet.model.LoyaltyCard
@@ -69,7 +75,7 @@ fun CardsTab(d: WalletData, padding: PaddingValues, onCard: (String) -> Unit, on
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (d.cards.isEmpty()) item(span = { GridItemSpan(2) }) {
-            FCard {
+            Glass {
                 Text("Leave the loyalty cards at home", color = StrideColors.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -84,17 +90,39 @@ fun CardsTab(d: WalletData, padding: PaddingValues, onCard: (String) -> Unit, on
     }
 }
 
+/**
+ * A loyalty card as a pane of tinted glass: the card's color as a soft gradient over the navy,
+ * a bright top edge, a light sheen and a glow of its color underneath (Apple Wallet, Liquid Glass style).
+ */
 @Composable
 fun CardTile(c: LoyaltyCard, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    val fg = onCard(c.color)
+    val tint = Color(c.color)
+    val shape = RoundedCornerShape(22.dp)
     Box(
-        modifier.fillMaxWidth().aspectRatio(1.586f).clip(RoundedCornerShape(16.dp)).background(Color(c.color))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(14.dp),
+        modifier.fillMaxWidth().aspectRatio(1.586f)
+            .shadow(18.dp, shape, ambientColor = tint, spotColor = tint)
+            .clip(shape)
+            .background(StrideColors.Elev)
+            .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.78f), tint.copy(alpha = 0.38f), tint.copy(alpha = 0.16f)), start = Offset.Zero, end = Offset.Infinite))
+            .drawBehind {
+                // The sheen: a soft white light from the top-left corner.
+                drawCircle(
+                    Brush.radialGradient(listOf(Color.White.copy(alpha = 0.30f), Color.Transparent), center = Offset(size.width * 0.12f, -size.height * 0.1f), radius = size.width * 0.8f),
+                    radius = size.width * 0.8f, center = Offset(size.width * 0.12f, -size.height * 0.1f),
+                )
+            }
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))), shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(16.dp),
     ) {
-        Text(c.name.ifBlank { "Card" }, color = fg, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        val shadow = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 1f), 6f)
         Text(
-            c.number.takeLast(4).let { if (c.number.length > 4) "•••• $it" else it }, color = fg.copy(alpha = 0.8f), fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace, modifier = Modifier.align(Alignment.BottomStart),
+            c.name.ifBlank { "Card" }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            style = TextStyle(shadow = shadow),
+        )
+        Text(
+            c.number.takeLast(4).let { if (c.number.length > 4) "•••• $it" else it }, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace, style = TextStyle(shadow = shadow), modifier = Modifier.align(Alignment.BottomStart),
         )
     }
 }
@@ -138,7 +166,7 @@ fun CardScreen(vm: WalletViewModel, d: WalletData, id: String, onEdit: () -> Uni
     )
 
     WalletScreen(
-        c.name.ifBlank { "Card" }, onBack,
+        c.name.ifBlank { "Card" }, onBack, glow = Color(c.color),
         actions = {
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Edit", tint = StrideColors.Dim) }
             IconButton(onClick = { askDelete = true }) { Icon(Icons.Filled.Delete, "Delete", tint = StrideColors.Dim) }
@@ -146,7 +174,8 @@ fun CardScreen(vm: WalletViewModel, d: WalletData, id: String, onEdit: () -> Uni
     ) {
         item {
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White).padding(horizontal = 24.dp, vertical = 28.dp),
+                Modifier.fillMaxWidth().shadow(24.dp, RoundedCornerShape(26.dp), ambientColor = Color(c.color), spotColor = Color(c.color))
+                    .clip(RoundedCornerShape(26.dp)).background(Color.White).padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 BarcodeImage(c.number, c.format, Modifier.padding(horizontal = if (c.format.square) 30.dp else 0.dp))
@@ -156,6 +185,6 @@ fun CardScreen(vm: WalletViewModel, d: WalletData, id: String, onEdit: () -> Uni
         }
         item { CardTile(c, Modifier.padding(horizontal = 60.dp)) }
         item { Text("${c.format.label} · the screen stays bright while this is open", color = StrideColors.Faint, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
-        if (c.note.isNotBlank()) item { FCard { Text(c.note, color = StrideColors.Dim, fontSize = 14.sp) } }
+        if (c.note.isNotBlank()) item { Glass { Text(c.note, color = StrideColors.Dim, fontSize = 14.sp) } }
     }
 }

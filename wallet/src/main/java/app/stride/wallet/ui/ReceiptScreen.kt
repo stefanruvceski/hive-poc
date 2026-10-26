@@ -37,7 +37,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.format.Dates
-import app.stride.ui.FCard
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.ReceiptStats
 import app.stride.wallet.model.ReceiptStatus
@@ -73,7 +72,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
         },
     ) {
         if (r.status != ReceiptStatus.OK) item {
-            FCard {
+            Glass {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (loading) { CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = WalletAccent); Spacer(Modifier.size(10.dp)) }
                     Text(
@@ -85,7 +84,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
             }
         }
         if (r.status == ReceiptStatus.OK) item {
-            FCard {
+            Glass(tint = WalletAccent) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(ReceiptStats.amount(r.total ?: 0.0), color = if (r.refund) StrideColors.Accent else StrideColors.Text, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
                     Text(" RSD", color = StrideColors.Dim, fontSize = 15.sp, modifier = Modifier.padding(bottom = 6.dp))
@@ -96,12 +95,13 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
                     color = StrideColors.Dim, fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(10.dp))
-                listOfNotNull(r.company?.takeIf { it != r.shop }, listOfNotNull(r.address, r.city).joinToString(", ").ifEmpty { null }, r.tin?.let { "PIB $it" })
+                listOfNotNull(r.company?.takeIf { it != r.shop }, listOfNotNull(r.address, r.city).joinToString(", ").ifEmpty { null }, r.tin?.let { "Seller PIB $it" })
                     .forEach { Text(it, color = StrideColors.Dim, fontSize = 12.sp) }
             }
         }
+        if (r.status == ReceiptStatus.OK) item { OwnerCard(vm, d, r) }
         if (fuel != null) item {
-            FCard {
+            Glass(tint = StrideColors.Amber) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.LocalGasStation, null, tint = StrideColors.Amber, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.size(8.dp))
@@ -116,7 +116,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
             }
         }
         if (r.items.isNotEmpty()) item {
-            FCard {
+            Glass {
                 Caps("Items · ${r.items.size}")
                 Spacer(Modifier.height(6.dp))
                 r.items.forEach { i ->
@@ -131,6 +131,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
                 }
             }
         }
+        if (r.status == ReceiptStatus.OK) item { WarrantyCard(vm, r) }
         item {
             Column {
                 OutlinedTextField(note, { note = it }, label = { Text("Note") }, modifier = Modifier.fillMaxWidth())
@@ -138,7 +139,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
             }
         }
         if (r.journal != null) item {
-            FCard(onClick = { showText = !showText }) {
+            Glass(onClick = { showText = !showText }) {
                 Caps(if (showText) "Receipt as printed ▲" else "Receipt as printed ▼")
                 if (showText) Text(
                     r.journal, color = StrideColors.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, lineHeight = 13.sp, softWrap = false,

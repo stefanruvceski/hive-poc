@@ -71,6 +71,7 @@ object FiscalParse {
             payment = payments.distinct().joinToString(", ").ifEmpty { null } ?: fromText.payment,
             items = items.ifEmpty { fromText.items },
             journal = journal ?: fromText.journal,
+            buyerTin = if (base.ownerManual) base.buyerTin else req?.str("buyer")?.let(::companyTin) ?: fromText.buyerTin,
             error = null,
         )
     }
@@ -101,6 +102,7 @@ object FiscalParse {
             time = span("sdcDateTimeLabel")?.let(::printedTime) ?: r.time,
             invoiceNumber = span("invoiceNumberLabel") ?: r.invoiceNumber,
             journal = journal ?: r.journal,
+            buyerTin = if (base.ownerManual) base.buyerTin else span("buyerIdLabel")?.let(::companyTin) ?: r.buyerTin,
             error = null,
         )
     }
@@ -137,8 +139,22 @@ object FiscalParse {
             payment = payments.joinToString(", ").ifEmpty { null } ?: base.payment,
             items = journalItems(lines).ifEmpty { base.items },
             journal = journal,
+            buyerTin = if (base.ownerManual) base.buyerTin else field("ИД купца:", "ID kupca:")?.let(::companyTin) ?: base.buyerTin,
         )
     }
+
+    private val COMPANY_BUYER = Regex("""(?<!\d)(10|12):\s*(\d{9})(?!\d)""")
+
+    /**
+     * The buyer's PIB when a receipt was issued to a company. The buyer id is "<type>:<number>": 10 = PIB,
+     * 12 = PIB with a public-sector code; other types (11 = JMBG, 20 = ID card, passports, …) are a person, so null.
+     */
+    fun companyTin(buyerId: String): String? = COMPANY_BUYER.find(buyerId)?.groupValues?.get(2)
+
+    /** The buyer PIB in a receipt's printed text (for receipts saved before buyers were read). */
+    fun buyerTinIn(journal: String): String? = journal.lineSequence().map { it.trim() }
+        .firstOrNull { it.startsWith("ИД купца:", true) || it.startsWith("ID kupca:", true) }
+        ?.let(::companyTin)
 
     /** The items between the "Назив Цена Кол. Укупно" header and the next dashed line: name line(s), then price, quantity, total. */
     fun journalItems(lines: List<String>): List<ReceiptItem> {

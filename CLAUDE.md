@@ -68,6 +68,11 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `domain/Barcodes` (tested) guesses the type (EAN check digits, else Code 128), validates and draws it with ZXing;
   the card screen shows it on white at full brightness. Scanning (`ui/Scanner`) is Google Play services: the code
   scanner UI for the camera (no camera permission) and ML Kit (unbundled) for a picked photo. Open targets "scan", "cards".
+  Who a receipt is for: `Receipt.buyerTin` = the buyer's PIB when the buyer id is type 10 or 12 (`FiscalParse.companyTin`;
+  other types are a person: personal), `ownerManual` keeps the user's choice; companies are named in `WalletData.companies`;
+  `domain/Owners` (tested) filters. Warranties per receipt (`Warranty`: item + months from the receipt date),
+  `domain/Warranties` (tested: active / ending in 30 days / expired). Look: glass everywhere (`Glass`, `GlassRow`, `GlassPill`,
+  `walletGlow` in `ui/WalletCommon`; cards are tinted glass tiles in `CardTile`).
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
   with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
   Open targets for a module later become "<moduleId>/<target>".

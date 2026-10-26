@@ -6,7 +6,9 @@
       {"icon": "apps", "text": "Wallet joins Hive, with two tabs: Receipts and Cards."},
       {"icon": "spark", "text": "Scan the QR code on any Serbian fiscal receipt (or pick a photo or screenshot, or paste the link). Hive asks the tax office for it and keeps the shop, the date, the payment, every item and the total. Offline? It's saved and read later."},
       {"icon": "chart", "text": "Fuel receipts show liters and the price per liter. Receipts tab: spending and liters per month, your top shops, search over shops and items."},
-      {"icon": "palette", "text": "Loyalty cards: scan the card's barcode, read it from a photo, or type the number. At the till Hive shows the same barcode at full brightness, so the plastic can stay at home."}
+      {"icon": "apps", "text": "Personal or company: a receipt issued to a company (its PIB on the receipt) is marked as that company's. Filter Personal or by company, name each company once, or change who a receipt is for."},
+      {"icon": "bell", "text": "Warranties: add one to anything you bought (6 months to 5 years, or your own length). Hive shows how long each still runs, warns in its last month and lists them all on the Receipts tab."},
+      {"icon": "palette", "text": "Loyalty cards: scan the card's barcode, read it from a photo, or type the number. At the till Hive shows the same barcode at full brightness, so the plastic can stay at home. Cards are panes of tinted glass, like the rest of Hive."}
     ]
   },
   {

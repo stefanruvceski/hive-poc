@@ -34,6 +34,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -125,7 +127,8 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        modifier = Modifier.walletGlow(),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 navigationIcon = { if (onHome != null) IconButton(onClick = onHome) { Icon(Icons.Filled.Apps, "All apps") } },
@@ -139,7 +142,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                         IconButton(onClick = ::scanReceipt) { Icon(Icons.Filled.QrCodeScanner, "Scan a receipt", tint = WalletAccent) }
                     } else IconButton(onClick = { push("new-card") }) { Icon(Icons.Filled.Add, "Add a card", tint = WalletAccent) }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
         bottomBar = {
