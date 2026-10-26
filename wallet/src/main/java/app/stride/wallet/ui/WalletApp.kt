@@ -109,7 +109,10 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
             "scan" -> scanReceipt()
             "cards", "receipts" -> { stack.clear(); tab = open.target }
             "noqr", "fuel" -> push(open.target)
-            else -> if (open.target.startsWith("card:")) { stack.clear(); tab = "cards"; push(open.target) }
+            else -> when {
+                open.target.startsWith("card:") -> { stack.clear(); tab = "cards"; push(open.target) }
+                open.target.startsWith("receipt:") -> { stack.clear(); tab = "receipts"; push(open.target) }
+            }
         }
     }
 

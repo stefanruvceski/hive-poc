@@ -67,6 +67,8 @@ data class Receipt(
     val source: String? = null,
     /** Kilometres on the odometer at this fill-up (fuel receipts), for L/100 km. */
     val odometer: Int? = null,
+    /** A Money category picked for this receipt (Money owns the categories); null = by its kind. */
+    val moneyCategory: String? = null,
 )
 
 /** A warranty on something bought with a receipt; it runs from the receipt's date. */

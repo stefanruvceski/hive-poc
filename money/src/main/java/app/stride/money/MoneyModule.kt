@@ -25,13 +25,15 @@ import java.time.YearMonth
 object MoneyModule : AppModule {
     override val id = "money"
     override val title = "Money"
-    override val subtitle = "Income, spending, budgets and a yearly goal"
+    override val subtitle = "Income, all spending, budgets and reports"
     override val icon: ImageVector = Icons.Filled.AccountBalanceWallet
     override val accent = Color(0xFF60A5FA)
     override val dataFiles = listOf("money.json")
 
     override fun onAppStart(context: android.content.Context) {
         app.stride.money.reminder.MoneyReminder.schedule(context)
+        // Other modules (Wallet) file their spending under Money's categories.
+        app.stride.finance.FinanceHub.categories = app.stride.money.data.MoneyCategories
     }
 
     @Composable
@@ -43,7 +45,7 @@ object MoneyModule : AppModule {
     @Composable
     override fun HomeSummary() {
         val vm: MoneyViewModel = viewModel()
-        val d by vm.data.collectAsStateWithLifecycle()
+        val d by vm.view.collectAsStateWithLifecycle()
         val today = LocalDate.now()
         val paid = Finance.yearTotal(d, today.year)
         val spent = Finance.monthExpenseTotal(d, YearMonth.from(today))

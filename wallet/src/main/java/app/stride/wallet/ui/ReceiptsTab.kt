@@ -19,6 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.ui.platform.LocalContext
+import app.stride.host.Host
 import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -47,13 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.format.Dates
-import androidx.compose.ui.graphics.Color
-import app.stride.ui.BarChart
-import app.stride.ui.PeriodNav
-import app.stride.ui.Segment
-import app.stride.ui.ThinBar
 import app.stride.wallet.domain.Brands
-import app.stride.wallet.domain.Category
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.Owners
 import app.stride.wallet.domain.ReceiptStats
@@ -79,8 +76,8 @@ fun warrantyColor(s: WarrantyState) = when (s) {
 }
 
 /**
- * Receipts: who they're for (all, personal or a company), this month's spending and fuel, the warranties
- * still running, then every receipt by month (search over shops and items).
+ * Receipts as documents: who they're for (all, personal or a company), the warranties still running, then every
+ * receipt by month (search over shops and items). What they add up to is shown in Money.
  */
 @Composable
 fun ReceiptsTab(
@@ -95,21 +92,15 @@ fun ReceiptsTab(
     onFuel: () -> Unit,
     onReceipt: (String) -> Unit,
 ) {
-    var month by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
-    val m = YearMonth.parse(month)
     var query by rememberSaveable { mutableStateOf("") }
     var owner by rememberSaveable { mutableStateOf(Owners.ALL) }
     var allWarranties by rememberSaveable { mutableStateOf(false) }
-    var view by rememberSaveable { mutableStateOf("list") }
     var saved by rememberSaveable { mutableStateOf(false) }
-    var category by rememberSaveable { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
     val today = LocalDate.now()
     val companies = Owners.companies(d.receipts)
     if (owner != Owners.ALL && owner != Owners.PERSONAL && owner !in companies) owner = Owners.ALL
-    val mine = Owners.filter(d.receipts, owner)
-        .let { rs -> if (saved) rs.filter { it.starred } else rs }
-        .let { rs -> category?.let { c -> rs.filter { Brands.category(it).name == c } } ?: rs }
-    val inMonth = ReceiptStats.inMonth(mine, m)
+    val mine = Owners.filter(d.receipts, owner).let { rs -> if (saved) rs.filter { it.starred } else rs }
     val list = ReceiptStats.search(mine, query)
     val warranties = Warranties.all(mine, today)
     LazyColumn(
@@ -123,7 +114,7 @@ fun ReceiptsTab(
                     Text("Scan a fiscal receipt", color = StrideColors.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Point the camera at the QR code at the bottom of any Serbian receipt. Hive asks the tax office (suf.purs.gov.rs) for it and keeps the shop, the date, every item and the total. Fuel receipts show liters and the price per liter; receipts issued to a company (with its PIB) are kept apart from your own.",
+                        "Point the camera at the QR code at the bottom of any Serbian receipt. Hive asks the tax office (suf.purs.gov.rs) for it and keeps the shop, the date, every item and the total. Fuel receipts show liters and the price per liter; receipts issued to a company (with its PIB) are kept apart from your own. Money counts them in your spending.",
                         color = StrideColors.Dim, fontSize = 13.sp,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -142,49 +133,20 @@ fun ReceiptsTab(
                     companies.forEach { pib -> GlassPill(Owners.name(pib, d.companies), owner == pib) { owner = pib } }
                 }
                 GlassPill("★ Saved", saved, StrideColors.Amber) { saved = !saved }
-                category?.let { c -> GlassPill("${Category.valueOf(c).label} ✕", true, Color(Category.valueOf(c).color)) { category = null } }
             }
         }
+        // Wallet keeps the papers; the numbers (spending, budgets, reports) are Money's.
         item {
             Glass(tint = WalletAccent) {
-                PeriodNav(monthTitle(m), onPrev = { month = m.minusMonths(1).toString() }, onNext = { month = m.plusMonths(1).toString() }, nextEnabled = m < YearMonth.now())
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(ReceiptStats.amount(ReceiptStats.total(inMonth)), color = StrideColors.Text, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(" RSD", color = StrideColors.Dim, fontSize = 14.sp, modifier = Modifier.padding(bottom = 5.dp))
+                TextButton(onClick = { Host.openIntent(context, "money/spending").let { runCatching { context.startActivity(it) } } }, contentPadding = PaddingValues(0.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ShowChart, null, tint = WalletAccent, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Spending, budgets and reports are in Money ›", color = WalletAccent, fontSize = 13.sp)
                 }
-                val liters = ReceiptStats.liters(inMonth)
-                Text(
-                    "${inMonth.size} receipt${if (inMonth.size == 1) "" else "s"}" + if (liters > 0) " · ${ReceiptStats.litersText(liters)} of fuel" else "",
-                    color = StrideColors.Dim, fontSize = 13.sp,
-                )
                 if (d.receipts.any { ReceiptStats.fuel(it) != null }) TextButton(onClick = onFuel, contentPadding = PaddingValues(0.dp)) {
                     Icon(Icons.Filled.LocalGasStation, null, tint = StrideColors.Amber, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.size(6.dp))
                     Text("Fuel diary ›", color = StrideColors.Amber, fontSize = 13.sp)
-                }
-                val weeks = ReceiptStats.weeks(mine, m)
-                if (weeks.any { it.second > 0 }) {
-                    Spacer(Modifier.height(10.dp))
-                    BarChart(weeks.map { it.second }, weeks.map { it.first }, WalletAccent, { ReceiptStats.amount(it) }, Modifier.fillMaxWidth().height(120.dp))
-                    Text("Average ${rsd(weeks.sumOf { it.second } / weeks.size)} a week", color = StrideColors.Dim, fontSize = 12.sp)
-                }
-                if (owner == Owners.ALL && companies.isNotEmpty()) {
-                    val business = inMonth.filter { it.buyerTin != null }
-                    if (business.isNotEmpty()) Text(
-                        "Personal ${rsd(ReceiptStats.total(inMonth - business.toSet()))} · Company ${rsd(ReceiptStats.total(business))}",
-                        color = StrideColors.Dim, fontSize = 12.sp,
-                    )
-                }
-                val shops = ReceiptStats.topShops(inMonth, 3)
-                if (shops.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    shops.forEach { (name, sum) ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Text(name, color = StrideColors.Text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text(rsd(sum), color = StrideColors.Dim, fontSize = 13.sp)
-                        }
-                    }
                 }
             }
         }
@@ -210,56 +172,6 @@ fun ReceiptsTab(
                 query, { query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                 placeholder = { Text("Search shops and items") }, leadingIcon = { Icon(Icons.Filled.Search, null) },
             )
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Segment("Receipts", view == "list") { view = "list" }
-                Segment("Shops", view == "shops") { view = "shops" }
-                Segment("Categories", view == "categories") { view = "categories" }
-            }
-        }
-        if (view == "shops") {
-            val shops = ReceiptStats.byShop(inMonth)
-            val top = shops.maxOfOrNull { it.third } ?: 1.0
-            item { Caps("${monthTitle(m)} · ${shops.size} shops") }
-            if (shops.isEmpty()) item { Text("No receipts this month.", color = StrideColors.Dim, fontSize = 13.sp) }
-            items(shops, key = { "s-" + it.first }) { (name, count, total) ->
-                val sample = inMonth.first { ReceiptStats.title(it) == name }
-                GlassRow({ query = name; view = "list" }) {
-                    ShopLogo(sample, 38)
-                    Spacer(Modifier.size(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(name, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("$count receipt${if (count == 1) "" else "s"}", color = StrideColors.Dim, fontSize = 12.sp)
-                        ThinBar((total / top).toFloat(), WalletAccent, Modifier.padding(top = 4.dp), height = 4)
-                    }
-                    Spacer(Modifier.size(10.dp))
-                    Text(ReceiptStats.amount(total), color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            return@LazyColumn
-        }
-        if (view == "categories") {
-            val cats = ReceiptStats.byCategory(inMonth)
-            val sum = cats.sumOf { it.third }.takeIf { it > 0 } ?: 1.0
-            item { Caps("${monthTitle(m)} · by category") }
-            if (cats.isEmpty()) item { Text("No receipts this month.", color = StrideColors.Dim, fontSize = 13.sp) }
-            items(cats, key = { "c-" + it.first.name }) { (cat, count, total) ->
-                GlassRow({ category = cat.name; view = "list" }, tint = Color(cat.color)) {
-                    Box(Modifier.size(38.dp).background(Color(cat.color).copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(categoryIcon(cat), null, tint = Color(cat.color), modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.size(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(cat.label, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("$count receipt${if (count == 1) "" else "s"} · ${(total / sum * 100).toInt()}%", color = StrideColors.Dim, fontSize = 12.sp)
-                        ThinBar((total / sum).toFloat(), Color(cat.color), Modifier.padding(top = 4.dp), height = 4)
-                    }
-                    Spacer(Modifier.size(10.dp))
-                    Text(ReceiptStats.amount(total), color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            return@LazyColumn
         }
         if (list.isEmpty()) item { Text(if (query.isBlank()) "No receipts here yet." else "Nothing matches \"$query\".", color = StrideColors.Dim, fontSize = 13.sp) }
         ReceiptStats.byMonth(list).forEach { (ym, rs) ->

@@ -1,5 +1,27 @@
 [
   {
+    "id": "2026-10-26-money-wallet",
+    "title": "Money counts, Wallet keeps 🧾",
+    "items": [
+      {
+        "icon": "chart",
+        "text": "All your spending now lives in Money: scanned receipts from Wallet show up there by themselves, next to what you type in, and count in budgets, reports and the monthly net."
+      },
+      {
+        "icon": "apps",
+        "text": "Business or personal: pick All, Personal or a company at the top of Spending and Reports. Receipts with a company's PIB go there on their own, and typed expenses can be marked for a company too."
+      },
+      {
+        "icon": "palette",
+        "text": "One set of categories: Money's. Money → Setup → Receipts from Wallet decides where each kind of receipt goes, and a receipt's category chip in Wallet files it under any Money category."
+      },
+      {
+        "icon": "spark",
+        "text": "Wallet is now the papers and the cards: receipts with their items, warranties and fuel diary, and your loyalty cards. Tap a receipt in Money to open it in Wallet."
+      }
+    ]
+  },
+  {
     "id": "2026-10-26-hive-backup",
     "title": "Never lose your data 🛟",
     "items": [

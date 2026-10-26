@@ -1,6 +1,15 @@
 package app.stride.money.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalContext
+import app.stride.host.Host
+import app.stride.money.domain.Feed
+import app.stride.ui.Chip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -56,7 +65,14 @@ private fun tabIcon(id: String) = when (id) {
 @Composable
 fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
     val vm: MoneyViewModel = viewModel()
-    val d by vm.data.collectAsStateWithLifecycle()
+    val d by vm.view.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // Business or personal: one filter for spending everywhere (income isn't split).
+    var scope by rememberSaveable { mutableStateOf(Feed.ALL) }
+    val companies = Feed.companies(d)
+    if (scope != Feed.ALL && scope != Feed.PERSONAL && scope !in companies) scope = Feed.ALL
+    val shown = Feed.scoped(d, scope)
+
     val fxBusy by vm.fxBusy.collectAsStateWithLifecycle()
     val today = LocalDate.now()
     val layout = d.settings.layout
@@ -69,6 +85,12 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var form by rememberSaveable { mutableStateOf<String?>(null) }
     var list by rememberSaveable { mutableStateOf<String?>(null) }
+
+    /** An expense from a Wallet receipt opens the receipt; a typed one opens its form. */
+    fun editExpense(id: String) {
+        val open = d.expenses.firstOrNull { it.id == id }?.open
+        if (open != null) runCatching { context.startActivity(Host.openIntent(context, open)) } else form = "edit-expense:$id"
+    }
 
     LaunchedEffect(open.id) {
         if (open.id == 0) return@LaunchedEffect
@@ -106,7 +128,7 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
     list?.let { l ->
         BackHandler { list = null }
         val inc = l == "income"
-        AllItemsScreen(d, inc, onEdit = { form = (if (inc) "edit-income:" else "edit-expense:") + it }, onAdd = { form = if (inc) "income" else "expense" }, onBack = { list = null })
+        AllItemsScreen(if (inc) d else shown, inc, onEdit = { if (inc) form = "edit-income:$it" else editExpense(it) }, onAdd = { form = if (inc) "income" else "expense" }, onBack = { list = null })
         return
     }
 
@@ -129,19 +151,29 @@ fun MoneyApp(open: OpenRequest, onHome: (() -> Unit)?) {
                         TextButton(onClick = { vm.setLayout(LayoutOps.resetTab(layout, tab)) }) { Text("Reset") }
                         Button(onClick = { editing = false }, modifier = Modifier.padding(end = 8.dp)) { Text("Done") }
                     },
-                ) else TopAppBar(
-                    navigationIcon = { if (onHome != null) IconButton(onClick = onHome) { Icon(Icons.Filled.Apps, "All apps") } },
-                    title = { Text(if (tab.id == "income") "Money" else tab.title, style = MaterialTheme.typography.headlineSmall) },
-                    actions = { IconButton(onClick = { layoutScreen = true }) { Icon(Icons.Filled.DashboardCustomize, "Tabs and sections", tint = StrideColors.Dim) } },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                )
+                ) else Column {
+                    TopAppBar(
+                        navigationIcon = { if (onHome != null) IconButton(onClick = onHome) { Icon(Icons.Filled.Apps, "All apps") } },
+                        title = { Text(if (tab.id == "income") "Money" else tab.title, style = MaterialTheme.typography.headlineSmall) },
+                        actions = { IconButton(onClick = { layoutScreen = true }) { Icon(Icons.Filled.DashboardCustomize, "Tabs and sections", tint = StrideColors.Dim) } },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                    )
+                    if ((tab.id == "spending" || tab.id == "reports") && companies.isNotEmpty()) Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Chip("All", scope == Feed.ALL) { scope = Feed.ALL }
+                        Chip("Personal", scope == Feed.PERSONAL) { scope = Feed.PERSONAL }
+                        companies.forEach { c -> Chip(c, scope == c) { scope = c } }
+                    }
+                }
             },
             bottomBar = { StrideNavBar(tabs.map { NavItem(it.title, tabIcon(it.id)) }, tabs.indexOf(tab)) { tabId = tabs[it].id } },
         ) { padding ->
             when (tab.id) {
                 "income" -> IncomeTab(vm, d, today, year, { year = it }, { form = "income" }, padding, host, onAll = { list = "income" }, onEdit = { form = "edit-income:$it" })
-                "reports" -> ReportsTab(d, today, year, { year = it }, padding, host)
-                "spending" -> SpendingTab(vm, d, month, { month = it }, { form = "expense" }, padding, host, onAll = { list = "expenses" }, onEdit = { form = "edit-expense:$it" })
+                "reports" -> ReportsTab(shown, today, year, { year = it }, padding, host)
+                "spending" -> SpendingTab(vm, shown, month, { month = it }, { form = "expense" }, padding, host, onAll = { list = "expenses" }, onEdit = ::editExpense)
                 else -> SetupTab(vm, d, fxBusy, padding, host)
             }
         }

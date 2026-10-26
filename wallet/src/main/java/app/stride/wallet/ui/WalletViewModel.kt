@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import app.stride.wallet.data.FiscalClient
 import app.stride.wallet.data.WalletStore
 import app.stride.wallet.data.CardImages
+import app.stride.wallet.domain.Brands
 import app.stride.wallet.domain.FiscalParse
 import app.stride.wallet.domain.ManiImport
 import app.stride.wallet.widget.WalletWidgets
+import app.stride.finance.FinanceHub
+import app.stride.finance.SpendCategory
 import app.stride.wallet.model.Company
 import app.stride.wallet.model.LoyaltyCard
 import app.stride.wallet.model.Receipt
@@ -54,6 +57,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val cardsChanged = before.cards != _data.value.cards
         viewModelScope.launch(Dispatchers.IO) {
             saveLock.withLock { store.save(_data.value) }
+            if (before.receipts != _data.value.receipts || before.companies != _data.value.companies) FinanceHub.changed()
             if (cardsChanged) WalletWidgets.refresh(getApplication<Application>())
         }
     }
@@ -117,6 +121,29 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val imported = _data.value.receipts.firstOrNull { it.source == "mani" && ManiImport.same(it, parsed) }
         update { d -> d.copy(receipts = d.receipts.filter { it.id != imported?.id } + parsed.copy(source = "verify", buyerTin = parsed.buyerTin ?: imported?.buyerTin, note = imported?.note.orEmpty())) }
         return parsed.id
+    }
+
+    /** A Money category for this receipt (null = filed by its kind). */
+    fun setMoneyCategory(id: String, categoryId: String?) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(moneyCategory = categoryId) else it }) }
+
+    private val _moneyCategories = MutableStateFlow<List<SpendCategory>>(emptyList())
+    /** Money's spending categories, to file a receipt under one of them. */
+    val moneyCategories: StateFlow<List<SpendCategory>> = _moneyCategories.asStateFlow()
+
+    fun loadMoneyCategories() {
+        viewModelScope.launch {
+            _moneyCategories.value = withContext(Dispatchers.IO) { runCatching { FinanceHub.categories?.categories(getApplication<Application>()) }.getOrNull().orEmpty() }
+        }
+    }
+
+    /** The Money category a receipt is filed under: picked by hand, else where Money files its kind. */
+    suspend fun moneyCategoryFor(r: Receipt): SpendCategory? = withContext(Dispatchers.IO) {
+        val book = FinanceHub.categories ?: return@withContext null
+        val app = getApplication<Application>()
+        runCatching {
+            r.moneyCategory?.let { id -> book.categories(app).firstOrNull { it.id == id } }
+                ?: book.categoryFor(app, Brands.category(r).name)
+        }.getOrNull()
     }
 
     /** Kilometres at a fill-up (null clears it). */

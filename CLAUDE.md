@@ -47,6 +47,16 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   (`StackedBarChart`, tap a month → its items), donut + per-slice trend, running total vs last year and goal pace,
   savings rate, weekday spending, biggest items, insights. All income / All expenses (`ui/AllItemsScreen`, filters in
   `domain/Ledger`, tested): search, year, source or category, status, grouped by month; tap to edit or delete.
+  **Money = the numbers and the plan, Wallet = the papers and cards.** All spending is counted in Money: typed expenses
+  plus Wallet's receipts, which arrive through the core contract `finance/FinanceHub` (modules can't depend on each
+  other): Wallet registers `spending` (`data/WalletSpending`: OK receipts → `FeedExpense`, id "wallet:<id>", `open`
+  "wallet/receipt:<id>"), Money registers `categories` (`data/MoneyCategories`, a `CategoryBook`); `FinanceHub.changed()`
+  after each Wallet save makes Money reload. `domain/Feed` (tested): `mapKinds` files each receipt kind (Wallet's
+  `Category` name) under a Money category in `MoneyData.kindMap` (matched by name/synonyms, else a new category),
+  `Receipt.moneyCategory` overrides it per receipt; `view` = data + feed expenses (off with `MoneySettings.receipts`).
+  Feed rows are read-only in Money (tap opens the receipt in Wallet). Business or personal is one shared tag: the
+  company's display name (`Expense.company`, receipt buyer PIB → `Owners.name`); `Feed.scoped` + scope chips on
+  Spending and Reports (All / Personal / company). Setup section "receipts" maps kinds and toggles the feed.
   No accounts and no cloud: all three apps keep their data on the phone (Google sign-in may come later, for Hive as a whole).
 - `:books` (`BooksModule`, package `app.stride.books`, amber): reading tracker modelled on the user's Notion Books / Quotes
   databases. `books.json` (`BooksData`: books with status to buy / to read / reading / finished / dropped, rating 1–10, dates,
@@ -58,13 +68,13 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and
   `OverlayView` (drag / pinch / rotate, corner mode); `TiltPerspective` (gravity → homography), `ImageFilters` (no white,
   Sobel outline), `BitmapLoader` (EXIF, last image kept). Images shared to Hive (`ACTION_SEND image/*`) open as "draw/share:<uri>".
-- `:wallet` (`WalletModule`, package `app.stride.wallet`, sky blue): fiscal receipts and loyalty cards, like the Mani.rs app.
+- `:wallet` (`WalletModule`, package `app.stride.wallet`, sky blue): fiscal receipts (as documents) and loyalty cards, like the Mani.rs app.
   `wallet.json` (`WalletData`: receipts, cards). A receipt is saved from the QR code's tax-office link
   (`suf.purs.gov.rs/v/?vl=…`, deduped by the `vl` value), then `data/FiscalClient` GETs that link with
   `Accept: application/json` (public, no key) and `domain/FiscalParse` (tested) reads `invoiceRequest` / `invoiceResult` /
   `journal`, falling back to the printed text and the HTML page (span ids `shopFullNameLabel`, `totalAmountLabel`, …);
   Cyrillic is shown in Latin. Offline scans stay PENDING and are retried when Wallet opens. `domain/ReceiptStats` (tested):
-  months, top shops, search, fuel (liters, price per liter, by item name). Loyalty cards: number + `CardFormat`;
+  months, search, fuel (liters, price per liter, by item name). Loyalty cards: number + `CardFormat`;
   `domain/Barcodes` (tested) guesses the type (EAN check digits, else Code 128), validates and draws it with ZXing;
   the card screen shows it on white at full brightness. Scanning (`ui/Scanner`) is Google Play services: the code
   scanner UI for the camera (no camera permission) and ML Kit (unbundled) for a picked photo. Open targets "scan", "cards".
@@ -75,8 +85,9 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `walletGlow` in `ui/WalletCommon`; cards are tinted glass tiles in `CardTile`).
   `domain/Brands` (tested): Serbian chains by legal name → short name, website (logo via Google's favicon service,
   `ShopLogo`, initials as fallback), color and `Category` (also guessed from fuel items or words; per-receipt override
-  `Receipt.category`); loyalty programs → color, logo and QR / barcode (`Brands.card`). `ReceiptStats.weeks / byShop /
-  byCategory` (tested) feed the weekly chart and the Shops / Categories views; `Receipt.starred` = ★ Saved.
+  `Receipt.category`); loyalty programs → color, logo and QR / barcode (`Brands.card`). Wallet shows no totals or charts (that's
+  Money's job; the Receipts tab links to "money/spending"); its category chip lists Money's categories when Money is
+  there (`Receipt.moneyCategory`), else its own kinds. `Receipt.starred` = ★ Saved.
   `domain/ManiImport` (tested): Mani's CSV (no QR link, no items) → `source = "mani"` receipts; Mani groups become
   companies keyed `group:<name>` (naming a real PIB the same moves them); a later scan of the same receipt (same minute
   and total) replaces the import. Card photos: `data/CardImages` (app files, 1000 px JPEG), `LoyaltyCard.image`.
@@ -92,7 +103,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   L/100 km fill-to-full from `Receipt.odometer`). Till: `CardScreen` is a white screen with only the code; ⋯ = pin /
   edit / delete. `LoyaltyCard.pinned`, order in `domain/CardOrder` (tested). Widget `widget/WalletWidgets` (Glance,
   `CardsWidget`, refreshed on every card change), Quick Settings `CardsTile`, app shortcut "cards"; open targets
-  "wallet/cards", "wallet/card:<id>", "wallet/noqr", "wallet/fuel".
+  "wallet/cards", "wallet/card:<id>", "wallet/receipt:<id>", "wallet/noqr", "wallet/fuel".
   **Later (asked for, not built yet):** company report: one tap → PDF/CSV of a month's receipts for a company
   (e.g. Obsidian IT) with totals and VAT per rate (the receipts' VAT labels / journal tax table), to send to the
   accountant; plus a "submitted / refunded" mark per receipt.

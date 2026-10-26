@@ -2,7 +2,14 @@ package app.stride.wallet.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.stride.finance.SpendCategory
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,12 +66,25 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
     var askDelete by rememberSaveable { mutableStateOf(false) }
     var showText by rememberSaveable { mutableStateOf(false) }
     var pickCategory by rememberSaveable { mutableStateOf(false) }
+    // Money's categories (spending is counted there); Wallet's own kinds only when Money isn't around.
+    val moneyCats by vm.moneyCategories.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.loadMoneyCategories() }
+    val moneyCat by produceState<SpendCategory?>(null, r.moneyCategory, r.category, r.shop, moneyCats) { value = vm.moneyCategoryFor(r) }
     if (pickCategory) AlertDialog(
         onDismissRequest = { pickCategory = false },
         title = { Text("Category") },
         text = {
-            Column {
-                Category.entries.forEach { c ->
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (moneyCats.isNotEmpty()) {
+                    Text("Money's spending categories", color = StrideColors.Faint, fontSize = 12.sp)
+                    moneyCats.forEach { c ->
+                        TextButton(onClick = { vm.setMoneyCategory(id, c.id); pickCategory = false }, modifier = Modifier.fillMaxWidth()) {
+                            Box(Modifier.size(12.dp).background(Color(c.color), CircleShape))
+                            Spacer(Modifier.size(10.dp))
+                            Text(c.name, color = StrideColors.Text, modifier = Modifier.weight(1f))
+                        }
+                    }
+                } else Category.entries.forEach { c ->
                     TextButton(onClick = { vm.setCategory(id, c.name); pickCategory = false }, modifier = Modifier.fillMaxWidth()) {
                         Icon(categoryIcon(c), null, tint = Color(c.color), modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(10.dp))
@@ -73,7 +93,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.setCategory(id, null); pickCategory = false }) { Text("Guess it", color = WalletAccent) } },
+        confirmButton = { TextButton(onClick = { vm.setMoneyCategory(id, null); vm.setCategory(id, null); pickCategory = false }) { Text("Guess it", color = WalletAccent) } },
         dismissButton = { TextButton(onClick = { pickCategory = false }) { Text("Cancel") } },
     )
     var note by rememberSaveable(id) { mutableStateOf(r.note) }
@@ -120,10 +140,12 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
                         Brands.shopName(r.shop)?.takeIf { it != ReceiptStats.title(r) }?.let { Text(it, color = StrideColors.Dim, fontSize = 12.sp) }
                     }
                     val cat = Brands.category(r)
+                    val mc = moneyCat
                     TextButton(onClick = { pickCategory = true }) {
-                        Icon(categoryIcon(cat), null, tint = Color(cat.color), modifier = Modifier.size(16.dp))
+                        if (mc != null) Box(Modifier.size(10.dp).background(Color(mc.color), CircleShape))
+                        else Icon(categoryIcon(cat), null, tint = Color(cat.color), modifier = Modifier.size(16.dp))
                         Spacer(Modifier.size(6.dp))
-                        Text(cat.label, color = Color(cat.color), fontSize = 12.sp)
+                        Text(mc?.name ?: cat.label, color = Color(mc?.color ?: cat.color), fontSize = 12.sp)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
