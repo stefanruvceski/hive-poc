@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wallet module: receipts are read from suf.purs.gov.rs; the barcode scanners come with Google Play services. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <!-- Download the scanner models with the app, so the first scan doesn't wait for them. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode,barcode_ui" />
+    </application>
+</manifest>

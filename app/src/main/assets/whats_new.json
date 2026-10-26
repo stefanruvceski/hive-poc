@@ -3,11 +3,49 @@
     "id": "2026-10-26-gym-day-review",
     "title": "A smarter gym day 🏋️",
     "items": [
-      {"icon": "strength", "text": "Every program exercise is now a kettlebell exercise with kettlebell steps. Where only a dumbbell photo exists, it says so; the movement is done with a bell."},
-      {"icon": "chart", "text": "Done now tells you how the day went: volume vs last time, records, kg per minute, and from the watch how long you worked and rested."},
-      {"icon": "speed", "text": "Strength days show your sets right under the verdict, with ↑ = ↓ against last time and ✓ On Garmin Connect once copied. The watch part no longer repeats the tiles at the top."},
-      {"icon": "spark", "text": "New per exercise: Last set to failure? Had more at 8+ reps means the next session suggests a heavier bell."},
-      {"icon": "heart", "text": "Form after a workout comes with a word: fresh, neutral, training or overloaded."}
+      {
+        "icon": "strength",
+        "text": "Every program exercise is now a kettlebell exercise with kettlebell steps. Where only a dumbbell photo exists, it says so; the movement is done with a bell."
+      },
+      {
+        "icon": "chart",
+        "text": "Done now tells you how the day went: volume vs last time, records, kg per minute, and from the watch how long you worked and rested."
+      },
+      {
+        "icon": "speed",
+        "text": "Strength days show your sets right under the verdict, with ↑ = ↓ against last time and ✓ On Garmin Connect once copied. The watch part no longer repeats the tiles at the top."
+      },
+      {
+        "icon": "spark",
+        "text": "New per exercise: Last set to failure? Had more at 8+ reps means the next session suggests a heavier bell."
+      },
+      {
+        "icon": "heart",
+        "text": "Form after a workout comes with a word: fresh, neutral, training or overloaded."
+      }
+    ]
+  },
+  {
+    "id": "2026-10-26-wallet-brands-mani",
+    "title": "Wallet: logos, categories, Mani import 🧾",
+    "items": [
+      {"icon": "palette", "text": "Receipts show the shop's logo and its everyday name (NIS, Lukoil, Gigatron…) instead of the long company name."},
+      {"icon": "chart", "text": "Spending per week with the weekly average, and the month by Shops or by Categories (fuel, groceries, tech, home, clothes, sport, pharmacy…). Tap one to see its receipts; change a receipt's category by tapping it."},
+      {"icon": "spark", "text": "Save receipts with the star and find them under ★ Saved."},
+      {"icon": "apps", "text": "Coming from Mani? ⋮ › Import from Mani (CSV): its receipts and groups come in. Scan one of them later and the full receipt with its items replaces it."},
+      {"icon": "palette", "text": "Loyalty cards know common programs (Moj Maxi, Lidl Plus, SuperKartica, Laguna, Vulkan…): their color, logo and whether the till reads a QR code or a barcode. Add a photo of the card to see it as it really looks."}
+    ]
+  },
+  {
+    "id": "2026-10-26-wallet",
+    "title": "New app: Wallet 🧾",
+    "items": [
+      {"icon": "apps", "text": "Wallet joins Hive, with two tabs: Receipts and Cards."},
+      {"icon": "spark", "text": "Scan the QR code on any Serbian fiscal receipt (or pick a photo or screenshot, or paste the link). Hive asks the tax office for it and keeps the shop, the date, the payment, every item and the total. Offline? It's saved and read later."},
+      {"icon": "chart", "text": "Fuel receipts show liters and the price per liter. Receipts tab: spending and liters per month, your top shops, search over shops and items."},
+      {"icon": "apps", "text": "Personal or company: a receipt issued to a company (its PIB on the receipt) is marked as that company's. Filter Personal or by company, name each company once, or change who a receipt is for."},
+      {"icon": "bell", "text": "Warranties: add one to anything you bought (6 months to 5 years, or your own length). Hive shows how long each still runs, warns in its last month and lists them all on the Receipts tab."},
+      {"icon": "palette", "text": "Loyalty cards: scan the card's barcode, read it from a photo, or type the number. At the till Hive shows the same barcode at full brightness, so the plastic can stay at home. Cards are panes of tinted glass, like the rest of Hive."}
     ]
   },
   {
