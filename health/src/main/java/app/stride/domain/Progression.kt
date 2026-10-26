@@ -31,6 +31,8 @@ object Progression {
         if (last == null || last.weightKg <= 0 || last.reps <= 0) return null
         return when {
             last.reps >= REP_MAX -> Hint.GoHeavier(last.weightKg, last.reps, nextBell(last.weightKg))
+            // 8+ reps that didn't reach failure: the program trains to failure at 6–10, so the bell is too light.
+            last.toFailure == false && last.reps >= 8 -> Hint.GoHeavier(last.weightKg, last.reps, nextBell(last.weightKg))
             last.reps < REP_MIN -> lighterBell(last.weightKg)?.let { Hint.GoLighter(last.weightKg, last.reps, it) }
             else -> Hint.AddRep(last.weightKg, last.reps)
         }

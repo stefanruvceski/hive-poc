@@ -77,31 +77,32 @@ object DefaultPlan {
         PlanDay(7, DayKind.STRENGTH_SHOULDERS_CORE, "Shoulders, arms, core + sauna", "06:00", sauna = true),
     )
 
+    /** Kettlebell first: every preset is a kettlebell exercise; dumbbells or machines only where no bell move hits the muscle. */
     fun presets(kind: DayKind): List<Preset> = when (kind) {
         DayKind.STRENGTH_LEGS -> listOf(
             Preset("Goblet or front squat", "Quads", "Goblet_Squat"),
-            Preset("Bulgarian split squat", "Quads", "Split_Squat_with_Dumbbells"),
+            Preset("Bulgarian split squat", "Quads", "KB_Bulgarian_Split_Squat"),
             Preset("Single-leg Romanian deadlift", "Hamstrings", "Kettlebell_One-Legged_Deadlift"),
-            Preset("Kettlebell swing", "Hamstrings", "One-Arm_Kettlebell_Swings"),
-            Preset("Single-leg calf raise (step, KB in hand)", "Calves", "Calf_Raise_On_A_Dumbbell"),
+            Preset("Kettlebell swing", "Hamstrings", "KB_Swing_Two_Hand"),
+            Preset("Single-leg calf raise (step, KB in hand)", "Calves", "KB_Calf_Raise"),
         )
         DayKind.STRENGTH_UPPER -> listOf(
             Preset("Kettlebell floor press", "Chest", "One-Arm_Kettlebell_Floor_Press"),
-            Preset("Push-ups on kettlebells", "Chest", "Pushups"),
-            Preset("Kettlebell floor fly", "Chest", "Dumbbell_Flyes"),
+            Preset("Push-ups on kettlebells", "Chest", "KB_Push_Up"),
+            Preset("Kettlebell floor fly", "Chest", "KB_Chest_Fly"),
             Preset("Single-arm row", "Back", "One-Arm_Kettlebell_Row"),
-            Preset("Kettlebell pullover", "Back", "Bent-Arm_Dumbbell_Pullover"),
+            Preset("Kettlebell pullover", "Back", "KB_Pullover"),
             Preset("Turkish get-up", "Core", "Kettlebell_Turkish_Get-Up_Squat_style"),
             Preset("Windmill or suitcase carry", "Core", "Kettlebell_Windmill"),
         )
         DayKind.STRENGTH_SHOULDERS_CORE -> listOf(
-            Preset("Single-arm overhead press", "Shoulders", "Dumbbell_One-Arm_Shoulder_Press"),
-            Preset("Lateral raise", "Shoulders", "Side_Lateral_Raise"),
-            Preset("Bent-over rear delt raise", "Shoulders", "Seated_Bent-Over_Rear_Delt_Raise"),
-            Preset("Kettlebell curl", "Biceps", "Dumbbell_Bicep_Curl"),
-            Preset("Hammer curl (KB by the horns)", "Biceps", "Hammer_Curls"),
-            Preset("Close-grip floor press", "Triceps", "Close-Grip_Dumbbell_Press"),
-            Preset("Overhead triceps extension", "Triceps", "Standing_Dumbbell_Triceps_Extension"),
+            Preset("Single-arm overhead press", "Shoulders", "KB_Single_Arm_Overhead_Press"),
+            Preset("Lateral raise", "Shoulders", "KB_Lateral_Raise"),
+            Preset("Bent-over rear delt raise", "Shoulders", "KB_Rear_Delt_Fly"),
+            Preset("Kettlebell curl", "Biceps", "KB_Bicep_Curl"),
+            Preset("Hammer curl (KB by the horns)", "Biceps", "KB_Hammer_Curl_Horns"),
+            Preset("Close-grip floor press", "Triceps", "KB_Close_Grip_Floor_Press"),
+            Preset("Overhead triceps extension", "Triceps", "KB_Overhead_Triceps_Extension"),
             Preset("Windmill or Turkish get-up", "Core", "Kettlebell_Windmill"),
         )
         else -> emptyList()
@@ -120,7 +121,12 @@ object DefaultPlan {
     }
 }
 
-data class Preset(val name: String, val group: String, val dbId: String? = null)
+data class Preset(val name: String, val group: String, val dbId: String? = null) {
+    companion object {
+        /** The program's library entry for an exercise named like a preset (sessions saved before a preset changed keep up). */
+        fun dbIdFor(name: String): String? = DayKind.entries.flatMap { DefaultPlan.presets(it) }.firstOrNull { it.name.equals(name.trim(), true) }?.dbId
+    }
+}
 
 @Serializable
 data class Settings(
@@ -387,6 +393,8 @@ data class ExerciseEntry(
     val dbId: String? = null,
     /** Reps are per side (single-arm / single-leg); null = guessed from the name ([guessPerSide]). */
     val perSide: Boolean? = null,
+    /** Whether the last working set went to failure; false = it stopped short (the weight is too light). Null = not said. */
+    val toFailure: Boolean? = null,
 ) {
     val isPerSide: Boolean get() = perSide ?: guessPerSide(name)
 
@@ -442,6 +450,12 @@ data class StrengthSession(
     val note: String = "",
     /** False while a workout is in progress in workout mode. */
     val finished: Boolean = true,
+    /** When the sets were copied into the watch's Garmin activity (ISO instant), null = not yet. */
+    val garminSyncedAt: String? = null,
+    /** From the watch's sets on Garmin: seconds working, seconds resting and the number of rests. */
+    val workSec: Int? = null,
+    val restSec: Int? = null,
+    val rests: Int? = null,
 ) {
     val volume: Double get() = exercises.sumOf { it.volume }
 
