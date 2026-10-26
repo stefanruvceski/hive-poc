@@ -112,11 +112,13 @@ import app.stride.domain.fmtDur
 import app.stride.domain.fmtKg
 import app.stride.domain.parseNum
 import app.stride.domain.planFor
+import app.stride.domain.StrengthReview
 import app.stride.model.AppData
 import app.stride.model.DayKind
 import app.stride.model.DefaultPlan
 import app.stride.model.ExerciseEntry
 import app.stride.model.SetEntry
+import app.stride.model.Preset
 import app.stride.model.StrengthSession
 import app.stride.ui.AppViewModel
 import app.stride.ui.FCard
@@ -140,7 +142,7 @@ private fun lastWeight(data: AppData, name: String): Double? =
 private fun newSession(data: AppData, date: LocalDate, kind: DayKind): StrengthSession {
     val last = data.strength.filter { it.kind == kind && it.logged && it.date < date.toString() }.maxByOrNull { it.date }
     val deload = isDeload(data, date)
-    val base = last?.exercises?.map { e -> e.copy(done = false) to e.workingSets.map { it.copy(done = false) } }
+    val base = last?.exercises?.map { e -> e.copy(done = false, dbId = Preset.dbIdFor(e.name) ?: e.dbId) to e.workingSets.map { it.copy(done = false) } }
         ?: DefaultPlan.presets(kind).map { p ->
             val kg = lastWeight(data, p.name) ?: 16.0
             ExerciseEntry(p.name, p.group, dbId = p.dbId, done = false) to List(2) { SetEntry(kg, 8) }
@@ -206,8 +208,18 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
 
     BackHandler(enabled = open != null) { open = null }
 
-    fun libFor(e: ExerciseEntry): LibraryExercise? =
-        e.dbId?.let { id -> library.firstOrNull { it.id == id } } ?: ExerciseMatcher.best(library, e.name)
+    fun libFor(e: ExerciseEntry): LibraryExercise? {
+        val own = e.dbId?.let { id -> library.firstOrNull { it.id == id } }
+        // Program exercises use the kettlebell entry, also in sessions saved when the program pointed at dumbbell pictures.
+        val preset = Preset.dbIdFor(e.name)?.let { id -> library.firstOrNull { it.id == id } }
+        return (if (own?.isKettlebell == true) own else preset ?: own) ?: ExerciseMatcher.best(library, e.name)
+    }
+
+    /** True when [lib] borrows its photos from a dumbbell (or other) exercise: the steps are for the bell. */
+    fun borrowedPhoto(lib: LibraryExercise?): Boolean =
+        lib != null && lib.isKettlebell && lib.img != null && library.firstOrNull { it.id == lib.img }?.isKettlebell == false
+
+    fun trendFor(e: ExerciseEntry): StrengthReview.Trend? = StrengthReview.trend(e, StrengthReview.before(data.strength, session, e))
 
     /** A record this exercise sets against all earlier sessions, if any. */
     fun recordFor(e: ExerciseEntry): Records.Record? =
@@ -268,6 +280,7 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
             ExerciseDetail(
                 e = current,
                 lib = libFor(current),
+                borrowedPhoto = borrowedPhoto(libFor(current)),
                 last = Progression.lastEntry(data.strength.filter { it.logged }, current.name, date.toString(), session.id),
                 padding = padding,
                 nextName = next?.value?.name,
@@ -289,6 +302,7 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
                 padding = padding,
                 libFor = ::libFor,
                 recordFor = ::recordFor,
+                trendFor = ::trendFor,
                 deload = isDeload(data, date),
                 onOpen = { open = it },
                 onKind = { k ->
@@ -353,6 +367,7 @@ private fun WorkoutList(
     padding: PaddingValues,
     libFor: (ExerciseEntry) -> LibraryExercise?,
     recordFor: (ExerciseEntry) -> Records.Record?,
+    trendFor: (ExerciseEntry) -> StrengthReview.Trend?,
     deload: Boolean,
     onOpen: (Int) -> Unit,
     onKind: (DayKind) -> Unit,
@@ -402,7 +417,7 @@ private fun WorkoutList(
         }
 
         itemsIndexed(session.exercises) { i, e ->
-            ExerciseRow(e, libFor(e), recordFor(e) != null) { onOpen(i) }
+            ExerciseRow(e, libFor(e), recordFor(e) != null, trendFor(e)) { onOpen(i) }
         }
 
         item {
@@ -447,7 +462,7 @@ private fun WorkoutList(
 }
 
 @Composable
-private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, record: Boolean, onClick: () -> Unit) {
+private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, record: Boolean, trend: StrengthReview.Trend?, onClick: () -> Unit) {
     val sets = e.workingSets.ifEmpty { e.expandedSets() }
     val kgs = sets.map { it.kg }.distinct()
     val summary = "${sets.size} × ${sets.map { it.reps }.distinct().joinToString("/")}" + (if (e.isPerSide) " / side" else "") +
@@ -470,7 +485,10 @@ private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, record: Boolean
                     color = StrideColors.Text,
                     maxLines = 2,
                 )
-                Text(summary, style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(summary, style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+                    if (trend != null && e.done) Text("  ${trend.arrow} vs last", style = MaterialTheme.typography.bodySmall, color = trendColor(trend))
+                }
             }
             Icon(
                 if (e.done) Icons.Filled.CheckCircle else Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -487,6 +505,7 @@ private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, record: Boolean
 private fun ExerciseDetail(
     e: ExerciseEntry,
     lib: LibraryExercise?,
+    borrowedPhoto: Boolean,
     last: ExerciseEntry?,
     padding: PaddingValues,
     nextName: String?,
@@ -513,8 +532,12 @@ private fun ExerciseDetail(
                 if (e.group.isNotEmpty()) Text(e.group.uppercase(), style = MaterialTheme.typography.labelMedium, color = StrideColors.Accent)
                 Text(e.name, style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.ExtraBold), color = StrideColors.Text)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    lib?.let { Text("Picture: ${it.name}", style = MaterialTheme.typography.bodySmall, color = StrideColors.Faint, modifier = Modifier.weight(1f)) }
-                        ?: Spacer(Modifier.weight(1f))
+                    lib?.let {
+                        Text(
+                            if (borrowedPhoto) "Photo shows the dumbbell version; do it with a kettlebell" else "Picture: ${it.name}",
+                            style = MaterialTheme.typography.bodySmall, color = if (borrowedPhoto) StrideColors.Dim else StrideColors.Faint, modifier = Modifier.weight(1f),
+                        )
+                    } ?: Spacer(Modifier.weight(1f))
                     app.stride.ui.Chip(if (e.isPerSide) "Per side ✓" else "Per side", e.isPerSide) { onChange { it.copy(perSide = !it.isPerSide) } }
                     TextButton(onClick = onHistory) { Text("History") }
                     TextButton(onClick = onPickPicture) {
@@ -591,6 +614,14 @@ private fun ExerciseDetail(
                         }
                     }
                 }
+            }
+        }
+        item {
+            // The program trains to failure at 6–10 reps: a set that stopped short means the bell is too light next time.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Last set to failure?", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Dim, modifier = Modifier.weight(1f))
+                app.stride.ui.Chip("Yes", e.toFailure == true) { onChange { it.copy(toFailure = if (it.toFailure == true) null else true) } }
+                app.stride.ui.Chip("Had more", e.toFailure == false) { onChange { it.copy(toFailure = if (it.toFailure == false) null else false) } }
             }
         }
         item {
@@ -886,4 +917,10 @@ private fun vibrate(context: Context) {
         }
         vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400, 200, 600), -1))
     }
+}
+
+internal fun trendColor(t: StrengthReview.Trend) = when (t) {
+    StrengthReview.Trend.UP -> StrideColors.Accent
+    StrengthReview.Trend.SAME -> StrideColors.Dim
+    StrengthReview.Trend.DOWN -> StrideColors.Warn
 }

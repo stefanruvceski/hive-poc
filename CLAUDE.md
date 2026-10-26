@@ -164,6 +164,12 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   After a workout, `GarminSets` (tested) copies the phone's sets (reps, kg, exercise) into the watch's strength activity
   that day (activitylist search → `activity-service/activity/{id}/exerciseSets` GET/PUT; watch timing and rests kept,
   extra watch sets dropped, extra phone sets appended); automatic on Finish, or "Copy sets to Garmin" on the Day screen.
+- Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last
+  session of the same kind, records, kg/min, work/rest from the watch (`StrengthSession.workSec/restSec/rests`, saved with
+  `garminSyncedAt` when sets are copied). Strength days put the sets card right under the verdict; `ActivityDetails(compact)`
+  drops what the key tiles show and the HR zones. `ExerciseEntry.toFailure == false` at 8+ reps → `Progression` says heavier.
+- Kettlebell first: every preset is a kettlebell library entry (`PresetsTest`); `KB_*` entries borrow photos where the DB has
+  no kettlebell one (the workout says "Photo shows the dumbbell version"); `Preset.dbIdFor` moves old sessions to the new ids.
 - Per-side exercises: `ExerciseEntry.perSide` (null = `guessPerSide` from the name: single-arm/leg, split squat, lunge…);
   reps are per side, volume counts both sides, the Garmin step note says "per side".
 - Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).

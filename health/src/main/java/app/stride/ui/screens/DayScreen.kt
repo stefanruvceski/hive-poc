@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import app.stride.domain.StrengthReview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -157,6 +158,20 @@ fun DayScreen(
 
             result.verdict?.let { v -> item { VerdictCard(v) } }
 
+            // Strength days: the sets from the phone right under the verdict; sleep and recovery after them.
+            val strengthDay = plan?.kind?.isStrength == true
+            if (strengthDay) {
+                item { SectionLabel("Strength · sets from the phone", Modifier.padding(start = 4.dp, top = 6.dp)) }
+                item {
+                    val s = result.strength
+                    StrengthCard(
+                        s, data.strength, onEdit = { onStrength(date, s?.id) }, canAdd = !date.isAfter(today),
+                        onCopy = if (garminUi.connected && s != null && s.finished) ({ vm.copySetsToGarmin(s) }) else null,
+                        copying = garminUi.busy,
+                    )
+                }
+            }
+
             data.sleep.firstOrNull { it.date == date.toString() }?.let { n -> item { SleepCard(n, data.sleep, date) } }
             if (data.sleep.isEmpty()) {
                 item { SleepSetupNote(data.settings.healthConnect) }
@@ -176,20 +191,6 @@ fun DayScreen(
                 }
             }
 
-            // Strength days: the sets from the phone first, then what the watch measured (time, heart rate, load).
-            val strengthDay = plan?.kind?.isStrength == true
-            if (strengthDay) {
-                item { SectionLabel("Strength · sets from the phone", Modifier.padding(start = 4.dp, top = 6.dp)) }
-                item {
-                    val s = result.strength
-                    StrengthCard(
-                        s, onEdit = { onStrength(date, s?.id) }, canAdd = !date.isAfter(today),
-                        onCopy = if (garminUi.connected && s != null && s.finished) ({ vm.copySetsToGarmin(s) }) else null,
-                        copying = garminUi.busy,
-                    )
-                }
-            }
-
             // Below: everything else intervals.icu knows, grouped into cards.
             result.matched.forEachIndexed { i, a ->
                 item(key = "h-" + a.id) {
@@ -203,7 +204,7 @@ fun DayScreen(
                     )
                 }
                 if (i > 0) item(key = "k-" + a.id) { KeyStats(a) }
-                item(key = a.id) { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { ActivityDetails(a) } }
+                item(key = a.id) { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { ActivityDetails(a, compact = strengthDay && i == 0) } }
             }
 
             result.extra.forEach { a ->
@@ -281,7 +282,7 @@ private fun RepsCard(reps: List<Interval>) {
 }
 
 @Composable
-private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolean, onCopy: (() -> Unit)? = null, copying: Boolean = false) {
+private fun StrengthCard(s: StrengthSession?, all: List<StrengthSession>, onEdit: () -> Unit, canAdd: Boolean, onCopy: (() -> Unit)? = null, copying: Boolean = false) {
     FCard {
         if (s == null) {
             Text("No exercises logged yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -293,6 +294,9 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
             s.exercises.forEach { e ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Text(e.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    StrengthReview.trend(e, StrengthReview.before(all, s, e))?.let { t ->
+                        Text(t.arrow + " ", style = MaterialTheme.typography.bodyLarge, color = trendColor(t))
+                    }
                     Text(
                         (if (e.weightKg > 0) "${fmtKg(e.weightKg)} kg · " else "") + "${e.sets}×${e.reps}" + if (e.isPerSide) " / side" else "",
                         style = MaterialTheme.typography.bodyLarge,
@@ -308,6 +312,10 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
                     Text("Sauna" + if (s.saunaMinutes > 0) " ${s.saunaMinutes} min" else "", style = MaterialTheme.typography.bodyMedium)
                 }
             }
+            StrengthReview.restLine(s)?.let {
+                Spacer(Modifier.height(6.dp))
+                Text("From the watch: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (s.note.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Text(s.note, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -315,9 +323,15 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
             Spacer(Modifier.height(10.dp))
             if (s.finished) FilledTonalButton(onClick = onEdit) { Text("Open workout") }
             else Button(onClick = onEdit) { Text("Continue workout · ${s.exercises.count { it.done }}/${s.exercises.size}") }
+            if (s.garminSyncedAt != null) {
+                Spacer(Modifier.height(6.dp))
+                Text("✓ On Garmin Connect", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Accent)
+            }
             if (onCopy != null) {
-                androidx.compose.material3.TextButton(onClick = onCopy, enabled = !copying) { Text(if (copying) "Updating Garmin…" else "Copy sets to Garmin") }
-                Text(
+                androidx.compose.material3.TextButton(onClick = onCopy, enabled = !copying) {
+                    Text(if (copying) "Updating Garmin…" else if (s.garminSyncedAt != null) "Copy again" else "Copy sets to Garmin")
+                }
+                if (s.garminSyncedAt == null) Text(
                     "Puts these reps and weights into the watch's activity on Garmin Connect; its time and heart rate stay.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
