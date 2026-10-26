@@ -4,4 +4,6 @@
     <cache-path name="updates" path="updates/" />
     <!-- Share images handed to other apps. -->
     <cache-path name="share" path="share/" />
+    <!-- Photos of receipts taken for "verify without QR" (read on the phone, then deleted). -->
+    <cache-path name="camera" path="camera/" />
 </paths>

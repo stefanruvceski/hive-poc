@@ -65,6 +65,8 @@ data class Receipt(
     val category: String? = null,
     /** Where it came from when not scanned: "mani" for a Mani CSV import (no items, no QR link). */
     val source: String? = null,
+    /** Kilometres on the odometer at this fill-up (fuel receipts), for L/100 km. */
+    val odometer: Int? = null,
 )
 
 /** A warranty on something bought with a receipt; it runs from the receipt's date. */
@@ -110,6 +112,8 @@ data class LoyaltyCard(
     val uses: Int = 0,
     /** A photo of the card's front (file name in the app's card folder), shown as the tile. */
     val image: String? = null,
+    /** Kept at the top of the list (and on the widget), whatever was used last. */
+    val pinned: Boolean = false,
 )
 
 /** Everything Wallet stores (wallet.json), on the phone only. */

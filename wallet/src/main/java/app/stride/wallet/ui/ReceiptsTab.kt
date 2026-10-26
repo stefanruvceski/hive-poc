@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -90,6 +91,8 @@ fun ReceiptsTab(
     onPhoto: () -> Unit,
     onLink: () -> Unit,
     onImport: () -> Unit,
+    onNoQr: () -> Unit,
+    onFuel: () -> Unit,
     onReceipt: (String) -> Unit,
 ) {
     var month by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
@@ -125,6 +128,7 @@ fun ReceiptsTab(
                     )
                     Spacer(Modifier.height(12.dp))
                     AddButtons(onScan, onPhoto, onLink)
+                    TextButton(onClick = onNoQr, modifier = Modifier.fillMaxWidth()) { Text("QR code won't scan? Use the printed fields", color = StrideColors.Dim) }
                     TextButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text("Coming from Mani? Import its CSV export", color = StrideColors.Dim) }
                 }
             }
@@ -154,6 +158,11 @@ fun ReceiptsTab(
                     "${inMonth.size} receipt${if (inMonth.size == 1) "" else "s"}" + if (liters > 0) " · ${ReceiptStats.litersText(liters)} of fuel" else "",
                     color = StrideColors.Dim, fontSize = 13.sp,
                 )
+                if (d.receipts.any { ReceiptStats.fuel(it) != null }) TextButton(onClick = onFuel, contentPadding = PaddingValues(0.dp)) {
+                    Icon(Icons.Filled.LocalGasStation, null, tint = StrideColors.Amber, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Fuel diary ›", color = StrideColors.Amber, fontSize = 13.sp)
+                }
                 val weeks = ReceiptStats.weeks(mine, m)
                 if (weeks.any { it.second > 0 }) {
                     Spacer(Modifier.height(10.dp))

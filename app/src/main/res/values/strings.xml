@@ -6,4 +6,6 @@
     <string name="shortcut_weight_long">Log your weight</string>
     <string name="shortcut_today_short">Today</string>
     <string name="shortcut_today_long">Open today</string>
+    <string name="shortcut_cards_short">Cards</string>
+    <string name="shortcut_cards_long">Show a loyalty card</string>
 </resources>

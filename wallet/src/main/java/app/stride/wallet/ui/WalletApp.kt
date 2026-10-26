@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
@@ -106,7 +107,9 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         if (open.id == 0) return@LaunchedEffect
         when (open.target) {
             "scan" -> scanReceipt()
-            "cards", "receipts" -> tab = open.target
+            "cards", "receipts" -> { stack.clear(); tab = open.target }
+            "noqr", "fuel" -> push(open.target)
+            else -> if (open.target.startsWith("card:")) { stack.clear(); tab = "cards"; push(open.target) }
         }
     }
 
@@ -129,6 +132,8 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         BackHandler { pop() }
         when {
             route.startsWith("receipt:") -> route.removePrefix("receipt:").let { id -> ReceiptScreen(vm, d, id, id in loading, ::pop) }
+            route == "noqr" -> NoQrScreen(vm, onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
+            route == "fuel" -> FuelScreen(d, onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route.startsWith("card:") -> CardScreen(vm, d, route.removePrefix("card:"), onEdit = { push("edit:" + route.removePrefix("card:")) }, onBack = ::pop)
             route == "new-card" -> CardForm(LoyaltyCard("", "", ""), onSave = { c -> val id = vm.saveCard(c); pop(); push("card:$id") }, onBack = ::pop)
             route.startsWith("edit:") -> {
@@ -153,6 +158,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                         Box {
                             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More ways to add", tint = StrideColors.Dim) }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(text = { Text("Receipt without QR") }, leadingIcon = { Icon(Icons.Filled.CameraAlt, null) }, onClick = { menu = false; push("noqr") })
                                 DropdownMenuItem(text = { Text("Receipt from a photo") }, leadingIcon = { Icon(Icons.Filled.Image, null) }, onClick = { menu = false; pickPhoto() })
                                 DropdownMenuItem(text = { Text("Paste a receipt link") }, leadingIcon = { Icon(Icons.Filled.Link, null) }, onClick = { menu = false; askLink = true })
                                 DropdownMenuItem(text = { Text("Import from Mani (CSV)") }, leadingIcon = { Icon(Icons.Filled.FileDownload, null) }, onClick = { menu = false; importMani() })
@@ -171,6 +177,6 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         },
     ) { padding ->
         if (tab == "cards") CardsTab(d, padding, onCard = { push("card:$it") }, onAdd = { push("new-card") })
-        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onReceipt = { push("receipt:$it") })
+        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onNoQr = { push("noqr") }, onFuel = { push("fuel") }, onReceipt = { push("receipt:$it") })
     }
 }

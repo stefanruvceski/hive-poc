@@ -40,4 +40,17 @@
             <extra android:name="app.stride.OPEN" android:value="today" />
         </intent>
     </shortcut>
+    <shortcut
+        android:shortcutId="cards"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_cards"
+        android:shortcutShortLabel="@string/shortcut_cards_short"
+        android:shortcutLongLabel="@string/shortcut_cards_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.stride"
+            android:targetClass="app.stride.MainActivity">
+            <extra android:name="app.stride.OPEN" android:value="wallet/cards" />
+        </intent>
+    </shortcut>
 </shortcuts>
