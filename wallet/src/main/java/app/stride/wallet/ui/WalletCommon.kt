@@ -1,6 +1,14 @@
 package app.stride.wallet.ui
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import app.stride.wallet.domain.Brands
+import app.stride.wallet.model.Receipt
+import coil.compose.AsyncImage
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +32,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocalGasStation
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Chair
+import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.LocalPharmacy
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -154,4 +174,46 @@ fun WalletScreen(
 @Composable
 fun Caps(text: String, color: Color = StrideColors.Dim, modifier: Modifier = Modifier) {
     Text(text.uppercase(), color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = modifier)
+}
+
+/**
+ * A shop's logo in a white circle (from its website, via Google's favicon service), or its initials
+ * on its brand color when the chain isn't known or the logo can't load.
+ */
+@Composable
+fun ShopLogo(r: Receipt, size: Int = 40) {
+    val brand = Brands.of(r)
+    val name = Brands.title(r)
+    LogoCircle(name, brand?.domain, brand?.color ?: Brands.category(r).color, size)
+}
+
+@Composable
+fun LogoCircle(name: String, domain: String?, color: Long, size: Int) {
+    var failed by remember(domain) { mutableStateOf(domain == null) }
+    Box(
+        Modifier.size(size.dp).clip(CircleShape).background(if (failed) Color(color).copy(alpha = 0.85f) else Color.White)
+            .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (failed) Text(Brands.initials(name), color = Color.White, fontSize = (size * 0.36f).sp, fontWeight = FontWeight.ExtraBold)
+        else AsyncImage(
+            model = Brands.logoUrl(domain!!), contentDescription = null, contentScale = ContentScale.Fit,
+            modifier = Modifier.size((size * 0.62f).dp), onError = { failed = true },
+        )
+    }
+}
+
+fun categoryIcon(c: app.stride.wallet.domain.Category): androidx.compose.ui.graphics.vector.ImageVector = when (c) {
+    app.stride.wallet.domain.Category.FUEL -> Icons.Filled.LocalGasStation
+    app.stride.wallet.domain.Category.GROCERIES -> Icons.Filled.ShoppingCart
+    app.stride.wallet.domain.Category.FOOD -> Icons.Filled.Restaurant
+    app.stride.wallet.domain.Category.TECH -> Icons.Filled.Devices
+    app.stride.wallet.domain.Category.HOME -> Icons.Filled.Chair
+    app.stride.wallet.domain.Category.CLOTHES -> Icons.Filled.Checkroom
+    app.stride.wallet.domain.Category.SPORT -> Icons.Filled.SportsSoccer
+    app.stride.wallet.domain.Category.HEALTH -> Icons.Filled.LocalPharmacy
+    app.stride.wallet.domain.Category.KIDS -> Icons.Filled.ChildCare
+    app.stride.wallet.domain.Category.PETS -> Icons.Filled.Pets
+    app.stride.wallet.domain.Category.BOOKS -> Icons.AutoMirrored.Filled.MenuBook
+    app.stride.wallet.domain.Category.OTHER -> Icons.Filled.Category
 }

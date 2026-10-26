@@ -6,6 +6,10 @@ import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.layout.ContentScale
+import app.stride.wallet.data.CardImages
+import app.stride.wallet.domain.Brands
+import coil.compose.AsyncImage
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -112,18 +116,31 @@ fun CardTile(c: LoyaltyCard, modifier: Modifier = Modifier, onClick: (() -> Unit
                 )
             }
             .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))), shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(16.dp),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
-        val shadow = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 1f), 6f)
-        Text(
-            c.name.ifBlank { "Card" }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            style = TextStyle(shadow = shadow),
-        )
-        Text(
-            c.number.takeLast(4).let { if (c.number.length > 4) "•••• $it" else it }, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace, style = TextStyle(shadow = shadow), modifier = Modifier.align(Alignment.BottomStart),
-        )
+        val context = LocalContext.current
+        if (c.image != null) {
+            // The card's own photo, edge to edge, under the same glass edge.
+            AsyncImage(
+                model = CardImages.file(context, c.image), contentDescription = c.name, contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+            return@Box
+        }
+        Box(Modifier.matchParentSize().padding(16.dp)) {
+            Brands.card(c.name)?.domain?.let { d ->
+                Box(Modifier.align(Alignment.TopEnd)) { LogoCircle(c.name, d, c.color, 30) }
+            }
+            val shadow = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 1f), 6f)
+            Text(
+                c.name.ifBlank { "Card" }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                style = TextStyle(shadow = shadow), modifier = Modifier.padding(end = 36.dp),
+            )
+            Text(
+                c.number.takeLast(4).let { if (c.number.length > 4) "•••• $it" else it }, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace, style = TextStyle(shadow = shadow), modifier = Modifier.align(Alignment.BottomStart),
+            )
+        }
     }
 }
 

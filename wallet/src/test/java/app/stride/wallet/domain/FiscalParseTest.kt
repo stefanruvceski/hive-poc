@@ -130,6 +130,6 @@ class FiscalParseTest {
         val f = ReceiptStats.fuel(r)!!
         assertEquals(40.0, f.liters, 1e-9)
         assertEquals(205.0, f.pricePerLiter, 1e-9)
-        assertEquals("BS BEOGRAD 5", ReceiptStats.title(r))
+        assertEquals("NIS", ReceiptStats.title(r))
     }
 }

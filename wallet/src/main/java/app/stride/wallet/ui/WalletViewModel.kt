@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.stride.wallet.data.FiscalClient
 import app.stride.wallet.data.WalletStore
+import app.stride.wallet.data.CardImages
 import app.stride.wallet.domain.FiscalParse
+import app.stride.wallet.domain.ManiImport
 import app.stride.wallet.model.Company
 import app.stride.wallet.model.LoyaltyCard
 import app.stride.wallet.model.Receipt
@@ -81,7 +83,19 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 FiscalClient.Answer.Offline -> { x -> x.copy(status = if (x.status == ReceiptStatus.OK) x.status else ReceiptStatus.PENDING, error = "No connection. It will be read when you're online.") }
             }
-            update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) next(it) else it }) }
+            update { d ->
+                val fetched = d.receipts.firstOrNull { it.id == id }?.let(next) ?: return@update d
+                // A receipt imported from Mani and now scanned: keep the full one, with what the user added to the import.
+                val imported = d.receipts.firstOrNull { it.id != id && it.source != null && ManiImport.same(it, fetched) }
+                val merged = if (imported == null) fetched else fetched.copy(
+                    note = fetched.note.ifBlank { imported.note },
+                    starred = fetched.starred || imported.starred,
+                    category = fetched.category ?: imported.category,
+                    warranties = fetched.warranties + imported.warranties,
+                    buyerTin = fetched.buyerTin ?: imported.buyerTin,
+                )
+                d.copy(receipts = d.receipts.filter { it.id != imported?.id }.map { if (it.id == id) merged else it })
+            }
             _loading.value = _loading.value - id
         }
     }
@@ -99,11 +113,37 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     /** Who a receipt is for, set by hand: a company's PIB, or null for personal. */
     fun setOwner(id: String, pib: String?) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(buyerTin = pib?.trim()?.ifEmpty { null }, ownerManual = true) else it }) }
 
-    /** Names a company by its PIB (an empty name forgets it). */
+    /**
+     * Names a company by its PIB (an empty name forgets it). Naming a real PIB like a Mani group ("Obsidian IT")
+     * moves that group's imported receipts to the PIB.
+     */
     fun nameCompany(pib: String, name: String) = update { d ->
-        val rest = d.companies.filter { it.pib != pib }
-        d.copy(companies = if (name.isBlank()) rest else rest + Company(pib, name.trim()))
+        val n = name.trim()
+        val group = d.companies.firstOrNull { ManiImport.isGroup(it.pib) && !ManiImport.isGroup(pib) && it.name.equals(n, ignoreCase = true) }
+        val rest = d.companies.filter { it.pib != pib && it.pib != group?.pib }
+        d.copy(
+            companies = if (n.isEmpty()) rest else rest + Company(pib, n),
+            receipts = if (group == null) d.receipts else d.receipts.map { if (it.buyerTin == group.pib) it.copy(buyerTin = pib) else it },
+        )
     }
+
+    /** Adds the receipts of a Mani CSV export; returns a line for the user. */
+    fun importMani(text: String): String {
+        if (!ManiImport.looksLikeMani(text)) return "That isn't a Mani export (Profile › Preuzimanje računa)."
+        val res = ManiImport.parse(text, _data.value.receipts, { id("rcp") }, now()) ?: return "Nothing could be read from that file."
+        update { d -> d.copy(receipts = d.receipts + res.receipts, companies = d.companies + res.companies.filter { c -> d.companies.none { it.pib == c.pib } }) }
+        return buildString {
+            append("Imported ${res.receipts.size} receipt${if (res.receipts.size == 1) "" else "s"}")
+            if (res.duplicates > 0) append(", ${res.duplicates} already here")
+            if (res.skipped > 0) append(", ${res.skipped} unreadable")
+            append(".")
+        }
+    }
+
+    fun toggleStar(id: String) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(starred = !it.starred) else it }) }
+
+    /** A category chosen by hand; null goes back to the guess. */
+    fun setCategory(id: String, category: String?) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(category = category) else it }) }
 
     fun addWarranty(receiptId: String, item: String, months: Int) {
         val w = Warranty(id("wty"), item.trim(), months)
@@ -123,11 +163,18 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     /** Adds or replaces a card; returns its id. */
     fun saveCard(c: LoyaltyCard): String {
         val x = if (c.id.isBlank()) c.copy(id = id("card"), addedAt = now()) else c
+        _data.value.cards.firstOrNull { it.id == x.id }?.image?.takeIf { it != x.image }?.let { CardImages.delete(getApplication<Application>(), it) }
         update { d -> if (d.cards.any { it.id == x.id }) d.copy(cards = d.cards.map { if (it.id == x.id) x else it }) else d.copy(cards = d.cards + x) }
         return x.id
     }
 
-    fun deleteCard(id: String) = update { d -> d.copy(cards = d.cards.filter { it.id != id }) }
+    fun deleteCard(id: String) {
+        _data.value.cards.firstOrNull { it.id == id }?.image?.let { CardImages.delete(getApplication<Application>(), it) }
+        update { d -> d.copy(cards = d.cards.filter { it.id != id }) }
+    }
+
+    /** Copies a picked photo of a card's front into the app (scaled down); returns its file name, null on failure. */
+    suspend fun saveCardImage(uri: android.net.Uri): String? = withContext(Dispatchers.IO) { CardImages.save(getApplication<Application>(), uri) }
 
     /** Opened at the till: moves the card up the list. */
     fun markUsed(id: String) = update { d -> d.copy(cards = d.cards.map { if (it.id == id) it.copy(lastUsed = now(), uses = it.uses + 1) else it }) }

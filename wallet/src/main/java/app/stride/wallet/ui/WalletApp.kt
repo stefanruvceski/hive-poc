@@ -13,9 +13,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,6 +92,15 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         }, onError = ::toast)
     }
     fun pickPhoto() = photo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    val maniFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val text = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() } }.getOrNull()
+            toast(if (text == null) "Couldn't open that file." else vm.importMani(text))
+            tab = "receipts"
+        }
+    }
+    fun importMani() = maniFile.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/vnd.ms-excel", "*/*"))
+    var menu by remember { mutableStateOf(false) }
 
     LaunchedEffect(open.id) {
         if (open.id == 0) return@LaunchedEffect
@@ -135,11 +149,15 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                 title = { Text(if (tab == "cards") "Cards" else "Wallet", style = MaterialTheme.typography.headlineSmall) },
                 actions = {
                     if (tab == "receipts") {
-                        if (d.receipts.isNotEmpty()) {
-                            IconButton(onClick = { askLink = true }) { Icon(Icons.Filled.Link, "Paste a receipt link", tint = StrideColors.Dim) }
-                            IconButton(onClick = ::pickPhoto) { Icon(Icons.Filled.Image, "Receipt from a photo", tint = StrideColors.Dim) }
-                        }
                         IconButton(onClick = ::scanReceipt) { Icon(Icons.Filled.QrCodeScanner, "Scan a receipt", tint = WalletAccent) }
+                        Box {
+                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More ways to add", tint = StrideColors.Dim) }
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(text = { Text("Receipt from a photo") }, leadingIcon = { Icon(Icons.Filled.Image, null) }, onClick = { menu = false; pickPhoto() })
+                                DropdownMenuItem(text = { Text("Paste a receipt link") }, leadingIcon = { Icon(Icons.Filled.Link, null) }, onClick = { menu = false; askLink = true })
+                                DropdownMenuItem(text = { Text("Import from Mani (CSV)") }, leadingIcon = { Icon(Icons.Filled.FileDownload, null) }, onClick = { menu = false; importMani() })
+                            }
+                        }
                     } else IconButton(onClick = { push("new-card") }) { Icon(Icons.Filled.Add, "Add a card", tint = WalletAccent) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -153,6 +171,6 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         },
     ) { padding ->
         if (tab == "cards") CardsTab(d, padding, onCard = { push("card:$it") }, onAdd = { push("new-card") })
-        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onReceipt = { push("receipt:$it") })
+        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onReceipt = { push("receipt:$it") })
     }
 }
