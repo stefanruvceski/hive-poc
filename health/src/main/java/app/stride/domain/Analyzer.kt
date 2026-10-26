@@ -248,7 +248,7 @@ object Analyzer {
         if (act != null) lines += "Garmin: ${fmtMin(act.movingTime)}, avg HR ${fmtHr(act.avgHr)}"
         return when {
             s == null -> Verdict(Level.OK, "Watch workout, exercises not logged", lines, "Log weights and sets to track progress.")
-            plan.sauna && !s.sauna -> Verdict(Level.OK, "Done, sauna not logged", lines)
+            // Sauna is optional: it counts toward the weekly sauna target, never against the workout day.
             else -> Verdict(Level.GOOD, "Done", lines)
         }
     }

@@ -12,6 +12,13 @@
     ]
   },
   {
+    "id": "2026-10-26-sauna-optional",
+    "title": "Sauna is optional",
+    "items": [
+      {"icon": "strength", "text": "A gym day is green when the workout is done; skipping the sauna no longer turns it orange. Saunas still count toward the weekly sauna target."}
+    ]
+  },
+  {
     "id": "2026-10-26-phone-sets-garmin",
     "title": "Your sets, on Garmin too ⌚",
     "items": [
