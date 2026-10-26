@@ -21,3 +21,12 @@
 -dontwarn com.github.victools.**
 -dontwarn java.lang.reflect.AnnotatedParameterizedType
 -dontwarn java.lang.reflect.AnnotatedType
+
+# Music (youtubedl-android): yt-dlp's JSON is read with Jackson, the library loads its parts by name.
+-keep class com.yausername.** { *; }
+-dontwarn com.yausername.**
+-keep class org.apache.commons.compress.** { *; }
+-dontwarn org.apache.commons.compress.**
+-dontwarn org.tukaani.xz.**
+-dontwarn org.brotli.**
+-dontwarn com.github.luben.zstd.**

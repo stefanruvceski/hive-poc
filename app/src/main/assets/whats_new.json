@@ -1,5 +1,27 @@
 [
   {
+    "id": "2026-10-26-music",
+    "title": "Music: Tempo moves into Hive 🎧",
+    "items": [
+      {
+        "icon": "music",
+        "text": "A new app on the home screen. Paste a link, or in YouTube tap Share → Hive Music, and it downloads as MP3, M4A or OPUS, or as video."
+      },
+      {
+        "icon": "speed",
+        "text": "Speed it up for the pool or podcasts: 0.5× to 3×, the pitch stays the same. Presets Faster 1.5×, Podcast 1.75×, Music and Video 1080p, or save your own."
+      },
+      {
+        "icon": "apps",
+        "text": "Options: quality, mono, normalize, trim silences, whole playlists, split by chapters, cover art. Files land in Music/Hive Music (Movies for video) or Downloads."
+      },
+      {
+        "icon": "heart",
+        "text": "A player with the cover blurred behind, a glass mini player, lock-screen controls and its own speed. yt-dlp updates itself once a day."
+      }
+    ]
+  },
+  {
     "id": "2026-10-26-money-wallet",
     "title": "Money counts, Wallet keeps 🧾",
     "items": [
