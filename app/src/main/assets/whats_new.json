@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-26-wallet",
+    "title": "New app: Wallet 🧾",
+    "items": [
+      {"icon": "apps", "text": "Wallet joins Hive, with two tabs: Receipts and Cards."},
+      {"icon": "spark", "text": "Scan the QR code on any Serbian fiscal receipt (or pick a photo or screenshot, or paste the link). Hive asks the tax office for it and keeps the shop, the date, the payment, every item and the total. Offline? It's saved and read later."},
+      {"icon": "chart", "text": "Fuel receipts show liters and the price per liter. Receipts tab: spending and liters per month, your top shops, search over shops and items."},
+      {"icon": "palette", "text": "Loyalty cards: scan the card's barcode, read it from a photo, or type the number. At the till Hive shows the same barcode at full brightness, so the plastic can stay at home."}
+    ]
+  },
+  {
     "id": "2026-10-26-phone-sets-garmin",
     "title": "Your sets, on Garmin too ⌚",
     "items": [
