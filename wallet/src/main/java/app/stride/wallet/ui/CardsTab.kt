@@ -8,7 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.layout.ContentScale
 import app.stride.wallet.data.CardImages
-import app.stride.wallet.domain.Brands
+import app.stride.wallet.domain.CardBrands
 import coil.compose.AsyncImage
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -100,7 +100,8 @@ fun CardsTab(d: WalletData, padding: PaddingValues, onCard: (String) -> Unit, on
  */
 @Composable
 fun CardTile(c: LoyaltyCard, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    val tint = Color(c.color)
+    val brand = CardBrands.find(c.name)
+    val tint = Color(brand?.let { if (it.light) it.color2 else it.color } ?: c.color)
     val shape = RoundedCornerShape(22.dp)
     Box(
         modifier.fillMaxWidth().aspectRatio(1.586f)
@@ -127,10 +128,12 @@ fun CardTile(c: LoyaltyCard, modifier: Modifier = Modifier, onClick: (() -> Unit
             )
             return@Box
         }
+        if (brand != null) {
+            // A known program: its own face (colors, motif, logo) instead of plain glass.
+            CardFace(brand, c.name, c.number, Modifier.matchParentSize())
+            return@Box
+        }
         Box(Modifier.matchParentSize().padding(16.dp)) {
-            Brands.card(c.name)?.domain?.let { d ->
-                Box(Modifier.align(Alignment.TopEnd)) { LogoCircle(c.name, d, c.color, 30) }
-            }
             val shadow = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 1f), 6f)
             Text(
                 c.name.ifBlank { "Card" }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,

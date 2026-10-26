@@ -46,6 +46,7 @@ import app.stride.ui.Chip
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.Barcodes
 import app.stride.wallet.domain.Brands
+import app.stride.wallet.domain.CardBrands
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import app.stride.wallet.model.CardFormat
@@ -120,6 +121,12 @@ fun CardForm(start: LoyaltyCard, onSave: (LoyaltyCard) -> Unit, onBack: () -> Un
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it; applyBrand(it) }, label = { Text("Shop (Maxi, Lilly, NIS…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                // Programs Hive has a card face for, as you type.
+                val t = name.trim()
+                val hits = if (t.length < 2 || CardBrands.find(t)?.name.equals(t, true)) emptyList() else CardBrands.all.filter { it.name.contains(t, ignoreCase = true) }.take(6)
+                if (hits.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    hits.forEach { b -> GlassPill(b.name, false) { name = b.name; applyBrand(b.name) } }
+                }
                 OutlinedTextField(
                     number, { v -> number = v; if (!formatChosen) format = Brands.card(name)?.format ?: Barcodes.guess(v) },
                     label = { Text("Card number") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -143,7 +150,13 @@ fun CardForm(start: LoyaltyCard, onSave: (LoyaltyCard) -> Unit, onBack: () -> Un
         if (number.isNotBlank() && problem == null) item {
             Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(16.dp)) { BarcodeImage(number.trim(), format) }
         }
-        item {
+        val brand = CardBrands.find(name)
+        if (brand != null) item {
+            Text(
+                "Hive draws the ${brand.name} card in its own colors" + if (image == null) ". Add a photo of yours below to see the real one." else ".",
+                color = StrideColors.Dim, fontSize = 12.sp,
+            )
+        } else item {
             Column {
                 Caps("Color")
                 Spacer(Modifier.size(6.dp))

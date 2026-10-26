@@ -1,6 +1,5 @@
 package app.stride.wallet.domain
 
-import app.stride.wallet.model.CardFormat
 import app.stride.wallet.model.Receipt
 import java.util.Locale
 
@@ -23,8 +22,6 @@ enum class Category(val label: String, val color: Long) {
 /** A shop chain: the short name people use, its website (for the logo), its color and what it sells. */
 data class Brand(val name: String, val domain: String?, val color: Long, val category: Category)
 
-/** A loyalty card program: its color, logo and the code its tills read. */
-data class CardBrand(val name: String, val domain: String?, val color: Long, val format: CardFormat?)
 
 /**
  * Serbian shop chains and loyalty programs (pure, unit tested). Receipts carry the company's legal name
@@ -142,40 +139,6 @@ object Brands {
     /** A logo image for a website (Google's favicon service, no key). */
     fun logoUrl(domain: String): String = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
 
-    // ---------------------------------------------------------------- loyalty cards
-
-    private class CardRule(pattern: String, val brand: CardBrand) { val re = Regex(pattern) }
-
-    private val CARDS = listOf(
-        CardRule("""SUPER ?KARTICA""", CardBrand("SuperKartica", "superkartica.rs", 0xFF1D3FD6, CardFormat.QR_CODE)),
-        CardRule("""LIDL""", CardBrand("Lidl Plus", "lidl.rs", 0xFF0050AA, CardFormat.QR_CODE)),
-        CardRule("""MAXI""", CardBrand("Moj Maxi", "maxi.rs", 0xFFE30613, CardFormat.EAN_13)),
-        CardRule("""VULKAN""", CardBrand("Vulkan klub", "knjizare-vulkan.rs", 0xFFE2231A, null)),
-        CardRule("""LAGUNA""", CardBrand("Laguna klub čitalaca", "laguna.rs", 0xFFC8102E, null)),
-        CardRule("""METRO""", CardBrand("Metro", "metro.rs", 0xFFFFD60A, null)),
-        CardRule("""PREMIUM PET""", CardBrand("Premium Pet", null, 0xFF8B5A3C, null)),
-        CardRule("""PET CENTAR""", CardBrand("Pet Centar", "pet-centar.rs", 0xFFE30613, null)),
-        CardRule("""JANKOVI[CĆ]""", CardBrand("Apoteka Janković", "apotekajankovic.rs", 0xFFF2B33D, null)),
-        CardRule("""SPORTINA""", CardBrand("Sportina", "sportina.rs", 0xFF7B5EA7, null)),
-        CardRule("""\bDM\b|ACTIVE BEAUTY""", CardBrand("dm", "dm.rs", 0xFF223E8F, null)),
-        CardRule("""LILLY""", CardBrand("Lilly", "lilly.rs", 0xFFE6007E, null)),
-        CardRule("""\bNIS\b|SA NAMA""", CardBrand("NIS Sa nama", "nis.rs", 0xFF0057A8, null)),
-        CardRule("""\bIDEA\b""", CardBrand("Idea", "idea.rs", 0xFFE30613, null)),
-        CardRule("""UNIVEREXPORT""", CardBrand("Univerexport", "univerexport.rs", 0xFF00843D, null)),
-        CardRule("""DECATHLON""", CardBrand("Decathlon", "decathlon.rs", 0xFF0082C3, null)),
-        CardRule("""GIGATRON""", CardBrand("Gigatron", "gigatron.rs", 0xFFE30613, null)),
-        CardRule("""SPORT ?VISION""", CardBrand("Sport Vision", "sportvision.rs", 0xFF111111, null)),
-        CardRule("""\bIKEA\b""", CardBrand("IKEA Family", "ikea.com", 0xFF0058A3, null)),
-        CardRule("""LUKOIL""", CardBrand("Lukoil", "lukoil.rs", 0xFFE2231A, null)),
-        CardRule("""\bOMV\b""", CardBrand("OMV", "omv.rs", 0xFF0A3D8F, null)),
-        CardRule("""\bMOL\b""", CardBrand("MOL Move", "mol.rs", 0xFF1E8A3C, null)),
-        CardRule("""BENU""", CardBrand("Benu", "benu.rs", 0xFF00843D, null)),
-    )
-
-    /** The loyalty program a card's name points at, or null. */
-    fun card(name: String): CardBrand? {
-        val t = up(name)
-        if (t.isBlank()) return null
-        return CARDS.firstOrNull { it.re.containsMatchIn(t) }?.brand
-    }
+    /** The loyalty program a card's name points at (see [CardBrands]), or null. */
+    fun card(name: String): CardBrand? = CardBrands.find(name)
 }

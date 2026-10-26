@@ -80,6 +80,9 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `domain/ManiImport` (tested): Mani's CSV (no QR link, no items) → `source = "mani"` receipts; Mani groups become
   companies keyed `group:<name>` (naming a real PIB the same moves them); a later scan of the same receipt (same minute
   and total) replaces the import. Card photos: `data/CardImages` (app files, 1000 px JPEG), `LoyaltyCard.image`.
+  Card faces: `domain/CardBrands` (tested, ~65 programs Mani knows) → name, logo domain, two colors, `CardStyle` motif,
+  light/dark, QR/barcode; `ui/CardFace` draws them (no third-party artwork in the repo: the repo is public; a user's own
+  card photo replaces the face). `CardForm` suggests programs while typing.
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
   with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
   Open targets for a module later become "<moduleId>/<target>".
