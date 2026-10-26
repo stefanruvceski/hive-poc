@@ -354,6 +354,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _garmin.value = _garmin.value.copy(busy = true)
             try {
                 val m = garmin.copySets(session)
+                if (m != null) _data.value.strength.firstOrNull { it.id == session.id }?.let { cur ->
+                    saveStrength(cur.copy(garminSyncedAt = java.time.Instant.now().toString(), workSec = m.workSec.takeIf { m.watch > 0 }, restSec = m.restSec.takeIf { m.watch > 0 }, rests = m.rests.takeIf { m.watch > 0 }))
+                }
                 when {
                     m == null -> toast(
                         if (afterFinish) "Saved. Once the watch has synced, open the day and tap Copy sets to Garmin."

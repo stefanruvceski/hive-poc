@@ -89,11 +89,12 @@ fun KeyStats(a: Activity) {
 
 /** Everything else intervals.icu knows about the workout, grouped into cards. Empty groups are hidden. */
 @Composable
-fun ActivityDetails(a: Activity) {
+fun ActivityDetails(a: Activity, compact: Boolean = false) {
     val swim = a.isSwim()
     val run = a.isRun()
 
-    val zones = a.hrZoneTimes?.takeIf { it.sum() > 0 }
+    // Compact (strength days): the tiles above already show time, heart rate, energy and load, and zones say little for lifting.
+    val zones = a.hrZoneTimes?.takeIf { it.sum() > 0 && !compact }
     val zoneContent: (@Composable ColumnScope.() -> Unit)? = if (zones == null) null else {
         {
             Text("TIME IN ZONES", style = TextStyle(fontSize = 10.sp), color = StrideColors.Faint)
@@ -104,8 +105,8 @@ fun ActivityDetails(a: Activity) {
     DetailCard(
         "Heart rate", Icons.Filled.Favorite, MetricColors.Heart,
         listOfNotNull(
-            a.avgHr?.let { Metric("Average", fmtNum(it), "bpm") },
-            a.maxHr?.let { Metric("Maximum", fmtNum(it), "bpm") },
+            a.avgHr?.takeIf { !compact }?.let { Metric("Average", fmtNum(it), "bpm") },
+            a.maxHr?.takeIf { !compact }?.let { Metric("Maximum", fmtNum(it), "bpm") },
             a.avgHr?.let { avg -> a.athleteMaxHr?.takeIf { it > 0 }?.let { Metric("Avg of max", fmtNum(avg / it * 100), "%") } },
             a.lthr?.let { Metric("Threshold", fmtNum(it), "bpm") },
             a.restingHr?.let { Metric("Resting", fmtNum(it), "bpm") },
@@ -132,12 +133,12 @@ fun ActivityDetails(a: Activity) {
     DetailCard(
         "Effort & load", Icons.Filled.Bolt, MetricColors.Load,
         listOfNotNull(
-            a.load?.let { Metric("Training load", fmtNum(it)) },
+            a.load?.takeIf { !compact }?.let { Metric("Training load", fmtNum(it)) },
             a.intensity?.let { Metric("Intensity", fmtNum(it), "%") },
             a.efficiency?.let { Metric("Efficiency", fmtNum(it, 2)) },
             a.rpe?.let { Metric("RPE", fmtNum(it), "/ 10") },
             a.feel?.let { Metric("Feel", feelLabel(it)) },
-            a.calories?.takeIf { it > 0 }?.let { Metric("Energy", fmtNum(it), "kcal") },
+            a.calories?.takeIf { it > 0 && !compact }?.let { Metric("Energy", fmtNum(it), "kcal") },
             a.avgWatts?.takeIf { it > 0 }?.let { Metric("Avg power", fmtNum(it), "W") },
             a.normWatts?.takeIf { it > 0 }?.let { Metric("Norm. power", fmtNum(it), "W") },
         ),
@@ -152,7 +153,7 @@ fun ActivityDetails(a: Activity) {
             atl?.let { Metric("Fatigue", fmtNum(it)) },
             if (ctl != null && atl != null) {
                 val form = ctl - atl
-                Metric("Form", (if (form > 0) "+" else "") + fmtNum(form), color = if (form < -20) StrideColors.Bad else if (form < -10) StrideColors.Warn else StrideColors.Good)
+                Metric("Form", (if (form > 0) "+" else "") + fmtNum(form) + " · " + formWord(form), color = if (form < -20) StrideColors.Bad else if (form < -10) StrideColors.Warn else StrideColors.Good)
             } else null,
         ),
     )
@@ -162,7 +163,7 @@ fun ActivityDetails(a: Activity) {
         "Time", Icons.Filled.Schedule, MetricColors.Time,
         listOfNotNull(
             a.clock().takeIf { it.isNotEmpty() }?.let { Metric("Start", it) },
-            a.movingTime?.let { Metric("Moving", fmtDur(it)) },
+            a.movingTime?.takeIf { !compact }?.let { Metric("Moving", fmtDur(it)) },
             a.elapsedTime?.let { Metric("Elapsed", fmtDur(it)) },
             paused?.takeIf { it >= 30 }?.let { Metric("Paused", fmtDur(it)) },
             a.laps?.takeIf { it > 0 }?.let { Metric("Laps", fmtNum(it)) },
@@ -197,4 +198,13 @@ fun ActivityDetails(a: Activity) {
             Text(device.joinToString(" · "), style = TextStyle(fontSize = 12.sp), color = StrideColors.Faint)
         }
     }
+}
+
+/** intervals.icu's form zones in a word: fresh above +5, neutral down to −10, training −10 to −30, overloaded below. */
+internal fun formWord(form: Double): String = when {
+    form > 25 -> "very fresh"
+    form > 5 -> "fresh"
+    form >= -10 -> "neutral"
+    form >= -30 -> "training"
+    else -> "overloaded"
 }

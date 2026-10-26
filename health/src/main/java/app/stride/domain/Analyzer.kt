@@ -116,7 +116,7 @@ object Analyzer {
             DayKind.RUN -> matched.firstOrNull()?.let { run(it, t) }
             DayKind.SWIM_INTENSE -> matched.firstOrNull()?.let { intenseSwim(it, intervals[it.id]) }
             DayKind.STRENGTH_LEGS, DayKind.STRENGTH_UPPER, DayKind.STRENGTH_SHOULDERS_CORE ->
-                if (did) strengthVerdict(plan, strength, matched.firstOrNull()) else null
+                if (did) strengthVerdict(data.strength, strength, matched.firstOrNull()) else null
             DayKind.REST_WALK, DayKind.REST -> restVerdict(kind, matched, extra, status)
         }
         return DayResult(date, plan, matched, extra, strength, status, verdict, manualOnly = manual && !logged)
@@ -239,18 +239,14 @@ object Analyzer {
         }
     }
 
-    private fun strengthVerdict(plan: PlanDay, s: StrengthSession?, act: Activity?): Verdict {
-        val lines = mutableListOf<String>()
-        if (s != null) {
-            lines += "${s.exercises.size} exercises · volume ${fmtKg(s.volume)} kg"
-            if (s.sauna) lines += "Sauna ${if (s.saunaMinutes > 0) "${s.saunaMinutes} min" else "✓"}"
-        }
-        if (act != null) lines += "Garmin: ${fmtMin(act.movingTime)}, avg HR ${fmtHr(act.avgHr)}"
-        return when {
-            s == null -> Verdict(Level.OK, "Watch workout, exercises not logged", lines, "Log weights and sets to track progress.")
-            // Sauna is optional: it counts toward the weekly sauna target, never against the workout day.
-            else -> Verdict(Level.GOOD, "Done", lines)
-        }
+    private fun strengthVerdict(sessions: List<StrengthSession>, s: StrengthSession?, act: Activity?): Verdict = when {
+        s == null -> Verdict(
+            Level.OK, "Watch workout, exercises not logged",
+            listOfNotNull(act?.let { "Garmin: ${fmtMin(it.movingTime)}, avg HR ${fmtHr(it.avgHr)}" }),
+            "Log weights and sets to track progress.",
+        )
+        // Sauna is optional: it counts toward the weekly sauna target, never against the workout day.
+        else -> Verdict(Level.GOOD, "Done", StrengthReview.lines(sessions, s, act?.movingTime?.let { it / 60 }, act?.avgHr))
     }
 
     private fun restVerdict(kind: DayKind, walks: List<Activity>, extra: List<Activity>, status: DayStatus): Verdict? {

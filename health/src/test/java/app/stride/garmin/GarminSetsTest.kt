@@ -42,6 +42,7 @@ class GarminSetsTest {
         assertEquals(9, sets[2]["repetitionCount"]!!.jsonPrimitive.content.toInt())
         assertEquals("123", m.body["activityId"]!!.jsonPrimitive.content)
         assertEquals(Triple(2, 3, 2), Triple(m.phone, m.watch, m.paired))
+        assertEquals(Triple(68, 185, 2), Triple(m.workSec, m.restSec, m.rests)) // 31.5 + 29 + 8, 90 + 95
     }
 
     @Test fun extraPhoneSetsAreAppendedAndUntickedExercisesSkipped() {

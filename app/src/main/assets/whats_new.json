@@ -1,5 +1,16 @@
 [
   {
+    "id": "2026-10-26-gym-day-review",
+    "title": "A smarter gym day 🏋️",
+    "items": [
+      {"icon": "strength", "text": "Every program exercise is now a kettlebell exercise with kettlebell steps. Where only a dumbbell photo exists, it says so; the movement is done with a bell."},
+      {"icon": "chart", "text": "Done now tells you how the day went: volume vs last time, records, kg per minute, and from the watch how long you worked and rested."},
+      {"icon": "speed", "text": "Strength days show your sets right under the verdict, with ↑ = ↓ against last time and ✓ On Garmin Connect once copied. The watch part no longer repeats the tiles at the top."},
+      {"icon": "spark", "text": "New per exercise: Last set to failure? Had more at 8+ reps means the next session suggests a heavier bell."},
+      {"icon": "heart", "text": "Form after a workout comes with a word: fresh, neutral, training or overloaded."}
+    ]
+  },
+  {
     "id": "2026-10-26-sauna-optional",
     "title": "Sauna is optional",
     "items": [

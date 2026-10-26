@@ -19,7 +19,11 @@ import kotlinx.serialization.json.put
  */
 object GarminSets {
     /** [body] is the PUT payload; [phone] sets logged, [watch] active sets recorded, [paired] sets that got the watch's timing. */
-    data class Merge(val body: JsonObject, val phone: Int, val watch: Int, val paired: Int)
+    data class Merge(
+        val body: JsonObject, val phone: Int, val watch: Int, val paired: Int,
+        /** From the watch: seconds working, seconds resting, number of rests. */
+        val workSec: Int = 0, val restSec: Int = 0, val rests: Int = 0,
+    )
 
     private data class PhoneSet(val name: String, val reps: Int, val kg: Double)
 
@@ -77,7 +81,11 @@ object GarminSets {
             }
         }
         val id: JsonElement = watch["activityId"] ?: JsonNull
-        return Merge(buildJsonObject { put("activityId", id); put("exerciseSets", out) }, phone.size, activeCount, minOf(phone.size, activeCount))
+        fun seconds(type: String) = sets.filter { str(it, "setType") == type }.sumOf { str(it, "duration")?.toDoubleOrNull() ?: 0.0 }.toInt()
+        return Merge(
+            buildJsonObject { put("activityId", id); put("exerciseSets", out) }, phone.size, activeCount, minOf(phone.size, activeCount),
+            workSec = seconds("ACTIVE"), restSec = seconds("REST"), rests = sets.count { str(it, "setType") == "REST" },
+        )
     }
 
     /** The newest strength activity in Garmin's activity list (activitylist-service search), or null. */
