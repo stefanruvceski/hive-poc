@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-26-wallet-noqr-fuel-till",
+    "title": "Wallet: no-QR receipts, fuel diary, faster at the till ⛽",
+    "items": [
+      {"icon": "spark", "text": "QR code won't scan? ⋮ › Receipt without QR: photograph the bottom of the receipt, Hive reads the four printed fields (total, PFR time, PFR number, counter) and finds it at the tax office, items and all."},
+      {"icon": "chart", "text": "Fuel diary (Receipts › Fuel diary): price per liter month by month, the stations you use from cheapest, liters and money this year, and liters per 100 km when you type the odometer on a fuel receipt."},
+      {"icon": "apps", "text": "Cards faster: a Wallet · Cards home-screen widget, a Cards tile in Quick Settings and a Cards shortcut on the Hive icon. Tap a card and it opens straight at the till."},
+      {"icon": "palette", "text": "At the till the card fills a clean white screen: just the code, the number and full brightness. Pin your favourite cards to the top (⋯ › Pin to top)."}
+    ]
+  },
+  {
     "id": "2026-10-26-wallet-card-faces",
     "title": "Loyalty cards that look like cards 💳",
     "items": [

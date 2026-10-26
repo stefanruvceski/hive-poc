@@ -37,6 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 import app.stride.format.Dates
 import app.stride.ui.theme.StrideColors
@@ -75,6 +77,7 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
         dismissButton = { TextButton(onClick = { pickCategory = false }) { Text("Cancel") } },
     )
     var note by rememberSaveable(id) { mutableStateOf(r.note) }
+    var km by rememberSaveable(id) { mutableStateOf(r.odometer?.toString().orEmpty()) }
     val fuel = ReceiptStats.fuel(r)
 
     if (askDelete) AlertDialog(
@@ -158,6 +161,13 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
                     Stat("Price per liter", ReceiptStats.amount(fuel.pricePerLiter), Modifier.weight(1f))
                     Stat("Fuel", ReceiptStats.amount(fuel.amount), Modifier.weight(1f))
                 }
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    km, { v -> km = v.filter(Char::isDigit).take(7); vm.setOdometer(id, km.toIntOrNull()) },
+                    label = { Text("Kilometres on the odometer (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = { Text("With these Hive works out liters per 100 km between fill-ups.") },
+                )
             }
         }
         if (r.items.isNotEmpty()) item {

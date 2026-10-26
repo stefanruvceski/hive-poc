@@ -1,0 +1,68 @@
+package app.stride.wallet.domain
+
+/**
+ * The four printed fields the tax office's "verify without QR" form asks for. Values are kept as the receipt prints
+ * them: total "3.001,50", time "19.10.2026. 08:56:24", number "FA73YEEA-FA73YEEA-102736", counter "102736/103225ПП".
+ */
+data class VerifyFields(val total: String = "", val time: String = "", val number: String = "", val counter: String = "") {
+    val complete: Boolean get() = total.isNotBlank() && time.isNotBlank() && number.isNotBlank() && counter.isNotBlank()
+}
+
+/**
+ * Reads the four fields from the text of a photographed receipt (pure, unit tested). On-device OCR reads Latin
+ * script only, so the Cyrillic labels come out garbled; the fields are found by the shape of their values instead.
+ */
+object ReceiptOcr {
+    private val NUMBER = Regex("""\b([A-Z0-9]{8})\s*-\s*([A-Z0-9]{8})\s*-\s*(\d{1,10})\b""")
+    private val TIME = Regex("""\b(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})\.?\s+(\d{1,2}):(\d{2}):(\d{2})\b""")
+    private val COUNTER = Regex("""\b(\d{1,10})\s*/\s*(\d{1,10})\s*([A-Za-zА-Яа-яΠΡ]{2})""")
+    private val AMOUNT = Regex("""(?<![\d.,])(\d{1,3}(?:\.\d{3})*,\d{2})(?![\d,])""")
+
+    fun read(text: String): VerifyFields {
+        val t = text.replace(' ', ' ')
+        val number = NUMBER.find(t.uppercase())?.let { m ->
+            "${m.groupValues[1]}-${m.groupValues[2]}-${m.groupValues[3]}"
+        }.orEmpty()
+        val time = TIME.find(t)?.let { m ->
+            val (d, mo, y, h, mi, s) = m.destructured
+            "%02d.%02d.%s. %02d:%s:%s".format(d.toInt(), mo.toInt(), y, h.toInt(), mi, s)
+        }.orEmpty()
+        val counter = COUNTER.findAll(t).map { m -> m to suffix(m.groupValues[3]) }.firstOrNull { it.second != null }
+            ?.let { (m, suf) -> "${m.groupValues[1]}/${m.groupValues[2]}$suf" }.orEmpty()
+        return VerifyFields(total(t), time, number, counter)
+    }
+
+    /**
+     * The counter's suffix is the receipt type in Cyrillic (ПП = normal sale, ПР = refund, КП/КР copy, ТП/ТР training,
+     * АП/АР advance, ОП/ОР pro forma); OCR reads П as N or Π and Р as P.
+     */
+    fun suffix(s: String): String? {
+        val map = mapOf(
+            'N' to 'П', 'П' to 'П', 'Π' to 'П', 'n' to 'П', 'п' to 'П',
+            'P' to 'Р', 'Р' to 'Р', 'Ρ' to 'Р', 'p' to 'Р', 'р' to 'Р',
+            'A' to 'А', 'А' to 'А', 'K' to 'К', 'К' to 'К', 'O' to 'О', 'О' to 'О', 'T' to 'Т', 'Т' to 'Т',
+        )
+        if (s.length != 2) return null
+        val a = map[s[0]] ?: return null
+        val b = map[s[1]] ?: return null
+        return if (b == 'П' || b == 'Р') "$a$b" else null
+    }
+
+    /**
+     * The total: the amount printed most often (it repeats in the items, the total line and the payment line);
+     * on a tie the largest of them, which skips a cash amount handed over that only shows once.
+     */
+    fun total(text: String): String {
+        val all = AMOUNT.findAll(text).map { it.groupValues[1] }.toList()
+        if (all.isEmpty()) return ""
+        val counts = all.groupingBy { it }.eachCount()
+        val top = counts.values.max()
+        return counts.filter { it.value == top }.keys.maxBy { FiscalParse.number(it) ?: 0.0 }
+    }
+
+    /** The form's time as an ISO local date-time ("2026-10-19T08:56:24"), for inputs of type datetime-local. */
+    fun isoTime(printed: String): String? = FiscalParse.printedTime(printed)
+
+    /** "3.001,50" → "3001.50", for inputs of type number. */
+    fun plainAmount(printed: String): String? = FiscalParse.number(printed)?.let { String.format(java.util.Locale.ROOT, "%.2f", it) }
+}

@@ -83,6 +83,19 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   Card faces: `domain/CardBrands` (tested, ~65 programs Mani knows) → name, logo domain, two colors, `CardStyle` motif,
   light/dark, QR/barcode; `ui/CardFace` draws them (no third-party artwork in the repo: the repo is public; a user's own
   card photo replaces the face). `CardForm` suggests programs while typing.
+  No QR: `ui/NoQrScreen` (route "noqr"): camera/photo → ML Kit text recognition (Latin only, so `domain/ReceiptOcr`,
+  tested, finds the four fields by the shape of their values) → editable fields → the tax office's verify page
+  (`https://suf.purs.gov.rs/verify`) in a visible WebView; `FILL_JS` fills inputs by label and presses Провери, and
+  every page load / 1.5 s the HTML is checked (`WalletViewModel.addFromVerifyPage`: QR link → normal fetch, else
+  `FiscalParse.parseHtml`). The form's real markup was never seen when this was written; the user can fix it by hand.
+  Fuel diary `ui/FuelScreen` (route "fuel") from `domain/FuelLog` (tested: fills, monthly price per liter, stations,
+  L/100 km fill-to-full from `Receipt.odometer`). Till: `CardScreen` is a white screen with only the code; ⋯ = pin /
+  edit / delete. `LoyaltyCard.pinned`, order in `domain/CardOrder` (tested). Widget `widget/WalletWidgets` (Glance,
+  `CardsWidget`, refreshed on every card change), Quick Settings `CardsTile`, app shortcut "cards"; open targets
+  "wallet/cards", "wallet/card:<id>", "wallet/noqr", "wallet/fuel".
+  **Later (asked for, not built yet):** company report: one tap → PDF/CSV of a month's receipts for a company
+  (e.g. Obsidian IT) with totals and VAT per rate (the receipts' VAT labels / journal tax table), to send to the
+  accountant; plus a "submitted / refunded" mark per receipt.
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
   with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
   Open targets for a module later become "<moduleId>/<target>".

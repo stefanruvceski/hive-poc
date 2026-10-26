@@ -8,6 +8,7 @@ import app.stride.wallet.data.WalletStore
 import app.stride.wallet.data.CardImages
 import app.stride.wallet.domain.FiscalParse
 import app.stride.wallet.domain.ManiImport
+import app.stride.wallet.widget.WalletWidgets
 import app.stride.wallet.model.Company
 import app.stride.wallet.model.LoyaltyCard
 import app.stride.wallet.model.Receipt
@@ -48,8 +49,13 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     private fun now() = Instant.now().toString()
 
     private fun update(f: (WalletData) -> WalletData) {
-        _data.value = f(_data.value)
-        viewModelScope.launch(Dispatchers.IO) { saveLock.withLock { store.save(_data.value) } }
+        val before = _data.value
+        _data.value = f(before)
+        val cardsChanged = before.cards != _data.value.cards
+        viewModelScope.launch(Dispatchers.IO) {
+            saveLock.withLock { store.save(_data.value) }
+            if (cardsChanged) WalletWidgets.refresh(getApplication<Application>())
+        }
     }
 
     // ---------------------------------------------------------------- receipts
@@ -99,6 +105,22 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             _loading.value = _loading.value - id
         }
     }
+
+    /**
+     * A receipt found on the tax office's "verify without QR" page: its QR link when the page shows one (then it is
+     * fetched like a scan), else the page itself. Returns the receipt's id, null when the page holds no receipt.
+     */
+    fun addFromVerifyPage(url: String, html: String): String? {
+        (FiscalParse.verificationUrl(url) ?: FiscalParse.verificationUrl(html))?.let { link -> return addReceipt(link)?.first }
+        val parsed = FiscalParse.parseHtml(Receipt(id("rcp"), "", addedAt = now()), html) ?: return null
+        _data.value.receipts.firstOrNull { it.invoiceNumber != null && it.invoiceNumber == parsed.invoiceNumber }?.let { return it.id }
+        val imported = _data.value.receipts.firstOrNull { it.source == "mani" && ManiImport.same(it, parsed) }
+        update { d -> d.copy(receipts = d.receipts.filter { it.id != imported?.id } + parsed.copy(source = "verify", buyerTin = parsed.buyerTin ?: imported?.buyerTin, note = imported?.note.orEmpty())) }
+        return parsed.id
+    }
+
+    /** Kilometres at a fill-up (null clears it). */
+    fun setOdometer(id: String, km: Int?) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(odometer = km) else it }) }
 
     /** Reads the receipts that were scanned offline. */
     fun retryPending() = _data.value.receipts.filter { it.status == ReceiptStatus.PENDING }.forEach { fetch(it.id) }
@@ -175,6 +197,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Copies a picked photo of a card's front into the app (scaled down); returns its file name, null on failure. */
     suspend fun saveCardImage(uri: android.net.Uri): String? = withContext(Dispatchers.IO) { CardImages.save(getApplication<Application>(), uri) }
+
+    fun togglePin(id: String) = update { d -> d.copy(cards = d.cards.map { if (it.id == id) it.copy(pinned = !it.pinned) else it }) }
 
     /** Opened at the till: moves the card up the list. */
     fun markUsed(id: String) = update { d -> d.copy(cards = d.cards.map { if (it.id == id) it.copy(lastUsed = now(), uses = it.uses + 1) else it }) }

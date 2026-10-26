@@ -1,6 +1,17 @@
 package app.stride.wallet.ui
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.remember
+import app.stride.wallet.domain.CardOrder
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
@@ -65,8 +76,8 @@ import app.stride.wallet.domain.Barcodes
 import app.stride.wallet.model.LoyaltyCard
 import app.stride.wallet.model.WalletData
 
-/** Last used first, then newest. */
-fun sortedCards(cards: List<LoyaltyCard>) = cards.sortedWith(compareByDescending<LoyaltyCard> { it.lastUsed ?: "" }.thenByDescending { it.addedAt })
+/** Pinned first, then last used, then newest. */
+fun sortedCards(cards: List<LoyaltyCard>) = CardOrder.sorted(cards)
 
 /** Loyalty cards as colored tiles; tap one to show its barcode at the till. */
 @Composable
@@ -90,7 +101,12 @@ fun CardsTab(d: WalletData, padding: PaddingValues, onCard: (String) -> Unit, on
                 Button(onClick = onAdd, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WalletAccent)) { Text("Add a card") }
             }
         }
-        items(sortedCards(d.cards), key = { it.id }) { c -> CardTile(c) { onCard(c.id) } }
+        items(sortedCards(d.cards), key = { it.id }) { c ->
+            Box {
+                CardTile(c) { onCard(c.id) }
+                if (c.pinned) Icon(Icons.Filled.PushPin, "Pinned", tint = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(16.dp))
+            }
+        }
     }
 }
 
@@ -185,26 +201,30 @@ fun CardScreen(vm: WalletViewModel, d: WalletData, id: String, onEdit: () -> Uni
         dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } },
     )
 
-    WalletScreen(
-        c.name.ifBlank { "Card" }, onBack, glow = Color(c.color),
-        actions = {
-            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Edit", tint = StrideColors.Dim) }
-            IconButton(onClick = { askDelete = true }) { Icon(Icons.Filled.Delete, "Delete", tint = StrideColors.Dim) }
-        },
-    ) {
-        item {
-            Column(
-                Modifier.fillMaxWidth().shadow(24.dp, RoundedCornerShape(26.dp), ambientColor = Color(c.color), spotColor = Color(c.color))
-                    .clip(RoundedCornerShape(26.dp)).background(Color.White).padding(horizontal = 24.dp, vertical = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                BarcodeImage(c.number, c.format, Modifier.padding(horizontal = if (c.format.square) 30.dp else 0.dp))
-                Spacer(Modifier.height(14.dp))
-                Text(Barcodes.spaced(c.number, c.format), color = Color(0xFF111827), fontSize = 20.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+    // At the till: nothing but the code on white, as big as the screen allows. Back closes; ⋯ holds the rest.
+    var menu by remember { mutableStateOf(false) }
+    BackHandler(onBack = onBack)
+    Box(Modifier.fillMaxSize().background(Color.White).statusBarsPadding().navigationBarsPadding()) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(c.name.ifBlank { "Card" }, color = Color(0xFF111827), fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(28.dp))
+            BarcodeImage(c.number, c.format, Modifier.padding(horizontal = if (c.format.square) 24.dp else 0.dp))
+            Spacer(Modifier.height(20.dp))
+            Text(Barcodes.spaced(c.number, c.format), color = Color(0xFF111827), fontSize = 24.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            if (c.note.isNotBlank()) Text(c.note, color = Color(0xFF6B7280), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+        }
+        Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More", tint = Color(0xFF9CA3AF)) }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text(if (c.pinned) "Unpin" else "Pin to top") }, leadingIcon = { Icon(Icons.Filled.PushPin, null) }, onClick = { menu = false; vm.togglePin(id) })
+                DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { menu = false; onEdit() })
+                DropdownMenuItem(text = { Text("Delete") }, leadingIcon = { Icon(Icons.Filled.Delete, null) }, onClick = { menu = false; askDelete = true })
             }
         }
-        item { CardTile(c, Modifier.padding(horizontal = 60.dp)) }
-        item { Text("${c.format.label} · the screen stays bright while this is open", color = StrideColors.Faint, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
-        if (c.note.isNotBlank()) item { Glass { Text(c.note, color = StrideColors.Dim, fontSize = 14.sp) } }
+        IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) { Icon(Icons.Filled.Close, "Close", tint = Color(0xFF9CA3AF)) }
+        Text(
+            "${c.format.label} · the screen stays bright", color = Color(0xFF9CA3AF), fontSize = 11.sp,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+        )
     }
 }
