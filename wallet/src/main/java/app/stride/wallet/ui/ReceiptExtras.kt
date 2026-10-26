@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.format.Dates
 import app.stride.ui.theme.StrideColors
+import app.stride.wallet.domain.ManiImport
 import app.stride.wallet.domain.Owners
 import app.stride.wallet.domain.ReceiptStats
 import app.stride.wallet.domain.Warranties
@@ -100,6 +101,7 @@ fun OwnerCard(vm: WalletViewModel, d: WalletData, r: Receipt) {
                 Text(
                     when {
                         pib == null -> "No buyer PIB on the receipt"
+                        ManiImport.isGroup(pib) -> "Mani group · name a company with a PIB the same and they join"
                         r.ownerManual -> "PIB $pib · set by you"
                         else -> "PIB $pib · from the receipt"
                     },

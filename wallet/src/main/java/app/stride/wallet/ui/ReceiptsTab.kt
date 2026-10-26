@@ -21,9 +21,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,7 +46,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.format.Dates
+import androidx.compose.ui.graphics.Color
+import app.stride.ui.BarChart
 import app.stride.ui.PeriodNav
+import app.stride.ui.Segment
+import app.stride.ui.ThinBar
+import app.stride.wallet.domain.Brands
+import app.stride.wallet.domain.Category
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.Owners
 import app.stride.wallet.domain.ReceiptStats
@@ -82,6 +89,7 @@ fun ReceiptsTab(
     onScan: () -> Unit,
     onPhoto: () -> Unit,
     onLink: () -> Unit,
+    onImport: () -> Unit,
     onReceipt: (String) -> Unit,
 ) {
     var month by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
@@ -89,10 +97,15 @@ fun ReceiptsTab(
     var query by rememberSaveable { mutableStateOf("") }
     var owner by rememberSaveable { mutableStateOf(Owners.ALL) }
     var allWarranties by rememberSaveable { mutableStateOf(false) }
+    var view by rememberSaveable { mutableStateOf("list") }
+    var saved by rememberSaveable { mutableStateOf(false) }
+    var category by rememberSaveable { mutableStateOf<String?>(null) }
     val today = LocalDate.now()
     val companies = Owners.companies(d.receipts)
     if (owner != Owners.ALL && owner != Owners.PERSONAL && owner !in companies) owner = Owners.ALL
     val mine = Owners.filter(d.receipts, owner)
+        .let { rs -> if (saved) rs.filter { it.starred } else rs }
+        .let { rs -> category?.let { c -> rs.filter { Brands.category(it).name == c } } ?: rs }
     val inMonth = ReceiptStats.inMonth(mine, m)
     val list = ReceiptStats.search(mine, query)
     val warranties = Warranties.all(mine, today)
@@ -112,15 +125,20 @@ fun ReceiptsTab(
                     )
                     Spacer(Modifier.height(12.dp))
                     AddButtons(onScan, onPhoto, onLink)
+                    TextButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text("Coming from Mani? Import its CSV export", color = StrideColors.Dim) }
                 }
             }
             return@LazyColumn
         }
-        if (companies.isNotEmpty()) item {
+        item {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 GlassPill("All", owner == Owners.ALL) { owner = Owners.ALL }
-                GlassPill("Personal", owner == Owners.PERSONAL) { owner = Owners.PERSONAL }
-                companies.forEach { pib -> GlassPill(Owners.name(pib, d.companies), owner == pib) { owner = pib } }
+                if (companies.isNotEmpty()) {
+                    GlassPill("Personal", owner == Owners.PERSONAL) { owner = Owners.PERSONAL }
+                    companies.forEach { pib -> GlassPill(Owners.name(pib, d.companies), owner == pib) { owner = pib } }
+                }
+                GlassPill("★ Saved", saved, StrideColors.Amber) { saved = !saved }
+                category?.let { c -> GlassPill("${Category.valueOf(c).label} ✕", true, Color(Category.valueOf(c).color)) { category = null } }
             }
         }
         item {
@@ -136,6 +154,12 @@ fun ReceiptsTab(
                     "${inMonth.size} receipt${if (inMonth.size == 1) "" else "s"}" + if (liters > 0) " · ${ReceiptStats.litersText(liters)} of fuel" else "",
                     color = StrideColors.Dim, fontSize = 13.sp,
                 )
+                val weeks = ReceiptStats.weeks(mine, m)
+                if (weeks.any { it.second > 0 }) {
+                    Spacer(Modifier.height(10.dp))
+                    BarChart(weeks.map { it.second }, weeks.map { it.first }, WalletAccent, { ReceiptStats.amount(it) }, Modifier.fillMaxWidth().height(120.dp))
+                    Text("Average ${rsd(weeks.sumOf { it.second } / weeks.size)} a week", color = StrideColors.Dim, fontSize = 12.sp)
+                }
                 if (owner == Owners.ALL && companies.isNotEmpty()) {
                     val business = inMonth.filter { it.buyerTin != null }
                     if (business.isNotEmpty()) Text(
@@ -177,6 +201,56 @@ fun ReceiptsTab(
                 query, { query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                 placeholder = { Text("Search shops and items") }, leadingIcon = { Icon(Icons.Filled.Search, null) },
             )
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Segment("Receipts", view == "list") { view = "list" }
+                Segment("Shops", view == "shops") { view = "shops" }
+                Segment("Categories", view == "categories") { view = "categories" }
+            }
+        }
+        if (view == "shops") {
+            val shops = ReceiptStats.byShop(inMonth)
+            val top = shops.maxOfOrNull { it.third } ?: 1.0
+            item { Caps("${monthTitle(m)} · ${shops.size} shops") }
+            if (shops.isEmpty()) item { Text("No receipts this month.", color = StrideColors.Dim, fontSize = 13.sp) }
+            items(shops, key = { "s-" + it.first }) { (name, count, total) ->
+                val sample = inMonth.first { ReceiptStats.title(it) == name }
+                GlassRow({ query = name; view = "list" }) {
+                    ShopLogo(sample, 38)
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(name, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("$count receipt${if (count == 1) "" else "s"}", color = StrideColors.Dim, fontSize = 12.sp)
+                        ThinBar((total / top).toFloat(), WalletAccent, Modifier.padding(top = 4.dp), height = 4)
+                    }
+                    Spacer(Modifier.size(10.dp))
+                    Text(ReceiptStats.amount(total), color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            return@LazyColumn
+        }
+        if (view == "categories") {
+            val cats = ReceiptStats.byCategory(inMonth)
+            val sum = cats.sumOf { it.third }.takeIf { it > 0 } ?: 1.0
+            item { Caps("${monthTitle(m)} · by category") }
+            if (cats.isEmpty()) item { Text("No receipts this month.", color = StrideColors.Dim, fontSize = 13.sp) }
+            items(cats, key = { "c-" + it.first.name }) { (cat, count, total) ->
+                GlassRow({ category = cat.name; view = "list" }, tint = Color(cat.color)) {
+                    Box(Modifier.size(38.dp).background(Color(cat.color).copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(categoryIcon(cat), null, tint = Color(cat.color), modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(cat.label, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("$count receipt${if (count == 1) "" else "s"} · ${(total / sum * 100).toInt()}%", color = StrideColors.Dim, fontSize = 12.sp)
+                        ThinBar((total / sum).toFloat(), Color(cat.color), Modifier.padding(top = 4.dp), height = 4)
+                    }
+                    Spacer(Modifier.size(10.dp))
+                    Text(ReceiptStats.amount(total), color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            return@LazyColumn
         }
         if (list.isEmpty()) item { Text(if (query.isBlank()) "No receipts here yet." else "Nothing matches \"$query\".", color = StrideColors.Dim, fontSize = 13.sp) }
         ReceiptStats.byMonth(list).forEach { (ym, rs) ->
@@ -225,12 +299,11 @@ fun AddButtons(onScan: () -> Unit, onPhoto: () -> Unit, onLink: () -> Unit) {
 @Composable
 private fun ReceiptRow(r: Receipt, companies: List<Company>, loading: Boolean, today: LocalDate, onClick: () -> Unit) {
     val fuel = ReceiptStats.fuel(r)
-    val tint = if (fuel != null) StrideColors.Amber else WalletAccent
     GlassRow(onClick) {
-        Box(Modifier.size(38.dp).background(tint.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+        if (loading || r.status != ReceiptStatus.OK) Box(Modifier.size(38.dp).background(WalletAccent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
             if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = WalletAccent)
-            else Icon(if (fuel != null) Icons.Filled.LocalGasStation else Icons.AutoMirrored.Filled.ReceiptLong, null, tint = tint, modifier = Modifier.size(20.dp))
-        }
+            else Icon(Icons.AutoMirrored.Filled.ReceiptLong, null, tint = WalletAccent, modifier = Modifier.size(20.dp))
+        } else ShopLogo(r, 38)
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -240,6 +313,7 @@ private fun ReceiptRow(r: Receipt, companies: List<Company>, loading: Boolean, t
             val sub = when (r.status) {
                 ReceiptStatus.OK -> listOfNotNull(
                     ReceiptStats.date(r).let { "${Dates.full(it)} ${r.time?.drop(11)?.take(5).orEmpty()}".trim() },
+                    Brands.shopName(r.shop)?.takeIf { fuel == null && it != ReceiptStats.title(r) },
                     fuel?.let { "${ReceiptStats.litersText(it.liters)} · ${ReceiptStats.amount(it.pricePerLiter)}/L" },
                     r.note.takeIf { it.isNotBlank() },
                 ).joinToString(" · ")
@@ -248,7 +322,9 @@ private fun ReceiptRow(r: Receipt, companies: List<Company>, loading: Boolean, t
             }
             Text(sub, color = if (r.status == ReceiptStatus.FAILED) StrideColors.Danger else StrideColors.Dim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val badges = listOfNotNull(
+                Icons.Filled.Star.takeIf { r.starred }?.let { it to "Saved" },
                 r.buyerTin?.let { Icons.Filled.BusinessCenter to Owners.name(it, companies) },
+                Icons.Filled.FileDownload.takeIf { r.source == "mani" }?.let { it to "From Mani" },
                 r.warranties.takeIf { it.isNotEmpty() }?.let { ws ->
                     val best = ws.map { Warranties.view(r, it, today) }.maxBy { it.until }
                     Icons.Filled.VerifiedUser to Warranties.left(best, today)

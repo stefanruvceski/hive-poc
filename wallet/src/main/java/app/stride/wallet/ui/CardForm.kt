@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,6 +45,9 @@ import androidx.compose.ui.unit.sp
 import app.stride.ui.Chip
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.Barcodes
+import app.stride.wallet.domain.Brands
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import app.stride.wallet.model.CardFormat
 import app.stride.wallet.model.LoyaltyCard
 
@@ -59,6 +64,23 @@ fun CardForm(start: LoyaltyCard, onSave: (LoyaltyCard) -> Unit, onBack: () -> Un
     var color by rememberSaveable { mutableLongStateOf(start.color) }
     var note by rememberSaveable { mutableStateOf(start.note) }
     var allFormats by rememberSaveable { mutableStateOf(false) }
+    var colorChosen by rememberSaveable { mutableStateOf(start.id.isNotBlank()) }
+    var image by rememberSaveable { mutableStateOf(start.image) }
+    val scope = rememberCoroutineScope()
+    val vm: WalletViewModel = viewModel()
+
+    /** A known program (Moj Maxi, Lidl Plus, SuperKartica…) brings its color and, where known, the code its tills read. */
+    fun applyBrand(n: String) {
+        val b = Brands.card(n) ?: return
+        if (!colorChosen) color = b.color
+        if (!formatChosen && b.format != null) format = b.format
+    }
+    val photo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) scope.launch {
+            val saved = vm.saveCardImage(uri)
+            if (saved == null) Toast.makeText(context, "Couldn't use that picture", Toast.LENGTH_SHORT).show() else image = saved
+        }
+    }
 
     fun scanned(s: Scanned) {
         number = s.value
@@ -74,7 +96,7 @@ fun CardForm(start: LoyaltyCard, onSave: (LoyaltyCard) -> Unit, onBack: () -> Un
 
     val problem = Barcodes.problem(number, format)
     WalletScreen(if (start.id.isBlank()) "New card" else "Edit card", onBack, actions = {
-        TextButton(onClick = { onSave(start.copy(name = name.trim(), number = number.trim(), format = format, color = color, note = note.trim())) }, enabled = problem == null) {
+        TextButton(onClick = { onSave(start.copy(name = name.trim(), number = number.trim(), format = format, color = color, note = note.trim(), image = image)) }, enabled = problem == null) {
             Text("Save", color = if (problem == null) WalletAccent else StrideColors.Faint)
         }
     }) {
@@ -97,9 +119,9 @@ fun CardForm(start: LoyaltyCard, onSave: (LoyaltyCard) -> Unit, onBack: () -> Un
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Shop (Maxi, Lilly, NIS…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it; applyBrand(it) }, label = { Text("Shop (Maxi, Lilly, NIS…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
-                    number, { v -> number = v; if (!formatChosen) format = Barcodes.guess(v) },
+                    number, { v -> number = v; if (!formatChosen) format = Brands.card(name)?.format ?: Barcodes.guess(v) },
                     label = { Text("Card number") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     isError = number.isNotBlank() && problem != null,
                     supportingText = { if (number.isNotBlank() && problem != null) Text(problem) },
@@ -130,13 +152,21 @@ fun CardForm(start: LoyaltyCard, onSave: (LoyaltyCard) -> Unit, onBack: () -> Un
                         Box(
                             Modifier.size(34.dp).clip(CircleShape).background(Color(c))
                                 .border(if (c == color) 3.dp else 0.dp, if (c == color) StrideColors.Text else Color.Transparent, CircleShape)
-                                .clickable { color = c },
+                                .clickable { color = c; colorChosen = true },
                         )
                     }
                 }
             }
         }
-        item { CardTile(start.copy(name = name, number = number, color = color), Modifier.padding(horizontal = 60.dp)) }
+        item { CardTile(start.copy(name = name, number = number, color = color, image = image), Modifier.padding(horizontal = 60.dp)) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TextButton(onClick = { photo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                    Text(if (image == null) "Use a photo of the card" else "Change the photo", color = WalletAccent)
+                }
+                if (image != null) TextButton(onClick = { image = null }) { Text("Remove photo", color = StrideColors.Dim) }
+            }
+        }
         item { OutlinedTextField(note, { note = it }, label = { Text("Note (optional)") }, modifier = Modifier.fillMaxWidth()) }
     }
 }

@@ -1,5 +1,16 @@
 [
   {
+    "id": "2026-10-26-wallet-brands-mani",
+    "title": "Wallet: logos, categories, Mani import 🧾",
+    "items": [
+      {"icon": "palette", "text": "Receipts show the shop's logo and its everyday name (NIS, Lukoil, Gigatron…) instead of the long company name."},
+      {"icon": "chart", "text": "Spending per week with the weekly average, and the month by Shops or by Categories (fuel, groceries, tech, home, clothes, sport, pharmacy…). Tap one to see its receipts; change a receipt's category by tapping it."},
+      {"icon": "spark", "text": "Save receipts with the star and find them under ★ Saved."},
+      {"icon": "apps", "text": "Coming from Mani? ⋮ › Import from Mani (CSV): its receipts and groups come in. Scan one of them later and the full receipt with its items replaces it."},
+      {"icon": "palette", "text": "Loyalty cards know common programs (Moj Maxi, Lidl Plus, SuperKartica, Laguna, Vulkan…): their color, logo and whether the till reads a QR code or a barcode. Add a photo of the card to see it as it really looks."}
+    ]
+  },
+  {
     "id": "2026-10-26-wallet",
     "title": "New app: Wallet 🧾",
     "items": [

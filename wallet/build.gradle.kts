@@ -33,6 +33,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1")
     // Draws the loyalty card's barcode (pure Java).
     implementation("com.google.zxing:core:3.5.3")
+    // Shop and card logos, card photos.
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     testImplementation("junit:junit:4.13.2")
 }

@@ -16,6 +16,8 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -38,7 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.stride.format.Dates
 import app.stride.ui.theme.StrideColors
+import app.stride.wallet.domain.Brands
+import app.stride.wallet.domain.Category
 import app.stride.wallet.domain.ReceiptStats
+import androidx.compose.ui.graphics.Color
 import app.stride.wallet.model.ReceiptStatus
 import app.stride.wallet.model.WalletData
 import java.util.Locale
@@ -51,6 +56,24 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
     val context = LocalContext.current
     var askDelete by rememberSaveable { mutableStateOf(false) }
     var showText by rememberSaveable { mutableStateOf(false) }
+    var pickCategory by rememberSaveable { mutableStateOf(false) }
+    if (pickCategory) AlertDialog(
+        onDismissRequest = { pickCategory = false },
+        title = { Text("Category") },
+        text = {
+            Column {
+                Category.entries.forEach { c ->
+                    TextButton(onClick = { vm.setCategory(id, c.name); pickCategory = false }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(categoryIcon(c), null, tint = Color(c.color), modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(10.dp))
+                        Text(c.label, color = StrideColors.Text, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { vm.setCategory(id, null); pickCategory = false }) { Text("Guess it", color = WalletAccent) } },
+        dismissButton = { TextButton(onClick = { pickCategory = false }) { Text("Cancel") } },
+    )
     var note by rememberSaveable(id) { mutableStateOf(r.note) }
     val fuel = ReceiptStats.fuel(r)
 
@@ -66,8 +89,9 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
         if (r.status == ReceiptStatus.OK) ReceiptStats.title(r) else "Receipt",
         onBack = { if (note != r.note) vm.setNote(id, note); onBack() },
         actions = {
-            if (r.status != ReceiptStatus.OK) IconButton(onClick = { vm.fetch(id) }, enabled = !loading) { Icon(Icons.Filled.Refresh, "Try again", tint = WalletAccent) }
-            IconButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.url))) } }) { Icon(Icons.AutoMirrored.Filled.OpenInNew, "Open on suf.purs.gov.rs", tint = StrideColors.Dim) }
+            IconButton(onClick = { vm.toggleStar(id) }) { Icon(if (r.starred) Icons.Filled.Star else Icons.Filled.StarBorder, if (r.starred) "Unsave" else "Save", tint = if (r.starred) StrideColors.Amber else StrideColors.Dim) }
+            if (r.status != ReceiptStatus.OK && r.url.isNotBlank()) IconButton(onClick = { vm.fetch(id) }, enabled = !loading) { Icon(Icons.Filled.Refresh, "Try again", tint = WalletAccent) }
+            if (r.url.isNotBlank()) IconButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.url))) } }) { Icon(Icons.AutoMirrored.Filled.OpenInNew, "Open on suf.purs.gov.rs", tint = StrideColors.Dim) }
             IconButton(onClick = { askDelete = true }) { Icon(Icons.Filled.Delete, "Delete", tint = StrideColors.Dim) }
         },
     ) {
@@ -85,6 +109,21 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
         }
         if (r.status == ReceiptStatus.OK) item {
             Glass(tint = WalletAccent) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ShopLogo(r, 48)
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(ReceiptStats.title(r), color = StrideColors.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Brands.shopName(r.shop)?.takeIf { it != ReceiptStats.title(r) }?.let { Text(it, color = StrideColors.Dim, fontSize = 12.sp) }
+                    }
+                    val cat = Brands.category(r)
+                    TextButton(onClick = { pickCategory = true }) {
+                        Icon(categoryIcon(cat), null, tint = Color(cat.color), modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text(cat.label, color = Color(cat.color), fontSize = 12.sp)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(ReceiptStats.amount(r.total ?: 0.0), color = if (r.refund) StrideColors.Accent else StrideColors.Text, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
                     Text(" RSD", color = StrideColors.Dim, fontSize = 15.sp, modifier = Modifier.padding(bottom = 6.dp))
@@ -97,6 +136,12 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
                 Spacer(Modifier.height(10.dp))
                 listOfNotNull(r.company?.takeIf { it != r.shop }, listOfNotNull(r.address, r.city).joinToString(", ").ifEmpty { null }, r.tin?.let { "Seller PIB $it" })
                     .forEach { Text(it, color = StrideColors.Dim, fontSize = 12.sp) }
+            }
+        }
+        if (r.source == "mani") item {
+            Glass {
+                Text("Imported from Mani", color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("Mani's export has the shop, time and total but no items. Scan this receipt's QR code and the full one replaces it, keeping your note, warranty and choices.", color = StrideColors.Dim, fontSize = 12.sp)
             }
         }
         if (r.status == ReceiptStatus.OK) item { OwnerCard(vm, d, r) }

@@ -59,6 +59,12 @@ data class Receipt(
     /** The user set who it's for by hand; fetching again keeps their choice. */
     val ownerManual: Boolean = false,
     val warranties: List<Warranty> = emptyList(),
+    /** Kept apart ("Saved") so it's easy to find. */
+    val starred: Boolean = false,
+    /** A category chosen by hand (`Category` name); null = guessed from the shop and items. */
+    val category: String? = null,
+    /** Where it came from when not scanned: "mani" for a Mani CSV import (no items, no QR link). */
+    val source: String? = null,
 )
 
 /** A warranty on something bought with a receipt; it runs from the receipt's date. */
@@ -102,6 +108,8 @@ data class LoyaltyCard(
     /** Last time it was opened at a till; the most used cards come first. */
     val lastUsed: String? = null,
     val uses: Int = 0,
+    /** A photo of the card's front (file name in the app's card folder), shown as the tile. */
+    val image: String? = null,
 )
 
 /** Everything Wallet stores (wallet.json), on the phone only. */

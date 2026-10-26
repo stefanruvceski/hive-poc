@@ -73,6 +73,13 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `domain/Owners` (tested) filters. Warranties per receipt (`Warranty`: item + months from the receipt date),
   `domain/Warranties` (tested: active / ending in 30 days / expired). Look: glass everywhere (`Glass`, `GlassRow`, `GlassPill`,
   `walletGlow` in `ui/WalletCommon`; cards are tinted glass tiles in `CardTile`).
+  `domain/Brands` (tested): Serbian chains by legal name → short name, website (logo via Google's favicon service,
+  `ShopLogo`, initials as fallback), color and `Category` (also guessed from fuel items or words; per-receipt override
+  `Receipt.category`); loyalty programs → color, logo and QR / barcode (`Brands.card`). `ReceiptStats.weeks / byShop /
+  byCategory` (tested) feed the weekly chart and the Shops / Categories views; `Receipt.starred` = ★ Saved.
+  `domain/ManiImport` (tested): Mani's CSV (no QR link, no items) → `source = "mani"` receipts; Mani groups become
+  companies keyed `group:<name>` (naming a real PIB the same moves them); a later scan of the same receipt (same minute
+  and total) replaces the import. Card photos: `data/CardImages` (app files, 1000 px JPEG), `LoyaltyCard.image`.
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
   with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
   Open targets for a module later become "<moduleId>/<target>".
