@@ -22,7 +22,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
 ## Modules (ready for a "super-app" of several apps)
 - `:app` is a thin shell: `MainActivity` (turns intents into `OpenRequest`s), `StrideApplication` (hands `BuildConfig`
   to `AppInfo`, calls each module's `onAppStart`), `Modules.all` (the module list), launcher icon (`ic_hive_*`: same-size hexagons in an uneven comb), shortcuts,
-  FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Books, Drawify. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
+  FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Books, Drawify, Wallet. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`; order and hidden apps in `host/HomeOrder`, tested, prefs `hive_home`, edited with the pencil or a long press); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
   the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`ic_stat_hive`, the comb; `app.stride.core.R`),
@@ -58,6 +58,21 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   Hive's is used). `DrawApp` (Compose) hosts the original Android views via `AndroidView`: CameraX `PreviewView` and
   `OverlayView` (drag / pinch / rotate, corner mode); `TiltPerspective` (gravity → homography), `ImageFilters` (no white,
   Sobel outline), `BitmapLoader` (EXIF, last image kept). Images shared to Hive (`ACTION_SEND image/*`) open as "draw/share:<uri>".
+- `:wallet` (`WalletModule`, package `app.stride.wallet`, sky blue): fiscal receipts and loyalty cards, like the Mani.rs app.
+  `wallet.json` (`WalletData`: receipts, cards). A receipt is saved from the QR code's tax-office link
+  (`suf.purs.gov.rs/v/?vl=…`, deduped by the `vl` value), then `data/FiscalClient` GETs that link with
+  `Accept: application/json` (public, no key) and `domain/FiscalParse` (tested) reads `invoiceRequest` / `invoiceResult` /
+  `journal`, falling back to the printed text and the HTML page (span ids `shopFullNameLabel`, `totalAmountLabel`, …);
+  Cyrillic is shown in Latin. Offline scans stay PENDING and are retried when Wallet opens. `domain/ReceiptStats` (tested):
+  months, top shops, search, fuel (liters, price per liter, by item name). Loyalty cards: number + `CardFormat`;
+  `domain/Barcodes` (tested) guesses the type (EAN check digits, else Code 128), validates and draws it with ZXing;
+  the card screen shows it on white at full brightness. Scanning (`ui/Scanner`) is Google Play services: the code
+  scanner UI for the camera (no camera permission) and ML Kit (unbundled) for a picked photo. Open targets "scan", "cards".
+  Who a receipt is for: `Receipt.buyerTin` = the buyer's PIB when the buyer id is type 10 or 12 (`FiscalParse.companyTin`;
+  other types are a person: personal), `ownerManual` keeps the user's choice; companies are named in `WalletData.companies`;
+  `domain/Owners` (tested) filters. Warranties per receipt (`Warranty`: item + months from the receipt date),
+  `domain/Warranties` (tested: active / ending in 30 days / expired). Look: glass everywhere (`Glass`, `GlassRow`, `GlassPill`,
+  `walletGlow` in `ui/WalletCommon`; cards are tinted glass tiles in `CardTile`).
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
   with its own `AppModule`, added to `settings.gradle.kts`, `app/build.gradle.kts` and `Modules.all`.
   Open targets for a module later become "<moduleId>/<target>".

@@ -69,5 +69,6 @@ dependencies {
     implementation(project(":money"))
     implementation(project(":books"))
     implementation(project(":draw"))
+    implementation(project(":wallet"))
     implementation(project(":core"))
 }
