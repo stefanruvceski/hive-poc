@@ -5,6 +5,7 @@ import android.util.Base64
 import app.stride.data.StrideJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -215,21 +216,49 @@ class GarminClient(private val context: Context) {
         return if (a != null && System.currentTimeMillis() < prefs.getLong(KEY_ACCESS_UNTIL, 0)) a else exchange()
     }
 
-    private fun api(method: String, path: String, json: JsonObject?): JsonObject? {
+    private fun api(method: String, path: String, json: JsonObject?): JsonObject? =
+        apiRaw(method, path, json, "the workout")?.let { runCatching { it.jsonObject }.getOrNull() }
+
+    private fun apiRaw(method: String, path: String, json: JsonObject?, what: String): JsonElement? {
         val b = Request.Builder().url("$API$path")
             .header("Authorization", "Bearer ${access()}")
             .header("User-Agent", APP_UA)
             .header("NK", "NT")
         val body = (json?.toString() ?: "{}").toRequestBody("application/json".toMediaType())
-        if (method == "POST") b.post(body) else b.get()
+        when (method) {
+            "POST" -> b.post(body)
+            "PUT" -> b.put(body)
+            else -> b.get()
+        }
         http.newCall(b.build()).execute().use { r ->
             val text = r.body?.string().orEmpty()
             if (r.code == 401) {
                 prefs.edit().remove(KEY_ACCESS).apply()
                 throw GarminException("Garmin sign-in expired. Connect Garmin again in Settings.")
             }
-            if (!r.isSuccessful) throw GarminException("Garmin rejected the workout (HTTP ${r.code}). ${text.take(160)}")
-            return runCatching { StrideJson.parseToJsonElement(text).jsonObject }.getOrNull()
+            if (!r.isSuccessful) throw GarminException("Garmin rejected $what (HTTP ${r.code}). ${text.take(160)}")
+            return runCatching { StrideJson.parseToJsonElement(text) }.getOrNull()
+        }
+    }
+
+    /**
+     * Replaces the sets of the strength activity the watch recorded on [date] with the phone's ([GarminSets]).
+     * Null when Garmin has no strength activity that day yet (the watch hasn't synced). Retries without exact
+     * exercise names when Garmin rejects them.
+     */
+    suspend fun copySets(session: app.stride.model.StrengthSession): GarminSets.Merge? = withContext(Dispatchers.IO) {
+        val list = apiRaw("GET", "/activitylist-service/activities/search/activities?startDate=${session.date}&endDate=${session.date}&limit=20", null, "the activity search")
+        val id = (list as? kotlinx.serialization.json.JsonArray)?.let { GarminSets.strengthActivityId(it) } ?: return@withContext null
+        val watch = apiRaw("GET", "/activity-service/activity/$id/exerciseSets", null, "the activity's sets") as? JsonObject
+            ?: throw GarminException("Garmin didn't return the watch's sets.")
+        val withId = if (watch["activityId"] == null) JsonObject(watch + ("activityId" to kotlinx.serialization.json.JsonPrimitive(id))) else watch
+        val merged = GarminSets.merge(withId, session)
+        try {
+            apiRaw("PUT", "/activity-service/activity/$id/exerciseSets", merged.body, "the sets")
+            merged
+        } catch (e: GarminException) {
+            if (e.message?.contains("HTTP 4") != true || e.message?.contains("HTTP 401") == true) throw e
+            GarminSets.merge(withId, session, exactNames = false).also { apiRaw("PUT", "/activity-service/activity/$id/exerciseSets", it.body, "the sets") }
         }
     }
 

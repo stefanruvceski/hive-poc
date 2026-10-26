@@ -303,6 +303,8 @@ fun WorkoutScreen(vm: AppViewModel, data: AppData, date: LocalDate, sessionId: S
                 onNote = { commit(session.copy(note = it)) },
                 onFinish = {
                     commit(session.copy(finished = true))
+                    // The watch recorded the same workout: put the phone's reps and weights into it on Garmin.
+                    if (garminUi.connected) vm.copySetsToGarmin(session.copy(finished = true), afterFinish = true)
                     vm.toast("Workout saved · ${session.exercises.count { it.done }} exercises · ${fmtKg(session.volume)} kg")
                     onBack()
                 },
@@ -448,7 +450,7 @@ private fun WorkoutList(
 private fun ExerciseRow(e: ExerciseEntry, lib: LibraryExercise?, record: Boolean, onClick: () -> Unit) {
     val sets = e.workingSets.ifEmpty { e.expandedSets() }
     val kgs = sets.map { it.kg }.distinct()
-    val summary = "${sets.size} × ${sets.map { it.reps }.distinct().joinToString("/")}" +
+    val summary = "${sets.size} × ${sets.map { it.reps }.distinct().joinToString("/")}" + (if (e.isPerSide) " / side" else "") +
         if (kgs.any { it > 0 }) " · ${kgs.joinToString("/") { fmtKg(it) }} kg" else ""
     Surface(
         onClick = onClick,
@@ -513,6 +515,7 @@ private fun ExerciseDetail(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     lib?.let { Text("Picture: ${it.name}", style = MaterialTheme.typography.bodySmall, color = StrideColors.Faint, modifier = Modifier.weight(1f)) }
                         ?: Spacer(Modifier.weight(1f))
+                    app.stride.ui.Chip(if (e.isPerSide) "Per side ✓" else "Per side", e.isPerSide) { onChange { it.copy(perSide = !it.isPerSide) } }
                     TextButton(onClick = onHistory) { Text("History") }
                     TextButton(onClick = onPickPicture) {
                         Icon(Icons.Filled.ImageSearch, null, modifier = Modifier.size(16.dp))
@@ -545,7 +548,7 @@ private fun ExerciseDetail(
                     Text("SET", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.width(36.dp))
                     Text("KG", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    Text("REPS", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.weight(1f))
+                    Text(if (e.isPerSide) "REPS / SIDE" else "REPS", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(56.dp))
                 }
                 val warmCount = sets.count { it.warmup }

@@ -86,8 +86,10 @@ object GarminWorkout {
                 val bodyweight = GarminExercises.isBodyweight(e.name)
                 fun kg(v: Double) = if (bodyweight) 0.0 else v
                 val sets = e.expandedSets()
+                // Garmin has no sides, so a per-side exercise says so on the watch ("8 reps · per side").
+                val side = if (e.isPerSide) " · per side" else ""
                 sets.filter { it.warmup }.forEach { w ->
-                    add(repsStep(++order, w.reps, kg(w.kg), cat, ex, "${e.name} (warm-up)", warmup = true))
+                    add(repsStep(++order, w.reps, kg(w.kg), cat, ex, "${e.name} (warm-up)$side", warmup = true))
                 }
                 val work = sets.filter { !it.warmup }
                 if (work.isEmpty()) continue
@@ -103,13 +105,13 @@ object GarminWorkout {
                         put("numberOfIterations", work.size)
                         put("smartRepeat", false)
                         put("workoutSteps", JsonArray(listOf(
-                            repsStep(++order, work[0].reps, kg(work[0].kg), cat, ex, e.name, warmup = false),
+                            repsStep(++order, work[0].reps, kg(work[0].kg), cat, ex, e.name + side, warmup = false),
                             restStep(++order, restSeconds),
                         )))
                     })
                 } else {
                     work.forEach { s ->
-                        add(repsStep(++order, s.reps, kg(s.kg), cat, ex, e.name, warmup = false))
+                        add(repsStep(++order, s.reps, kg(s.kg), cat, ex, e.name + side, warmup = false))
                         add(restStep(++order, restSeconds))
                     }
                 }

@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
@@ -96,6 +97,8 @@ fun DayScreen(
 ) {
     val result = Analyzer.day(date, today, data, intervals)
     val plan = result.plan
+    val garminUi by vm.garminUi.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.refreshGarmin() }
 
     if (plan?.kind == DayKind.SWIM_INTENSE) {
         result.matched.firstOrNull()?.let { a -> LaunchedEffect(a.id) { vm.loadIntervals(a.id) } }
@@ -173,21 +176,34 @@ fun DayScreen(
                 }
             }
 
+            // Strength days: the sets from the phone first, then what the watch measured (time, heart rate, load).
+            val strengthDay = plan?.kind?.isStrength == true
+            if (strengthDay) {
+                item { SectionLabel("Strength · sets from the phone", Modifier.padding(start = 4.dp, top = 6.dp)) }
+                item {
+                    val s = result.strength
+                    StrengthCard(
+                        s, onEdit = { onStrength(date, s?.id) }, canAdd = !date.isAfter(today),
+                        onCopy = if (garminUi.connected && s != null && s.finished) ({ vm.copySetsToGarmin(s) }) else null,
+                        copying = garminUi.busy,
+                    )
+                }
+            }
+
             // Below: everything else intervals.icu knows, grouped into cards.
             result.matched.forEachIndexed { i, a ->
                 item(key = "h-" + a.id) {
                     SectionLabel(
-                        if (result.matched.size > 1) "Workout ${i + 1} · ${a.name ?: a.type ?: ""}" else "Workout details",
+                        when {
+                            result.matched.size > 1 -> "Workout ${i + 1} · ${a.name ?: a.type ?: ""}"
+                            strengthDay -> "From the watch"
+                            else -> "Workout details"
+                        },
                         Modifier.padding(start = 4.dp, top = 6.dp),
                     )
                 }
                 if (i > 0) item(key = "k-" + a.id) { KeyStats(a) }
                 item(key = a.id) { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { ActivityDetails(a) } }
-            }
-
-            if (plan?.kind?.isStrength == true) {
-                item { SectionLabel("Strength", Modifier.padding(start = 4.dp, top = 6.dp)) }
-                item { StrengthCard(result.strength, onEdit = { onStrength(date, result.strength?.id) }, canAdd = !date.isAfter(today)) }
             }
 
             result.extra.forEach { a ->
@@ -265,7 +281,7 @@ private fun RepsCard(reps: List<Interval>) {
 }
 
 @Composable
-private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolean) {
+private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolean, onCopy: (() -> Unit)? = null, copying: Boolean = false) {
     FCard {
         if (s == null) {
             Text("No exercises logged yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -278,7 +294,7 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Text(e.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Text(
-                        (if (e.weightKg > 0) "${fmtKg(e.weightKg)} kg · " else "") + "${e.sets}×${e.reps}",
+                        (if (e.weightKg > 0) "${fmtKg(e.weightKg)} kg · " else "") + "${e.sets}×${e.reps}" + if (e.isPerSide) " / side" else "",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -299,6 +315,13 @@ private fun StrengthCard(s: StrengthSession?, onEdit: () -> Unit, canAdd: Boolea
             Spacer(Modifier.height(10.dp))
             if (s.finished) FilledTonalButton(onClick = onEdit) { Text("Open workout") }
             else Button(onClick = onEdit) { Text("Continue workout · ${s.exercises.count { it.done }}/${s.exercises.size}") }
+            if (onCopy != null) {
+                androidx.compose.material3.TextButton(onClick = onCopy, enabled = !copying) { Text(if (copying) "Updating Garmin…" else "Copy sets to Garmin") }
+                Text(
+                    "Puts these reps and weights into the watch's activity on Garmin Connect; its time and heart rate stay.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

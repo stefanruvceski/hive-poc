@@ -385,9 +385,27 @@ data class ExerciseEntry(
     val done: Boolean = true,
     /** Exercise library id for the picture and steps (free-exercise-db), null = match by name. */
     val dbId: String? = null,
+    /** Reps are per side (single-arm / single-leg); null = guessed from the name ([guessPerSide]). */
+    val perSide: Boolean? = null,
 ) {
+    val isPerSide: Boolean get() = perSide ?: guessPerSide(name)
+
+    /** Both sides do the work, so a per-side exercise moves twice the load. */
     val volume: Double
-        get() = if (setList.isNotEmpty()) setList.filter { !it.warmup }.sumOf { it.kg * it.reps } else weightKg * sets * reps
+        get() = (if (setList.isNotEmpty()) setList.filter { !it.warmup }.sumOf { it.kg * it.reps } else weightKg * sets * reps) * if (isPerSide) 2 else 1
+
+    companion object {
+        private val PER_SIDE = listOf(
+            "single-arm", "single arm", "one-arm", "one arm", "single-leg", "single leg", "one-leg", "one leg",
+            "alternating", "unilateral", "per side", "each side", "split squat", "lunge", "step-up", "step up", "suitcase",
+        )
+
+        /** Single-arm / single-leg exercises are logged per side. */
+        fun guessPerSide(name: String): Boolean {
+            val n = name.lowercase()
+            return PER_SIDE.any { it in n }
+        }
+    }
 
     /** Working sets only (no warm-ups). */
     val workingSets: List<SetEntry> get() = expandedSets().filter { !it.warmup }
