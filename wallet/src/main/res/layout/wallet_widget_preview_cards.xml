@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picker preview with sample data (the real widget is drawn by Glance). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/wallet_wp_bg" android:padding="12dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LOYALTY CARDS" android:textColor="#64748B" android:textSize="10sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="▬  Moj Maxi" android:textColor="#EEF2FF" android:textSize="13sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▬  Lidl Plus" android:textColor="#EEF2FF" android:textSize="13sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▬  SuperKartica" android:textColor="#EEF2FF" android:textSize="13sp" android:textStyle="bold" />
+</LinearLayout>

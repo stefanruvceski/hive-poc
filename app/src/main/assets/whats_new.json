@@ -3,9 +3,28 @@
     "id": "2026-10-26-hive-backup",
     "title": "Never lose your data 🛟",
     "items": [
-      {"icon": "apps", "text": "Hive settings (gear on the home screen) → Backup: pick a folder on your phone, e.g. Documents/Hive. Every app goes into one file there once a day: two weeks of daily copies plus one per month."},
-      {"icon": "spark", "text": "The folder is yours, so it stays even if Hive is deleted. After a reinstall Hive offers to restore from it; you can also restore any backup file or share it to Drive."},
-      {"icon": "bell", "text": "Your intervals.icu and Anthropic keys now live apart from your data: no backup carries them, not even Android's own Google backup."}
+      {
+        "icon": "apps",
+        "text": "Hive settings (gear on the home screen) → Backup: pick a folder on your phone, e.g. Documents/Hive. Every app goes into one file there once a day: two weeks of daily copies plus one per month."
+      },
+      {
+        "icon": "spark",
+        "text": "The folder is yours, so it stays even if Hive is deleted. After a reinstall Hive offers to restore from it; you can also restore any backup file or share it to Drive."
+      },
+      {
+        "icon": "bell",
+        "text": "Your intervals.icu and Anthropic keys now live apart from your data: no backup carries them, not even Android's own Google backup."
+      }
+    ]
+  },
+  {
+    "id": "2026-10-26-wallet-noqr-fuel-till",
+    "title": "Wallet: no-QR receipts, fuel diary, faster at the till ⛽",
+    "items": [
+      {"icon": "spark", "text": "QR code won't scan? ⋮ › Receipt without QR: photograph the bottom of the receipt, Hive reads the four printed fields (total, PFR time, PFR number, counter) and finds it at the tax office, items and all."},
+      {"icon": "chart", "text": "Fuel diary (Receipts › Fuel diary): price per liter month by month, the stations you use from cheapest, liters and money this year, and liters per 100 km when you type the odometer on a fuel receipt."},
+      {"icon": "apps", "text": "Cards faster: a Wallet · Cards home-screen widget, a Cards tile in Quick Settings and a Cards shortcut on the Hive icon. Tap a card and it opens straight at the till."},
+      {"icon": "palette", "text": "At the till the card fills a clean white screen: just the code, the number and full brightness. Pin your favourite cards to the top (⋯ › Pin to top)."}
     ]
   },
   {

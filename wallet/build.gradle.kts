@@ -31,6 +31,8 @@ dependencies {
     // Live scanning with Google's scanner UI (no camera permission) and barcodes in a picked photo or screenshot.
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1")
+    // Reads the printed fields of a receipt whose QR code won't scan.
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
     // Draws the loyalty card's barcode (pure Java).
     implementation("com.google.zxing:core:3.5.3")
     // Shop and card logos, card photos.
