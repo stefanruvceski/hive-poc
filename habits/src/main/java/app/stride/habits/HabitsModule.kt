@@ -35,6 +35,7 @@ object HabitsModule : AppModule {
     override val subtitle = "Daily habits, to-dos, streaks and mood"
     override val icon: ImageVector = Icons.Filled.TaskAlt
     override val accent = Color(0xFFFACC15)
+    override val dataFiles = listOf("habits.json")
 
     override fun onAppStart(context: Context) {
         HabitReminder.schedule(context)

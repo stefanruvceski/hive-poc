@@ -168,6 +168,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   `LiveWorkoutReceiver` (writes the store, `DataEvents.notifyChanged()` makes the app reload).
 - Health Connect (`data/HealthSync.kt`, connect-client): fills missing steps/sleep/HRV/resting HR/weight, writes
   finished strength sessions without a watch workout (`AppData.hcExported`). Foreground only (no background read).
+- Hive backup (`core/backup/`): `HiveBackup` zips every module's `AppModule.dataFiles` (files/folders in filesDir, plus
+  manifest.json) into `hive-backup-YYYY-MM-DD.zip` in a user-picked SAF folder (prefs `hive_prefs`), daily via WorkManager;
+  `BackupFormat` (tested) names, zips and prunes (14 daily + newest per month for 12 months). Restore replaces the modules'
+  files and closes Hive. `BackupCard` in Hive settings; `RestoreOffer` on home on a fresh install. Keys never in data files:
+  Health's `Store` keeps the intervals.icu / Anthropic keys in prefs `secrets` (excluded from Android backup like `garmin`).
 - Backup (`data/Backup.kt`): export/restore JSON via the system file picker (Drive works), weekly auto backup into a
   picked folder (SAF tree, `Settings.backupFolder`). Keys are stripped.
 - Trends: Challenges and badges (`domain/Badges.kt`), Sleep and HRV insights (`domain/Insights.kt`), Year in review

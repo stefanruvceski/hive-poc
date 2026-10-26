@@ -10,5 +10,7 @@ class StrideApplication : Application() {
         AppInfo.init(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, BuildConfig.DEBUG)
         app.stride.format.Dates.init(this)
         Modules.all.forEach { it.onAppStart(this) }
+        app.stride.backup.HiveBackup.modules = Modules.all
+        app.stride.backup.HiveBackup.schedule(this)
     }
 }

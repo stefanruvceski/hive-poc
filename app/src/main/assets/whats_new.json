@@ -1,5 +1,23 @@
 [
   {
+    "id": "2026-10-26-hive-backup",
+    "title": "Never lose your data 🛟",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "Hive settings (gear on the home screen) → Backup: pick a folder on your phone, e.g. Documents/Hive. Every app goes into one file there once a day: two weeks of daily copies plus one per month."
+      },
+      {
+        "icon": "spark",
+        "text": "The folder is yours, so it stays even if Hive is deleted. After a reinstall Hive offers to restore from it; you can also restore any backup file or share it to Drive."
+      },
+      {
+        "icon": "bell",
+        "text": "Your intervals.icu and Anthropic keys now live apart from your data: no backup carries them, not even Android's own Google backup."
+      }
+    ]
+  },
+  {
     "id": "2026-10-26-wallet-noqr-fuel-till",
     "title": "Wallet: no-QR receipts, fuel diary, faster at the till ⛽",
     "items": [
