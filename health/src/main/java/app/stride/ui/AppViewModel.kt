@@ -343,6 +343,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Copies the phone's sets into the strength activity the watch recorded that day, so Garmin Connect shows the
+     * real reps and weights (the watch's timing, heart rate and the rest stay). [afterFinish]: called right after
+     * finishing, when the watch often hasn't synced yet, so a missing activity only gets a hint.
+     */
+    fun copySetsToGarmin(session: StrengthSession, afterFinish: Boolean = false) {
+        if (!garmin.connected || session.exercises.isEmpty() || _garmin.value.busy) return
+        viewModelScope.launch {
+            _garmin.value = _garmin.value.copy(busy = true)
+            try {
+                val m = garmin.copySets(session)
+                when {
+                    m == null -> toast(
+                        if (afterFinish) "Saved. Once the watch has synced, open the day and tap Copy sets to Garmin."
+                        else "No strength activity from the watch on this day yet. Sync the watch and try again."
+                    )
+                    m.watch == 0 -> toast("Garmin has the activity but no sets in it yet; added ${m.phone} sets from the phone")
+                    m.phone == m.watch -> toast("Garmin updated · ${m.phone} sets with your reps and weights")
+                    else -> toast("Garmin updated · ${m.phone} sets from the phone, the watch had counted ${m.watch}")
+                }
+            } catch (e: Exception) {
+                toast(e.message ?: "Couldn't update Garmin")
+            } finally {
+                _garmin.value = _garmin.value.copy(busy = false)
+            }
+        }
+    }
+
     fun setShareStyle(s: ShareStyle) {
         if (s != _data.value.settings.share) update { d -> d.copy(settings = d.settings.copy(share = s)) }
     }

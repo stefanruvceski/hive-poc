@@ -139,6 +139,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   workout-service JSON (repeat groups, reps, kg, rest; tested), `GarminExercises` maps names to FIT categories and, where known, exact exercise names (tested; on a 4xx the
   upload is retried without exact names); bodyweight exercises go without weight; a checked sauna becomes a timed step after the last exercise (dropped on the last retry).
   Workout screen → watch icon sends the session, scheduled on its date. Settings → Garmin Connect (MFA supported).
+  After a workout, `GarminSets` (tested) copies the phone's sets (reps, kg, exercise) into the watch's strength activity
+  that day (activitylist search → `activity-service/activity/{id}/exerciseSets` GET/PUT; watch timing and rests kept,
+  extra watch sets dropped, extra phone sets appended); automatic on Finish, or "Copy sets to Garmin" on the Day screen.
+- Per-side exercises: `ExerciseEntry.perSide` (null = `guessPerSide` from the name: single-arm/leg, split squat, lunge…);
+  reps are per side, volume counts both sides, the Garmin step note says "per side".
 - Quick Settings tile `live/StartWorkoutTile.kt`; launcher shortcuts `res/xml/shortcuts.xml` (EXTRA_OPEN workout/weight/today).
 
 ## Design

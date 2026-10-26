@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-26-phone-sets-garmin",
+    "title": "Your sets, on Garmin too ⌚",
+    "items": [
+      {"icon": "watch", "text": "Log reps and kg on the phone while the watch records: when you finish, Hive copies your sets into the watch's activity on Garmin Connect. The watch keeps its timing, heart rate and load. Not synced yet? Open the day and tap Copy sets to Garmin."},
+      {"icon": "strength", "text": "Single-arm and single-leg exercises are now per side: reps mean each side, volume counts both, and the watch step says \"per side\". Toggle Per side on any exercise."},
+      {"icon": "chart", "text": "Strength days show the sets from the phone first, then what the watch measured."}
+    ]
+  },
+  {
     "id": "2026-11-01-books",
     "title": "New app: Books 📚",
     "items": [
