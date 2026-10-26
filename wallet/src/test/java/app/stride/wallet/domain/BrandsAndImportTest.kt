@@ -100,3 +100,27 @@ class GroupingTest {
         assertEquals(1, ReceiptStats.search(rs, "nis").count { it.id == "b" })
     }
 }
+
+class CardBrandsTest {
+    @Test fun programs() {
+        fun n(s: String) = CardBrands.find(s)?.name
+        assertEquals("Dr. Max", n("Dr. Max"))
+        assertEquals("Moj Maxi", n("moj Maxi"))
+        assertEquals("Benu Plus", n("Benu Plus"))
+        assertEquals("Đak & Spot", n("Đak & Spot"))
+        assertEquals("Sport&Bonus", n("Sport&Bonus"))
+        assertEquals("Forma Ideale", n("Forma Ideale"))
+        assertEquals("Knez Petrol", n("Knez Petrol"))
+        assertEquals("Petrol zlatna kartica", n("Petrol zlatna kartica"))
+        assertEquals("MOL Move", n("Mol Move"))
+        assertEquals("GameS Privilege", n("GameS Privilege Card"))
+        assertEquals("Game Centar Klan", n("Game Centar Klan"))
+        assertEquals("Lukoil", n("Lukoil program lojalnosti"))
+        assertEquals("Under Armour Kvantum Plus", n("Under Armour Kvantum Plus"))
+        assertEquals("moj dm", n("moj dm"))
+        assertEquals(CardStyle.X, CardBrands.find("Vulkan klub")!!.style)
+        assertNull(CardBrands.find("Moja kartica"))
+        // Every program's name finds itself.
+        CardBrands.all.forEach { assertEquals(it.name, n(it.name)) }
+    }
+}

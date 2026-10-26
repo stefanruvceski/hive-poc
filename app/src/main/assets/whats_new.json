@@ -1,5 +1,14 @@
 [
   {
+    "id": "2026-10-26-wallet-card-faces",
+    "title": "Loyalty cards that look like cards 💳",
+    "items": [
+      {"icon": "palette", "text": "About 65 Serbian loyalty programs now have their own card: their colors, their motif (Lilly's dots, Vulkan's X, Benu's crosses, Gigatron's gold corner…) and their logo."},
+      {"icon": "spark", "text": "Start typing a shop when adding a card and Hive suggests the program; tap it and the card, colors and code type are set."},
+      {"icon": "apps", "text": "Want it exactly like the plastic? Add a photo of your card and Hive shows that instead."}
+    ]
+  },
+  {
     "id": "2026-10-26-wallet-brands-mani",
     "title": "Wallet: logos, categories, Mani import 🧾",
     "items": [
