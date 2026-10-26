@@ -26,22 +26,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -141,12 +130,12 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
         ) {
             item {
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (onHome != null) IconButton(onClick = onHome) { Icon(Icons.Filled.Apps, "All apps", tint = StrideColors.Dim) }
-                    Column(Modifier.weight(1f).padding(start = if (onHome != null) 0.dp else 8.dp)) {
+                    if (onHome != null) GlassIconButton(Icons.Filled.Apps, "All apps", onClick = onHome)
+                    Column(Modifier.weight(1f).padding(start = if (onHome != null) 12.dp else 4.dp)) {
                         Text("AUDIO & VIDEO", color = StrideColors.Dim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Text("Music", color = StrideColors.Text, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                    IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Music settings", tint = StrideColors.Dim) }
+                    GlassIconButton(Icons.Filled.Settings, "Music settings", onClick = onSettings)
                 }
             }
 
@@ -154,15 +143,14 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                 Glass(tint = MusicAccent) {
                     Text("New download", color = StrideColors.Dim, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        url, { url = it; error = null }, Modifier.fillMaxWidth(), singleLine = true,
-                        placeholder = { Text("Paste a link…") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        trailingIcon = { TextButton(onClick = { clipboard.getText()?.text?.let { url = it } }) { Text("Paste", color = MusicAccent) } },
+                    GlassField(
+                        url, { url = it; error = null }, "Paste a link…", keyboardType = KeyboardType.Uri,
+                        trailing = { GlassPill("Paste", selected = true) { clipboard.getText()?.text?.let { url = it; error = null } } },
                     )
                     error?.let { Text(it, color = StrideColors.Danger, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
                     Spacer(Modifier.height(10.dp))
-                    Button(
+                    GlassButton(
+                        "Download", subtitle = Args.summary(opts), enabled = url.isNotBlank(),
                         onClick = {
                             val link = Args.extractUrl(url)
                             if (link == null) error = "That doesn't look like a link"
@@ -172,14 +160,7 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                                 url = ""
                             }
                         },
-                        enabled = url.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MusicAccent),
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Download", color = StrideColors.Bg, fontWeight = FontWeight.Bold)
-                            Text(Args.summary(opts), color = StrideColors.Bg.copy(alpha = 0.75f), fontSize = 11.sp)
-                        }
-                    }
+                    )
                 }
             }
 
@@ -207,7 +188,7 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                         if (active > 0) "In progress · $active" else "Downloads",
                         color = if (active > 0) StrideColors.Amber else StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
                     )
-                    if (finished > 0) TextButton(onClick = { MusicRepo.clearFinished() }) { Text("Clear finished", color = StrideColors.Dim) }
+                    if (finished > 0) GlassPill("Clear finished", selected = false) { MusicRepo.clearFinished() }
                 }
             }
             if (rows.isEmpty()) item {
@@ -232,20 +213,21 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
 
     if (saveDialog) {
         var name by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { saveDialog = false },
-            title = { Text("New preset") },
-            text = { OutlinedTextField(name, { name = it }, singleLine = true, placeholder = { Text("Name") }) },
-            confirmButton = { TextButton(onClick = { MusicRepo.addPreset(name, opts); saveDialog = false }, enabled = name.isNotBlank()) { Text("Save", color = MusicAccent) } },
-            dismissButton = { TextButton(onClick = { saveDialog = false }) { Text("Cancel") } },
-        )
+        GlassDialog("New preset", onDismiss = { saveDialog = false }) {
+            Text(Args.summary(opts), color = StrideColors.Dim, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
+            GlassField(name, { name = it }, "Name, e.g. Pool 1.6×")
+            Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassPill("Cancel", selected = false, modifier = Modifier.weight(1f)) { saveDialog = false }
+                GlassPill("Save", selected = true, enabled = name.isNotBlank(), modifier = Modifier.weight(1f)) { MusicRepo.addPreset(name, opts); saveDialog = false }
+            }
+        }
     }
 }
 
 @Composable
 private fun SpeedCard(o: DlOptions, onChange: (DlOptions) -> Unit) {
     val quick = listOf(1f, 1.25f, 1.5f, 1.75f, 2f)
-    Glass {
+    Glass(tint = MusicAccent) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             app.stride.ui.ProgressRing((o.speed - 0.5f) / 2.5f, size = 92, stroke = 9, color = MusicAccent, label = "${Args.fmtSpeed(o.speed)}×")
             Column(Modifier.padding(start = 18.dp)) {
@@ -256,10 +238,9 @@ private fun SpeedCard(o: DlOptions, onChange: (DlOptions) -> Unit) {
                 Text(if (o.speed == 1f) "Original speed" else "Pitch stays the same", color = StrideColors.Dim, fontSize = 13.sp)
             }
         }
-        Slider(
-            value = o.speed, onValueChange = { onChange(o.copy(speed = (it * 20).roundToInt() / 20f)) }, valueRange = 0.5f..3f, steps = 49,
-            colors = SliderDefaults.colors(thumbColor = MusicAccent, activeTrackColor = MusicAccent),
-        )
+        Spacer(Modifier.height(10.dp))
+        GlassSlider(o.speed, 0.5f..3f, 0.05f) { onChange(o.copy(speed = (it * 20).roundToInt() / 20f)) }
+        Spacer(Modifier.height(10.dp))
         Segmented(quick.map { Args.fmtSpeed(it) + "×" }, quick.indexOf(o.speed)) { onChange(o.copy(speed = quick[it])) }
     }
 }
@@ -298,9 +279,9 @@ private fun OptionsBody(o: DlOptions, onChange: (DlOptions) -> Unit, onSavePrese
         SwitchRow("Split by chapters", o.splitChapters) { onChange(o.copy(splitChapters = it)) }
         SwitchRow("aria2c", o.useAria2, "Faster on slow links") { onChange(o.copy(useAria2 = it)) }
         Labeled("Extra yt-dlp arguments") {
-            OutlinedTextField(o.extraArgs, { onChange(o.copy(extraArgs = it)) }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("e.g. --sponsorblock-remove sponsor") })
+            GlassField(o.extraArgs, { onChange(o.copy(extraArgs = it)) }, "e.g. --sponsorblock-remove sponsor")
         }
-        TextButton(onClick = onSavePreset) { Text("Save as preset…", color = MusicAccent) }
+        GlassPill("Save as preset…", selected = true, modifier = Modifier.padding(top = 8.dp), onClick = onSavePreset)
     }
 }
 
@@ -337,20 +318,18 @@ private fun DownloadRow(
             }
         }
         if (item.status == DlStatus.RUNNING || item.status == DlStatus.FETCHING) {
-            val p = prog?.pct?.takeIf { it >= 0 }
-            if (p != null) LinearProgressIndicator(progress = { p / 100f }, color = MusicAccent, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-            else LinearProgressIndicator(color = MusicAccent, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            GlassProgress(prog?.pct?.takeIf { it >= 0 }?.let { it / 100f }, Modifier.padding(top = 10.dp))
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            if (item.status.active) TextButton(onClick = onCancel) { Text("Cancel", color = StrideColors.Danger) }
-            if (playable) TextButton(onClick = onPlay) { Text(if (nowPlaying) "Playing" else "Play", color = MusicAccent) }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+            if (item.status.active) GlassPill("Cancel", selected = true, tint = StrideColors.Danger, onClick = onCancel)
+            if (playable) GlassPill(if (nowPlaying) "Playing" else "▶ Play", selected = true, onClick = onPlay)
             val first = item.outputs.firstOrNull()
             if (item.status == DlStatus.DONE && first != null) {
-                if (!playable) TextButton(onClick = { openUri(ctx, first) }) { Text("Open", color = MusicAccent) }
-                TextButton(onClick = { shareUri(ctx, first) }) { Text("Share", color = StrideColors.Dim) }
+                if (!playable) GlassPill("Open", selected = true) { openUri(ctx, first) }
+                GlassPill("Share", selected = false) { shareUri(ctx, first) }
             }
-            if (item.status == DlStatus.FAILED || item.status == DlStatus.CANCELED) TextButton(onClick = onRetry) { Text("Retry", color = MusicAccent) }
-            if (!item.status.active) TextButton(onClick = onDelete) { Text("Remove", color = StrideColors.Faint) }
+            if (item.status == DlStatus.FAILED || item.status == DlStatus.CANCELED) GlassPill("Retry", selected = true, onClick = onRetry)
+            if (!item.status.active) GlassPill("Remove", selected = false, onClick = onDelete)
         }
     }
 }
@@ -387,7 +366,8 @@ private fun MusicSettings(onBack: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                GlassIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Spacer(Modifier.size(12.dp))
                 Text("Music settings", color = StrideColors.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -404,13 +384,13 @@ private fun MusicSettings(onBack: () -> Unit) {
         item {
             Glass {
                 Text("yt-dlp " + (version ?: "…"), color = StrideColors.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = {
+                GlassPill("Update now", selected = true, modifier = Modifier.padding(vertical = 8.dp)) {
                     updateText = "Updating…"
                     scope.launch {
                         updateText = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Engine.updateNow(ctx) }
                         version = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Engine.version(ctx) }
                     }
-                }) { Text("Update now", color = MusicAccent) }
+                }
                 updateText?.let { Text(it, color = StrideColors.Dim, fontSize = 12.sp) }
             }
         }
@@ -423,7 +403,7 @@ private fun MusicSettings(onBack: () -> Unit) {
                             Text(p.name, color = StrideColors.Text, fontSize = 15.sp)
                             Text(Args.summary(p.options), color = StrideColors.Dim, fontSize = 12.sp)
                         }
-                        if (!p.builtin) TextButton(onClick = { MusicRepo.deletePreset(p.id) }) { Text("Delete", color = StrideColors.Danger) }
+                        if (!p.builtin) GlassPill("Delete", selected = true, tint = StrideColors.Danger) { MusicRepo.deletePreset(p.id) }
                     }
                 }
             }
