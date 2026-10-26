@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -66,6 +67,7 @@ private fun icon(name: String): ImageVector = when (name) {
     "swim" -> Icons.Filled.Pool
     "run" -> Icons.AutoMirrored.Filled.DirectionsRun
     "strength" -> Icons.Filled.FitnessCenter
+    "music" -> Icons.Filled.MusicNote
     else -> Icons.Filled.AutoAwesome
 }
 

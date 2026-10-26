@@ -13,10 +13,13 @@ android {
 
     defaultConfig {
         applicationId = "app.stride"
-        minSdk = 26
+        // 29: Music saves into the shared Music / Movies / Download folders through MediaStore.
+        minSdk = 29
         targetSdk = 35
         versionCode = buildNumber
         versionName = "1.$buildNumber"
+        // Music bundles Python, yt-dlp and ffmpeg as native libraries; the Pixel needs only arm64.
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     // Release signing comes from CI secrets (see .github/workflows/build.yml); the keystore is never committed.
@@ -55,6 +58,8 @@ android {
         buildConfig = true
     }
     packaging {
+        // youtubedl-android runs its binaries from the extracted lib folder, so they must not stay compressed in the APK.
+        jniLibs { useLegacyPackaging = true }
         // Duplicate license/metadata files from the Anthropic SDK's dependencies (Jackson, Kotlin).
         resources {
             excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
@@ -70,5 +75,6 @@ dependencies {
     implementation(project(":books"))
     implementation(project(":draw"))
     implementation(project(":wallet"))
+    implementation(project(":music"))
     implementation(project(":core"))
 }
