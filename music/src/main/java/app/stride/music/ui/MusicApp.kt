@@ -96,9 +96,13 @@ fun MusicApp(open: OpenRequest, onHome: (() -> Unit)?) {
 
     BackHandler(enabled = settings && !player) { settings = false }
     BackHandler(enabled = player) { player = false }
-    Box(Modifier.fillMaxSize().musicGlow()) {
-        if (settings) MusicSettings { settings = false }
-        else MusicHome(onHome, sharedUrl, onSettings = { settings = true }, onPlayer = { player = true })
+    val haze = remember { dev.chrisbanes.haze.HazeState() }
+    Box(Modifier.fillMaxSize()) {
+        MusicBackdrop(haze, Playback.artwork)
+        androidx.compose.runtime.CompositionLocalProvider(LocalHaze provides haze) {
+            if (settings) MusicSettings { settings = false }
+            else MusicHome(onHome, sharedUrl, onSettings = { settings = true }, onPlayer = { player = true })
+        }
         AnimatedVisibility(visible = player, enter = slideInVertically(tween(380)) { it }, exit = slideOutVertically(tween(300)) { it }) {
             NowPlaying(onClose = { player = false })
         }

@@ -29,6 +29,9 @@ android {
 dependencies {
     api(project(":core"))
     implementation("io.coil-kt:coil-compose:2.7.0")
+    // Frosted glass: blurs the background behind each glass surface (Android 12+, a tinted scrim before that).
+    // 1.1.1 is the last release on Kotlin 2.0 / Compose 1.7, which this project uses.
+    implementation("dev.chrisbanes.haze:haze:1.1.1")
 
     // yt-dlp + ffmpeg + aria2c bundled (Python runs from native libs; the app extracts them, see app/build.gradle.kts).
     val ydl = "0.17.3"

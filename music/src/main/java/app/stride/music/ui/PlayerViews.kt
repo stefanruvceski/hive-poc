@@ -106,7 +106,7 @@ fun MiniPlayer(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(26.dp)
     Box(
         modifier.padding(horizontal = 12.dp).navigationBarsPadding().padding(bottom = 10.dp).fillMaxWidth().clip(shape)
-            .glassSurface(shape, fill = MusicBg.copy(alpha = 0.88f))
+            .glassSurface(shape, fill = MusicBg.copy(alpha = 0.55f), haze = LocalHaze.current)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onOpen),
     ) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
