@@ -194,6 +194,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** The Claude app's reply for the week starting [monday], pasted into the coach card. */
+    fun pasteCoach(monday: LocalDate, reply: String) {
+        val text = app.stride.coach.CoachHandoff.clean(reply)
+        if (text == null) {
+            toast("Copy Claude's reply first, then tap Paste reply.")
+            return
+        }
+        update { d -> d.copy(coach = d.coach + (monday.toString() to text)) }
+        app.stride.coach.CoachShare.recordReply(getApplication(), monday, text)
+        toast("Coach review saved")
+    }
+
     /** Health Connect: fill sleep/HRV/steps/weight gaps and write finished strength workouts. */
     fun syncHealth(silent: Boolean = true) {
         if (!_data.value.settings.healthConnect) return

@@ -16,9 +16,24 @@
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- The coach without an API key hands its prompt to the Claude app. -->
+        <package android:name="com.anthropic.claude" />
     </queries>
 
     <application>
+        <!-- Share → "Hive Coach": Claude's reply becomes the week's coach review (no screen). -->
+        <activity
+            android:name="app.stride.coach.CoachShare$ReplyActivity"
+            android:exported="true"
+            android:label="Hive Coach"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <!-- Health Connect privacy note on Android 14+. -->
         <activity-alias
             android:name="app.stride.ViewPermissionUsageActivity"

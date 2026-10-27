@@ -98,6 +98,8 @@ fun WeekTab(
     host: SectionHost,
     coachBusy: Boolean = false,
     onAskCoach: (LocalDate) -> Unit = {},
+    onAskClaude: (LocalDate) -> Unit = {},
+    onPasteCoach: (LocalDate, String) -> Unit = { _, _ -> },
     onEditGoals: () -> Unit = onSettings,
 ) {
     val nextMonday = mondayOf(today).plusWeeks(1)
@@ -176,6 +178,8 @@ fun WeekTab(
                                 busy = coachBusy,
                                 hasKey = data.settings.anthropicKey.isNotBlank(),
                                 onAsk = { onAskCoach(reviewMonday) },
+                                onAskClaude = { onAskClaude(reviewMonday) },
+                                onPaste = { onPasteCoach(reviewMonday, it) },
                                 onSettings = onSettings,
                             )
                         }

@@ -209,7 +209,7 @@ enum class NotifType(val id: String, val title: String, val description: String,
     DELOAD("deload", "Deload suggestion", "Monday · when a lighter week is due"),
     NO_DATA("no_data", "Watch not syncing", "No watch workouts for 3 days while workouts were planned"),
     UPDATE("update", "App update", "A new ${Brand.NAME} version is out"),
-    COACH("coach", "Weekly AI coach", "Sunday 19:00 · review of the week and advice for next week (needs an Anthropic API key)"),
+    COACH("coach", "Weekly AI coach", "Sunday 19:00 · review of the week and advice for next week (with an API key it arrives by itself, else a nudge to ask the Claude app)"),
     BADGE("badge", "Badges", "When you earn a badge or finish a monthly challenge"),
 }
 

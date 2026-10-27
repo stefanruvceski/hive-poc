@@ -97,6 +97,15 @@ object PlanReminder {
                 }
             }
         }
+        // Without a key: a nudge to send the week to the Claude app (once per week).
+        if (data.settings.notifyOn(NotifType.COACH) && data.settings.anthropicKey.isBlank() &&
+            now.dayOfWeek == DayOfWeek.SUNDAY && now.hour >= 19 && monday.toString() !in data.coach
+        ) {
+            val n = Notice(NotifType.COACH, "ask-$monday", "Your week is ready for the coach", "Tap, then Ask Claude: the Claude app reviews it, no API key needed.")
+            if (n.dedupe !in sentSoFar && notify(context, n)) {
+                prefs.edit().putStringSet(KEY_SENT, (sentSoFar + n.dedupe).toList().takeLast(300).toSet()).apply()
+            }
+        }
 
         // Update check twice a day.
         var latest = prefs.getInt(KEY_LATEST_BUILD, 0).takeIf { it > 0 }
@@ -128,7 +137,11 @@ object PlanReminder {
         val (channel, channelName) = channel(n.type)
         // One slot per type; workout notes get their own so two workouts don't replace each other.
         val id = 100 + n.type.ordinal * 10 + if (n.type == NotifType.WORKOUT_DONE || n.type == NotifType.PERSONAL_BEST) Math.floorMod(n.key.hashCode(), 10) else 0
-        return Notifier.post(context, channel, channelName, id, n.title, n.text, if (n.type == NotifType.PLAN_REVIEW) "plan-review" else null)
+        return Notifier.post(context, channel, channelName, id, n.title, n.text, when (n.type) {
+            NotifType.PLAN_REVIEW -> "plan-review"
+            NotifType.COACH -> "week"
+            else -> null
+        })
     }
 
     /** A sample of [t] right now, for the test button in Settings. */
