@@ -459,3 +459,38 @@ fun GarminCard(vm: AppViewModel) {
         )
     }
 }
+
+/** Where coach notifications land: today's check-in on top, the weekly review below, each one tap from the Claude app. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun CoachScreen(vm: AppViewModel, data: AppData, today: java.time.LocalDate, busy: Boolean, onBack: () -> Unit, onSettings: () -> Unit) {
+    val context = LocalContext.current
+    val week = app.stride.coach.CoachShare.reviewWeek(today)
+    val hasKey = data.settings.anthropicKey.isNotBlank()
+    androidx.compose.material3.Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { Text("Coach") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+            )
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CoachCard(
+                monday = today, review = data.coachDays[today.toString()], busy = busy, hasKey = hasKey,
+                onAsk = { vm.askCoachDaily(today) }, onSettings = onSettings,
+                onAskClaude = { app.stride.coach.CoachShare.ask(context, data, app.stride.coach.CoachHandoff.Kind.DAY, today) },
+                onPaste = { vm.pasteCoach(app.stride.coach.CoachHandoff.Kind.DAY, today, it) },
+                daily = true,
+            )
+            CoachCard(
+                monday = week, review = data.coach[week.toString()], busy = busy, hasKey = hasKey,
+                onAsk = { vm.askCoach(week) }, onSettings = onSettings,
+                onAskClaude = { app.stride.coach.CoachShare.ask(context, data, week) },
+                onPaste = { vm.pasteCoach(week, it) },
+            )
+        }
+    }
+}

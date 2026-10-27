@@ -209,6 +209,7 @@ enum class NotifType(val id: String, val title: String, val description: String,
     DELOAD("deload", "Deload suggestion", "Monday · when a lighter week is due"),
     NO_DATA("no_data", "Watch not syncing", "No watch workouts for 3 days while workouts were planned"),
     UPDATE("update", "App update", "A new ${Brand.NAME} version is out"),
+    COACH_DAILY("coach_daily", "Daily AI coach", "06:00 · tap Ask Claude: yesterday reviewed, advice for today, in the Claude app"),
     COACH("coach", "Weekly AI coach", "Sunday 19:00 · review of the week and advice for next week (with an API key it arrives by itself, else a nudge to ask the Claude app)"),
     BADGE("badge", "Badges", "When you earn a badge or finish a monthly challenge"),
 }
@@ -490,6 +491,8 @@ data class AppData(
     val deloadWeeks: List<String> = emptyList(),
     /** Weekly AI coach reviews, keyed by the reviewed week's Monday (ISO date). */
     val coach: Map<String, String> = emptyMap(),
+    /** Daily AI coach check-ins (yesterday reviewed, advice for the day), keyed by the day's ISO date. */
+    val coachDays: Map<String, String> = emptyMap(),
     /** Strength session ids already written to Health Connect. */
     val hcExported: List<String> = emptyList(),
     /** Nights with sleep stages (from Health Connect), keyed by the date you wake up; 120 days. */

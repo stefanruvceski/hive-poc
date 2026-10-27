@@ -192,6 +192,12 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   into the Hive backup folder (`HiveBackup.writeFile`); the reply comes back by Share → "Hive Coach"
   (`CoachShare.ReplyActivity`, goes to the week last sent) or "Paste reply" (`AppViewModel.pasteCoach`), cleaned of
   markdown by `CoachHandoff.clean` (tested), and fills the file's `response`. Sunday 19:00 nudge when there's no key.
+  Daily check-in: `CoachPrompt.daily` + `DAILY_SYSTEM` (tested; yesterday in full, last night's sleep/HRV/RHR vs 7-day
+  average, the four days before, recovery trend, today's plan, week so far; sections Yesterday / Today / Watch) in
+  `AppData.coachDays[date]` (120 days), file `coach-day-<date>.json`. `CoachHandoff.Kind` (WEEK / DAY) + pending key
+  "day:<date>" route shared replies. Notification `NotifType.COACH_DAILY` 06:00-12:00 via `CoachShare.notify` (tap →
+  "coach" = `CoachScreen` overlay with both cards; button "Ask Claude" → `CoachShare.AskActivity`, opens Claude directly).
+  Week tab section "coach_daily". `LayoutOps.sections` puts sections added in an update after their default neighbour.
   R8 keeps for the SDK (Jackson) are in `proguard-rules.pro`.
 - Live workout (`live/LiveWorkout.kt`): ongoing lock-screen notification while a stored, unfinished session is open:
   current set (`domain/LiveSet.kt`, tested), rest countdown, "Set done" / "+30 s" actions handled by

@@ -21,6 +21,13 @@
     </queries>
 
     <application>
+        <!-- The coach notification's "Ask Claude" button: opens the Claude app with the prompt (no screen). -->
+        <activity
+            android:name="app.stride.coach.CoachShare$AskActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- Share → "Hive Coach": Claude's reply becomes the week's coach review (no screen). -->
         <activity
             android:name="app.stride.coach.CoachShare$ReplyActivity"

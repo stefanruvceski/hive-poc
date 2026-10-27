@@ -86,6 +86,8 @@ import java.util.Locale
 fun CoachCard(
     monday: LocalDate, review: String?, busy: Boolean, hasKey: Boolean, onAsk: () -> Unit, onSettings: () -> Unit,
     onAskClaude: () -> Unit = {}, onPaste: (String) -> Unit = {},
+    /** The morning check-in: [monday] is then the day. */
+    daily: Boolean = false,
 ) {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val paste = { onPaste(clipboard.getText()?.text.orEmpty()) }
@@ -94,8 +96,11 @@ fun CoachCard(
             IconBubble(Icons.Filled.AutoAwesome, StrideColors.Manual, 40)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("AI COACH", style = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = StrideColors.Manual)
-                Text("Week ${weekRange(monday)}", style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text)
+                Text(if (daily) "DAILY COACH" else "AI COACH", style = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = StrideColors.Manual)
+                Text(
+                    if (daily) "${monday.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)} · yesterday and today" else "Week ${weekRange(monday)}",
+                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = StrideColors.Text,
+                )
             }
             if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
         }
@@ -104,33 +109,34 @@ fun CoachCard(
             review != null -> {
                 CoachText(review)
                 Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Written by Claude · check it against how you feel", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.weight(1f))
-                    androidx.compose.material3.TextButton(onClick = if (hasKey) onAsk else onAskClaude, enabled = !busy) { Text("Refresh") }
-                }
-                if (!hasKey) androidx.compose.material3.TextButton(onClick = paste) { Text("Paste a new reply") }
+                Text("Written by Claude · check it against how you feel", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint)
             }
-            !hasKey -> {
-                Text(
-                    "A short weekly review of your training, recovery and records, with advice for next week. " +
-                        "Ask Claude opens the Claude app with your week written out; send it, then share the reply to " +
-                        "Hive Coach (or copy it and tap Paste reply). No API key needed.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = StrideColors.Dim,
-                )
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = onAskClaude, modifier = Modifier.fillMaxWidth()) { Text("Ask Claude") }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                    OutlinedButton(onClick = paste, modifier = Modifier.weight(1f)) { Text("Paste reply") }
-                    androidx.compose.material3.TextButton(onClick = onSettings) { Text("Use an API key") }
-                }
+            daily -> Text(
+                "A quick morning check-in: yesterday against its plan, last night's recovery, the days before for a trend, " +
+                    "and advice for today's session. Ask Claude opens the Claude app with it all written out; share the reply " +
+                    "to Hive Coach or copy it and tap Paste reply.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = StrideColors.Dim,
+            )
+            else -> Text(
+                "A short weekly review of your training, recovery and records, with advice for next week. Ask Claude opens " +
+                    "the Claude app with your week written out; send it, then share the reply to Hive Coach or copy it and " +
+                    "tap Paste reply." + if (hasKey) " With your API key it also arrives on its own on Sunday evening." else "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = StrideColors.Dim,
+            )
+        }
+        // Always there, key or not, review or not.
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onAskClaude, modifier = Modifier.weight(1f)) { Text("Ask Claude") }
+            OutlinedButton(onClick = paste, modifier = Modifier.weight(1f)) { Text("Paste reply") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            if (hasKey) androidx.compose.material3.TextButton(onClick = onAsk, enabled = !busy) {
+                Text(if (busy) "Thinking…" else if (review != null) "Refresh with API key" else "Review with API key")
             }
-            else -> {
-                Text("No review for this week yet. It also arrives on its own on Sunday evening.", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Dim)
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = onAsk, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "Thinking…" else "Review this week") }
-                androidx.compose.material3.TextButton(onClick = onAskClaude) { Text("Or ask in the Claude app") }
-            }
+            else androidx.compose.material3.TextButton(onClick = onSettings) { Text("Use an API key instead") }
         }
     }
 }
@@ -140,11 +146,11 @@ fun CoachCard(
 private fun CoachText(text: String) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         text.lines().filter { it.isNotBlank() }.forEach { line ->
-            val label = listOf("Went well:", "Change:", "Next week:").firstOrNull { line.trim().startsWith(it) }
+            val label = listOf("Went well:", "Change:", "Next week:", "Yesterday:", "Today:", "Watch:").firstOrNull { line.trim().startsWith(it) }
             if (label != null) {
                 val color = when (label) {
-                    "Went well:" -> StrideColors.Good
-                    "Change:" -> StrideColors.Warn
+                    "Went well:", "Yesterday:" -> StrideColors.Good
+                    "Change:", "Watch:" -> StrideColors.Warn
                     else -> StrideColors.Manual
                 }
                 Text(label.dropLast(1).uppercase(), style = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Bold), color = color, modifier = Modifier.padding(top = 6.dp))

@@ -23,7 +23,11 @@ object Notifier {
 
     // Permission is checked right above the notify call (Android 13+ only needs it).
     @SuppressLint("MissingPermission")
-    fun post(context: Context, channel: String, channelName: String, id: Int, title: String, text: String, open: String? = null): Boolean {
+    fun post(
+        context: Context, channel: String, channelName: String, id: Int, title: String, text: String, open: String? = null,
+        /** An optional button that starts an activity (e.g. "Ask Claude"). */
+        action: Pair<String, android.content.Intent>? = null,
+    ): Boolean {
         if (!allowed(context)) return false
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(channel, channelName, NotificationManager.IMPORTANCE_DEFAULT))
@@ -35,6 +39,11 @@ object Notifier {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pending)
             .setAutoCancel(true)
+            .apply {
+                action?.let { (label, intent) ->
+                    addAction(0, label, PendingIntent.getActivity(context, id + 1, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+                }
+            }
             .build()
         NotificationManagerCompat.from(context).notify(id, notification)
         return true

@@ -27,6 +27,7 @@ import app.stride.data.Backup
 import app.stride.data.DataEvents
 import app.stride.coach.CoachClient
 import app.stride.coach.CoachPrompt
+import app.stride.domain.planFor
 import app.stride.domain.mondayOf
 import java.time.DayOfWeek
 import app.stride.domain.Notice
@@ -97,13 +98,33 @@ object PlanReminder {
                 }
             }
         }
-        // Without a key: a nudge to send the week to the Claude app (once per week).
+        // Without a key: a nudge to send the week to the Claude app (once per week), with an "Ask Claude" button.
         if (data.settings.notifyOn(NotifType.COACH) && data.settings.anthropicKey.isBlank() &&
             now.dayOfWeek == DayOfWeek.SUNDAY && now.hour >= 19 && monday.toString() !in data.coach
         ) {
-            val n = Notice(NotifType.COACH, "ask-$monday", "Your week is ready for the coach", "Tap, then Ask Claude: the Claude app reviews it, no API key needed.")
-            if (n.dedupe !in sentSoFar && notify(context, n)) {
-                prefs.edit().putStringSet(KEY_SENT, (sentSoFar + n.dedupe).toList().takeLast(300).toSet()).apply()
+            val key = "coach:ask-$monday"
+            if (key !in sentSoFar && app.stride.coach.CoachShare.notify(
+                    context, app.stride.coach.CoachHandoff.Kind.WEEK, 100 + NotifType.COACH.ordinal * 10,
+                    "Your week is ready for the coach", "Tap Ask Claude: the Claude app reviews your week, then share the reply to Hive Coach.",
+                )
+            ) {
+                prefs.edit().putStringSet(KEY_SENT, (sentSoFar + key).toList().takeLast(300).toSet()).apply()
+            }
+        }
+
+        // 06:00-12:00: the daily check-in (yesterday reviewed, advice for today) through the Claude app.
+        val todayDate = now.toLocalDate()
+        val dailyKey = "coach_daily:$todayDate"
+        if (data.settings.notifyOn(NotifType.COACH_DAILY) && now.hour in 6..11 && todayDate.toString() !in data.coachDays) {
+            val sentNow = prefs.getStringSet(KEY_SENT, emptySet()).orEmpty()
+            val plan = data.planFor(todayDate)
+            if (dailyKey !in sentNow && app.stride.coach.CoachShare.notify(
+                    context, app.stride.coach.CoachHandoff.Kind.DAY, 100 + NotifType.COACH_DAILY.ordinal * 10,
+                    "Morning check-in" + (plan?.let { " · ${it.title}" } ?: " · rest day"),
+                    "Tap Ask Claude: yesterday reviewed and advice for today, from your watch data.",
+                )
+            ) {
+                prefs.edit().putStringSet(KEY_SENT, (sentNow + dailyKey).toList().takeLast(300).toSet()).apply()
             }
         }
 
@@ -131,6 +152,7 @@ object PlanReminder {
         NotifType.LOW_RECOVERY, NotifType.BEDTIME, NotifType.DELOAD, NotifType.WEIGH_IN -> "health" to "Recovery and health"
         NotifType.NO_DATA, NotifType.UPDATE -> "app" to "App and sync"
         NotifType.COACH, NotifType.BADGE -> "progress" to "Workouts and progress"
+        NotifType.COACH_DAILY -> "daily" to "Daily plan"
     }
 
     private fun notify(context: Context, n: Notice): Boolean {
@@ -139,7 +161,7 @@ object PlanReminder {
         val id = 100 + n.type.ordinal * 10 + if (n.type == NotifType.WORKOUT_DONE || n.type == NotifType.PERSONAL_BEST) Math.floorMod(n.key.hashCode(), 10) else 0
         return Notifier.post(context, channel, channelName, id, n.title, n.text, when (n.type) {
             NotifType.PLAN_REVIEW -> "plan-review"
-            NotifType.COACH -> "week"
+            NotifType.COACH, NotifType.COACH_DAILY -> "coach"
             else -> null
         })
     }

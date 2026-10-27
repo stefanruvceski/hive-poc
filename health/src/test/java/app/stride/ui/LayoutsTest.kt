@@ -32,11 +32,15 @@ class LayoutsTest {
     }
 
     @Test
-    fun newSectionsAppendToSavedOrder() {
+    fun newSectionsJoinSavedOrderNextToTheirDefaultNeighbour() {
         val p = LayoutPrefs(order = mapOf("week" to listOf("compare", "plan")))
         val ids = Layouts.sections(p, week).map { it.id }
-        assertEquals(listOf("compare", "plan"), ids.take(2))
         assertEquals(week.sections.size, ids.size)
+        // The saved order stays; sections it doesn't know follow the one before them in the default order.
+        assertTrue(ids.indexOf("compare") < ids.indexOf("plan"))
+        assertEquals(ids.indexOf("plan") + 1, ids.indexOf("insights"))
+        assertEquals(ids.indexOf("swap") + 1, ids.indexOf("coach_daily"))
+        assertEquals("rings", ids.first())
     }
 
     @Test
