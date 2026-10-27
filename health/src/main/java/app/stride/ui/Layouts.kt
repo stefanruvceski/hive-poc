@@ -10,6 +10,7 @@ object Layouts {
             SectionDef("rings", "Daily rings"),
             SectionDef("today", "Today's workout"),
             SectionDef("swap", "Recovery swap"),
+            SectionDef("coach_daily", "Daily AI coach"),
             SectionDef("progress", "Week progress"),
             SectionDef("coach", "AI coach"),
             SectionDef("targets", "Weekly targets"),

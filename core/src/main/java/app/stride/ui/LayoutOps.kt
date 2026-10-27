@@ -21,9 +21,17 @@ object LayoutOps {
     fun visibleTabs(p: LayoutPrefs, all: List<TabDef>): List<TabDef> = tabs(p, all).filter { it.id !in p.hiddenTabs }.ifEmpty { listOf(all.first()) }
 
     /** Sections of [tab] in the user's order; sections added in later versions go to the end. */
+    /** The user's order; a section added in an update lands right after the one before it in the default order. */
     fun sections(p: LayoutPrefs, tab: TabDef): List<SectionDef> {
         val saved = p.order[tab.id].orEmpty().mapNotNull { id -> tab.sections.firstOrNull { it.id == id } }
-        return saved + tab.sections.filter { it !in saved }
+        if (saved.isEmpty()) return tab.sections
+        val out = saved.toMutableList()
+        tab.sections.forEachIndexed { i, s ->
+            if (s in out) return@forEachIndexed
+            val before = tab.sections.take(i).lastOrNull { it in out }
+            out.add(if (before == null) 0 else out.indexOf(before) + 1, s)
+        }
+        return out
     }
 
     fun hidden(p: LayoutPrefs, tab: TabDef, s: SectionDef) = "${tab.id}.${s.id}" in p.hidden

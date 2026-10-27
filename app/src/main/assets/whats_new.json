@@ -1,5 +1,23 @@
 [
   {
+    "id": "2026-10-27-coach-daily",
+    "title": "A daily coach, one tap from Claude",
+    "items": [
+      {
+        "icon": "bell",
+        "text": "Every morning at 06:00: a notification with an Ask Claude button. It opens the Claude app with yesterday's workout, last night's sleep, HRV and resting HR, the four days before for a trend and today's plan, all written out. Send it and you get Yesterday / Today / Watch."
+      },
+      {
+        "icon": "heart",
+        "text": "Share the reply to Hive Coach (or Paste reply) and it shows on the Week tab in a new Daily coach card. Tapping a coach notification opens a Coach screen with today's check-in and the weekly review."
+      },
+      {
+        "icon": "apps",
+        "text": "Ask Claude and Paste reply are now always on both coach cards, with or without an API key. Turn the daily one off in Settings → Notifications."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-coach-claude-app",
     "title": "The coach without an API key",
     "items": [

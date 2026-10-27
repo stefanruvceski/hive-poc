@@ -30,4 +30,12 @@ class CoachHandoffTest {
         val m = CoachHandoff.message("SYS", "DATA")
         assertTrue(m.indexOf("SYS") < m.indexOf("DATA"))
     }
+
+    @Test fun pendingKeys() {
+        val d = LocalDate.of(2026, 10, 27)
+        assertEquals(CoachHandoff.Kind.DAY to d, CoachHandoff.parsePending(CoachHandoff.pendingKey(CoachHandoff.Kind.DAY, d)))
+        assertEquals(CoachHandoff.Kind.WEEK to d, CoachHandoff.parsePending("2026-10-27"))
+        assertNull(CoachHandoff.parsePending("day:nope"))
+        assertEquals("coach-day-2026-10-27.json", CoachHandoff.fileName(CoachHandoff.Kind.DAY, d))
+    }
 }

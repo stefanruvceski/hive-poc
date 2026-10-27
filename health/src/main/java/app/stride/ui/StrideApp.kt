@@ -60,6 +60,7 @@ import app.stride.ui.screens.LayoutScreen
 import app.stride.ui.screens.NotificationsScreen
 import app.stride.ui.screens.YearReviewScreen
 import app.stride.ui.screens.GoalsScreen
+import app.stride.ui.screens.CoachScreen
 import app.stride.ui.theme.StrideColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
@@ -89,6 +90,7 @@ sealed interface Overlay {
     data object Notifications : Overlay
     data class Year(val year: Int) : Overlay
     data object Goals : Overlay
+    data object Coach : Overlay
 }
 
 private fun tabIcon(id: String) = when (id) {
@@ -159,6 +161,7 @@ fun StrideApp(
         when {
             t == "workout" -> overlays = listOf(Overlay.Strength(LocalDate.now(), null))
             t == "today" -> overlays = listOf(Overlay.Day(LocalDate.now()))
+            t == "coach" -> overlays = listOf(Overlay.Coach)
             t == "plan-review" -> overlays = listOf(Overlay.PlanReview(mondayOf(LocalDate.now()).plusWeeks(1)))
             t.startsWith("day:") -> runCatching { LocalDate.parse(t.removePrefix("day:")) }.getOrNull()?.let { overlays = listOf(Overlay.Day(it)) }
             else -> {
@@ -243,6 +246,9 @@ fun StrideApp(
                         onAskCoach = { vm.askCoach(it) },
                         onAskClaude = { app.stride.coach.CoachShare.ask(context, data, it) },
                         onPasteCoach = { m, t -> vm.pasteCoach(m, t) },
+                        onAskCoachDaily = { vm.askCoachDaily(it) },
+                        onAskClaudeDaily = { app.stride.coach.CoachShare.ask(context, data, app.stride.coach.CoachHandoff.Kind.DAY, it) },
+                        onPasteCoachDaily = { d, t -> vm.pasteCoach(app.stride.coach.CoachHandoff.Kind.DAY, d, t) },
                     )
                     "trends" -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) }, host = host, onYear = { push(Overlay.Year(it)) })
                     "strength" -> StrengthTab(
@@ -264,6 +270,7 @@ fun StrideApp(
             is Overlay.Notifications -> NotificationsScreen(vm = vm, data = data, onBack = pop)
             is Overlay.Year -> YearReviewScreen(data = data, year = top.year, onClose = pop)
             is Overlay.Goals -> GoalsScreen(vm = vm, data = data, onBack = pop)
+            is Overlay.Coach -> CoachScreen(vm = vm, data = data, today = today, busy = coachBusy, onBack = pop, onSettings = { push(Overlay.Settings) })
             is Overlay.Day -> DayScreen(
                 vm = vm, data = data, date = top.date, today = today, intervals = intervals,
                 onBack = pop,

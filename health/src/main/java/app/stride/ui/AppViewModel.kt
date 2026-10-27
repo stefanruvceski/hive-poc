@@ -195,15 +195,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** The Claude app's reply for the week starting [monday], pasted into the coach card. */
-    fun pasteCoach(monday: LocalDate, reply: String) {
+    fun pasteCoach(monday: LocalDate, reply: String) = pasteCoach(app.stride.coach.CoachHandoff.Kind.WEEK, monday, reply)
+
+    /** A reply pasted into the weekly card ([date] = Monday) or the daily one ([date] = the day). */
+    fun pasteCoach(kind: app.stride.coach.CoachHandoff.Kind, date: LocalDate, reply: String) {
         val text = app.stride.coach.CoachHandoff.clean(reply)
         if (text == null) {
             toast("Copy Claude's reply first, then tap Paste reply.")
             return
         }
-        update { d -> d.copy(coach = d.coach + (monday.toString() to text)) }
-        app.stride.coach.CoachShare.recordReply(getApplication(), monday, text)
-        toast("Coach review saved")
+        update { d -> app.stride.coach.CoachShare.put(d, kind, date, text) }
+        app.stride.coach.CoachShare.recordReply(getApplication(), kind, date, text)
+        toast(if (kind == app.stride.coach.CoachHandoff.Kind.DAY) "Daily check-in saved" else "Coach review saved")
+    }
+
+    /** The daily check-in for [day] with the user's own key (the Claude app is the free way). */
+    fun askCoachDaily(day: LocalDate) {
+        val key = _data.value.settings.anthropicKey
+        if (key.isBlank() || _coachBusy.value) return
+        viewModelScope.launch {
+            _coachBusy.value = true
+            try {
+                val text = CoachClient.review(key, CoachPrompt.DAILY_SYSTEM, CoachPrompt.daily(_data.value, day))
+                update { d -> app.stride.coach.CoachShare.put(d, app.stride.coach.CoachHandoff.Kind.DAY, day, text) }
+            } catch (e: Exception) {
+                toast(e.message ?: "The coach is unavailable right now.")
+            } finally {
+                _coachBusy.value = false
+            }
+        }
     }
 
     /** Health Connect: fill sleep/HRV/steps/weight gaps and write finished strength workouts. */
