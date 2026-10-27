@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-27-music-abyss",
+    "title": "Music goes Abyss 🌊",
+    "items": [
+      {
+        "icon": "palette",
+        "text": "A new look for Music: near-black navy with neon cyan, blue and teal light behind real frosted liquid glass (it blurs what's behind it as you scroll), with rainbow-edged rims where the light bends, like Apple's new glass."
+      },
+      {
+        "icon": "music",
+        "text": "Download stays lively before you paste a link: tinted glass with a hint, then a glowing cyan button once the link is in. Slider, progress and the play button glow in the same colors."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-coach-daily",
     "title": "A daily coach, one tap from Claude",
     "items": [

@@ -88,7 +88,7 @@ private fun RoundButton(size: Dp, filled: Boolean, enabled: Boolean = true, onCl
     Box(
         Modifier.size(size).scale(s).clip(CircleShape)
             .then(
-                if (filled) Modifier.background(MusicBrand) else Modifier,
+                if (filled) Modifier.background(Brush.linearGradient(listOf(MusicBrand, MusicDeep))) else Modifier,
             )
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
@@ -106,7 +106,7 @@ fun MiniPlayer(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(26.dp)
     Box(
         modifier.padding(horizontal = 12.dp).navigationBarsPadding().padding(bottom = 10.dp).fillMaxWidth().clip(shape)
-            .glassSurface(shape, fill = MusicBg.copy(alpha = 0.88f))
+            .glassSurface(shape, fill = MusicBg.copy(alpha = 0.55f), haze = LocalHaze.current)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onOpen),
     ) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -174,7 +174,7 @@ fun NowPlaying(onClose: () -> Unit) {
             Row(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 RoundButton(64.dp, filled = false, onClick = { Playback.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", tint = MusicText, modifier = Modifier.size(40.dp)) }
                 RoundButton(88.dp, filled = true, onClick = { Playback.toggle() }) {
-                    Icon(if (Playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play or pause", tint = MusicInk, modifier = Modifier.size(48.dp))
+                    Icon(if (Playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play or pause", tint = MusicText, modifier = Modifier.size(48.dp))
                 }
                 RoundButton(64.dp, filled = false, enabled = Playback.hasNext, onClick = { Playback.next() }) {
                     Icon(Icons.Filled.SkipNext, "Next", tint = if (Playback.hasNext) MusicText else StrideColors.Faint, modifier = Modifier.size(40.dp))

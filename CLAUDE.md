@@ -107,7 +107,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   **Later (asked for, not built yet):** company report: one tap → PDF/CSV of a month's receipts for a company
   (e.g. Obsidian IT) with totals and VAT per rate (the receipts' VAT labels / journal tax table), to send to the
   accountant; plus a "submitted / refunded" mark per receipt.
-- `:music` (`MusicModule`, package `app.stride.music`, violet `MusicAccent`): Tempo (the user's yt-dlp app, its repo is
+- `:music` (`MusicModule`, package `app.stride.music`, neon cyan `MusicAccent`): Tempo (the user's yt-dlp app, its repo is
   gone; rebuilt from the session that wrote it). youtubedl-android 0.17.3 (yt-dlp + ffmpeg + aria2c, `engine/Engine`:
   init off the main thread in `onAppStart`, yt-dlp self-update once a day, prefs `music_engine`). `music.json`
   (`MusicData`: downloads, presets, active preset, settings). `domain/Args` (tested) turns `DlOptions` into yt-dlp
@@ -116,9 +116,13 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   stored), files saved with MediaStore into Music|Movies/Hive Music or Download (why minSdk is 29 for the whole app).
   Player: Media3 `player/PlaybackService` (MediaSession, lock screen) + `Playback` (MediaController state for Compose).
   UI: `ui/MusicApp` (link, presets, speed card, options, downloads, settings), `ui/PlayerViews` (mini player, now
-  playing), glass helpers in `ui/MusicCommon`: colors and glass copied from the user's site (repo `stefanruvceski/ruvceski.com`,
-  theme "glacier" in `src/styles/theme.css`, `.glass` / `.ambient` in `globals.css`): `MusicBrand` ice (main buttons, ink text
-  `MusicInk`), `MusicBrand2` teal (highlights, = `MusicAccent`), `MusicBg`, `musicGlow()` = the four ambient lights, `glassSurface`. Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
+  playing), glass helpers in `ui/MusicCommon`. Look "Abyss" (picked from mocks): near-black navy (`musicGlow()`: navy
+  radial from the top + three soft neon lights, cyan / electric blue / teal), Apple-style liquid glass (`glassSurface`:
+  white 11% → 2%, bright top line, chromatic sweep rim cyan → blue), `MusicBrand` cyan (main actions, = `MusicAccent`),
+  `MusicBrand2` teal, `MusicDeep` blue, `MusicFill` gradient for slider / progress; the Download button stays tinted
+  glass with a hint when there's no link yet. Frost: Haze 1.1.1 (last on Kotlin 2.0 / Compose 1.7; don't bump without
+  upgrading those): `MusicBackdrop` (glow + floating tiles + the playing cover) is the `haze` source, every
+  `glassSurface(haze = LocalHaze.current)` is a `hazeChild`; glass must never sit inside the backdrop (Haze throws). Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
   with the active preset, or opens "music/add:<url>" when "Ask on Share" is on; "music/player" opens the player.
   The app packs only arm64-v8a and `useLegacyPackaging` (the library runs binaries from the lib folder).
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module

@@ -96,9 +96,13 @@ fun MusicApp(open: OpenRequest, onHome: (() -> Unit)?) {
 
     BackHandler(enabled = settings && !player) { settings = false }
     BackHandler(enabled = player) { player = false }
-    Box(Modifier.fillMaxSize().musicGlow()) {
-        if (settings) MusicSettings { settings = false }
-        else MusicHome(onHome, sharedUrl, onSettings = { settings = true }, onPlayer = { player = true })
+    val haze = remember { dev.chrisbanes.haze.HazeState() }
+    Box(Modifier.fillMaxSize()) {
+        MusicBackdrop(haze, Playback.artwork)
+        androidx.compose.runtime.CompositionLocalProvider(LocalHaze provides haze) {
+            if (settings) MusicSettings { settings = false }
+            else MusicHome(onHome, sharedUrl, onSettings = { settings = true }, onPlayer = { player = true })
+        }
         AnimatedVisibility(visible = player, enter = slideInVertically(tween(380)) { it }, exit = slideOutVertically(tween(300)) { it }) {
             NowPlaying(onClose = { player = false })
         }
@@ -136,8 +140,8 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                     Column(Modifier.weight(1f).padding(start = if (onHome != null) 12.dp else 4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // The site's eyebrow: a small teal dot with a glow, then the label in ice.
-                            Box(Modifier.size(6.dp).shadow(6.dp, androidx.compose.foundation.shape.CircleShape, ambientColor = MusicBrand2, spotColor = MusicBrand2).background(MusicBrand2, androidx.compose.foundation.shape.CircleShape))
-                            Text("  AUDIO & VIDEO", color = MusicBrand, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                            Box(Modifier.size(6.dp).shadow(6.dp, androidx.compose.foundation.shape.CircleShape, ambientColor = MusicBrand, spotColor = MusicBrand).background(MusicBrand, androidx.compose.foundation.shape.CircleShape))
+                            Text("  AUDIO & VIDEO", color = MusicEyebrow, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         }
                         Text("Music", color = MusicText, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
                     }
@@ -156,7 +160,7 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                     error?.let { Text(it, color = StrideColors.Danger, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
                     Spacer(Modifier.height(10.dp))
                     GlassButton(
-                        "Download", subtitle = Args.summary(opts), enabled = url.isNotBlank(),
+                        "Download", subtitle = Args.summary(opts), enabled = url.isNotBlank(), hint = "Paste a link to start",
                         onClick = {
                             val link = Args.extractUrl(url)
                             if (link == null) error = "That doesn't look like a link"
