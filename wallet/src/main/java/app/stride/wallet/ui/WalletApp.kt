@@ -136,9 +136,9 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         when {
             route.startsWith("receipt:") -> route.removePrefix("receipt:").let { id -> ReceiptScreen(vm, d, id, id in loading, ::pop) }
             route == "noqr" -> NoQrScreen(vm, onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
-            route == "fuel" -> FuelScreen(d, onReceipt = { push("receipt:$it") }, onBack = ::pop)
+            route == "fuel" -> FuelScreen(vm, d, onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route == "prices" -> PricesScreen(d, onProduct = { push("product:$it") }, onBack = ::pop)
-            route.startsWith("product:") -> ProductScreen(d, route.removePrefix("product:"), onReceipt = { push("receipt:$it") }, onBack = ::pop)
+            route.startsWith("product:") -> ProductScreen(vm, d, route.removePrefix("product:"), onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route.startsWith("card:") -> CardScreen(vm, d, route.removePrefix("card:"), onEdit = { push("edit:" + route.removePrefix("card:")) }, onBack = ::pop)
             // Saved: back to all cards, where the new one now sits, with a small note.
             route == "new-card" -> CardForm(LoyaltyCard("", "", ""), onSave = { c ->

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.stride.wallet.data.FiscalClient
 import app.stride.wallet.data.WalletStore
 import app.stride.wallet.data.CardImages
+import app.stride.wallet.domain.Aliases
 import app.stride.wallet.domain.Brands
 import app.stride.wallet.domain.FiscalParse
 import app.stride.wallet.domain.ManiImport
@@ -206,6 +207,29 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun setNote(id: String, note: String) = update { d -> d.copy(receipts = d.receipts.map { if (it.id == id) it.copy(note = note) else it }) }
 
     fun deleteReceipt(id: String) = update { d -> d.copy(receipts = d.receipts.filter { it.id != id }) }
+
+    // ---------------------------------------------------------------- prices: products and shops merged by hand
+
+    /** [b]'s product becomes a spelling of [a]'s (a keeps its name). */
+    fun mergeProducts(a: String, b: String) = update { d -> d.copy(productGroups = Aliases.merge(d.productGroups, a, b)) }
+
+    /** The name a product is shown under; blank goes back to the most used one. */
+    fun renameProduct(key: String, name: String?) = update { d -> d.copy(productGroups = Aliases.rename(d.productGroups, key, name)) }
+
+    fun unmergeProduct(key: String) = update { d -> d.copy(productGroups = Aliases.unmerge(d.productGroups, key)) }
+
+    /** "Not the same product": stops suggesting the pair. */
+    fun notSameProduct(a: String, b: String) = update { d -> d.copy(notSame = (d.notSame + Aliases.pair(a, b)).distinct()) }
+
+    /** [b]'s shop becomes part of [a]'s, which keeps [name] (what it was shown as) unless it already had one. */
+    fun mergeShops(a: String, b: String, name: String) = update { d ->
+        val merged = Aliases.merge(d.shopGroups, a, b)
+        d.copy(shopGroups = if (Aliases.group(merged, a)?.name == null) Aliases.rename(merged, a, name) else merged)
+    }
+
+    fun renameShop(key: String, name: String?) = update { d -> d.copy(shopGroups = Aliases.rename(d.shopGroups, key, name)) }
+
+    fun unmergeShop(key: String) = update { d -> d.copy(shopGroups = Aliases.unmerge(d.shopGroups, key)) }
 
     // ---------------------------------------------------------------- loyalty cards
 

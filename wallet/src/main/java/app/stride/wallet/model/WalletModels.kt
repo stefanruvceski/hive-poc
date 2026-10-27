@@ -125,4 +125,14 @@ data class WalletData(
     val receipts: List<Receipt> = emptyList(),
     val cards: List<LoyaltyCard> = emptyList(),
     val companies: List<Company> = emptyList(),
+    /** Products merged by hand (different spellings of one product) and their chosen names. */
+    val productGroups: List<AliasGroup> = emptyList(),
+    /** Shops merged by hand (e.g. one chain under two companies) and their chosen names. */
+    val shopGroups: List<AliasGroup> = emptyList(),
+    /** Product pairs ("keyA|keyB", sorted) the user said aren't the same: never suggested again. */
+    val notSame: List<String> = emptyList(),
 )
+
+/** Several keys that are one thing; [keys] first is the one kept, [name] the user's chosen name (null = automatic). */
+@Serializable
+data class AliasGroup(val keys: List<String>, val name: String? = null)
