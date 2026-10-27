@@ -187,6 +187,11 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 - AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (official Anthropic Java SDK, `claude-opus-5-5`,
   server-side refusal fallback). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
   Reviews in `AppData.coach[monday]`; Week tab section "coach"; Sunday 19:00 the worker writes one and notifies.
+  Without a key (`coach/CoachShare`): "Ask Claude" copies `CoachHandoff.message` (system + week), opens the Claude app
+  (`com.anthropic.claude`, in `<queries>`; else a chooser) and writes `coach-<monday>.json` (`prompt`, empty `response`)
+  into the Hive backup folder (`HiveBackup.writeFile`); the reply comes back by Share → "Hive Coach"
+  (`CoachShare.ReplyActivity`, goes to the week last sent) or "Paste reply" (`AppViewModel.pasteCoach`), cleaned of
+  markdown by `CoachHandoff.clean` (tested), and fills the file's `response`. Sunday 19:00 nudge when there's no key.
   R8 keeps for the SDK (Jackson) are in `proguard-rules.pro`.
 - Live workout (`live/LiveWorkout.kt`): ongoing lock-screen notification while a stored, unfinished session is open:
   current set (`domain/LiveSet.kt`, tested), rest countdown, "Set done" / "+30 s" actions handled by

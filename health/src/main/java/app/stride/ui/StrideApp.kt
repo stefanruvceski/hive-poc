@@ -241,6 +241,8 @@ fun StrideApp(
                         coachBusy = coachBusy,
                         onEditGoals = { push(Overlay.Goals) },
                         onAskCoach = { vm.askCoach(it) },
+                        onAskClaude = { app.stride.coach.CoachShare.ask(context, data, it) },
+                        onPasteCoach = { m, t -> vm.pasteCoach(m, t) },
                     )
                     "trends" -> TrendsTab(data = data, today = today, padding = padding, onDay = { push(Overlay.Day(it)) }, host = host, onYear = { push(Overlay.Year(it)) })
                     "strength" -> StrengthTab(

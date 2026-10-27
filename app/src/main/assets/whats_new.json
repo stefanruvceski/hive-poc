@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-27-coach-claude-app",
+    "title": "The coach without an API key",
+    "items": [
+      {
+        "icon": "heart",
+        "text": "Health → Week → AI coach → Ask Claude: the Claude app opens with your week written out. Send it, then share the reply to Hive Coach (or copy it and tap Paste reply) and it shows in the card like before."
+      },
+      {
+        "icon": "bell",
+        "text": "Sunday at 19:00 a nudge reminds you to ask, and the prompt is also saved as coach-<week>.json (with an empty response the reply fills in) in your Hive backup folder."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-music-glacier",
     "title": "Music in ruvceski.com colors",
     "items": [

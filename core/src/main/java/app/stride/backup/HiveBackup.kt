@@ -107,6 +107,17 @@ object HiveBackup {
         return name
     }
 
+    /** Writes (or replaces) a small file in the Hive folder, e.g. the coach's prompt for the Claude app. Null without a folder. */
+    fun writeFile(context: Context, name: String, mime: String, bytes: ByteArray): Uri? {
+        val tree = folder(context) ?: return null
+        val existing = children(context, tree).firstOrNull { it.name == name }
+        val doc = existing?.let { docUri(tree, it.id) }
+            ?: DocumentsContract.createDocument(context.contentResolver, docUri(tree, DocumentsContract.getTreeDocumentId(tree)), mime, name)
+            ?: return null
+        context.contentResolver.openOutputStream(doc, "wt")?.use { it.write(bytes) } ?: return null
+        return doc
+    }
+
     /** The newest Hive backup in the folder: its uri and file name. */
     fun newest(context: Context): Pair<Uri, String>? {
         val tree = folder(context) ?: return null

@@ -83,7 +83,12 @@ import java.util.Locale
 
 /** The coach's review of [monday]'s week, with a button to ask (or ask again). */
 @Composable
-fun CoachCard(monday: LocalDate, review: String?, busy: Boolean, hasKey: Boolean, onAsk: () -> Unit, onSettings: () -> Unit) {
+fun CoachCard(
+    monday: LocalDate, review: String?, busy: Boolean, hasKey: Boolean, onAsk: () -> Unit, onSettings: () -> Unit,
+    onAskClaude: () -> Unit = {}, onPaste: (String) -> Unit = {},
+) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val paste = { onPaste(clipboard.getText()?.text.orEmpty()) }
     GlassCard(Modifier.fillMaxWidth(), tint = StrideColors.Manual) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBubble(Icons.Filled.AutoAwesome, StrideColors.Manual, 40)
@@ -96,28 +101,35 @@ fun CoachCard(monday: LocalDate, review: String?, busy: Boolean, hasKey: Boolean
         }
         Spacer(Modifier.height(10.dp))
         when {
-            !hasKey -> {
-                Text(
-                    "A short weekly review of your training, recovery and records, with advice for next week. " +
-                        "Add your own Anthropic API key in Settings to turn it on.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = StrideColors.Dim,
-                )
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(onClick = onSettings) { Text("Add API key") }
-            }
             review != null -> {
                 CoachText(review)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Written by Claude · check it against how you feel", style = MaterialTheme.typography.labelSmall, color = StrideColors.Faint, modifier = Modifier.weight(1f))
-                    androidx.compose.material3.TextButton(onClick = onAsk, enabled = !busy) { Text("Refresh") }
+                    androidx.compose.material3.TextButton(onClick = if (hasKey) onAsk else onAskClaude, enabled = !busy) { Text("Refresh") }
+                }
+                if (!hasKey) androidx.compose.material3.TextButton(onClick = paste) { Text("Paste a new reply") }
+            }
+            !hasKey -> {
+                Text(
+                    "A short weekly review of your training, recovery and records, with advice for next week. " +
+                        "Ask Claude opens the Claude app with your week written out; send it, then share the reply to " +
+                        "Hive Coach (or copy it and tap Paste reply). No API key needed.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = StrideColors.Dim,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = onAskClaude, modifier = Modifier.fillMaxWidth()) { Text("Ask Claude") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    OutlinedButton(onClick = paste, modifier = Modifier.weight(1f)) { Text("Paste reply") }
+                    androidx.compose.material3.TextButton(onClick = onSettings) { Text("Use an API key") }
                 }
             }
             else -> {
                 Text("No review for this week yet. It also arrives on its own on Sunday evening.", style = MaterialTheme.typography.bodyMedium, color = StrideColors.Dim)
                 Spacer(Modifier.height(10.dp))
                 Button(onClick = onAsk, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "Thinking…" else "Review this week") }
+                androidx.compose.material3.TextButton(onClick = onAskClaude) { Text("Or ask in the Claude app") }
             }
         }
     }
