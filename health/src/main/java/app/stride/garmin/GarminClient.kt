@@ -263,6 +263,18 @@ class GarminClient(private val context: Context) {
     }
 
     /**
+     * Moves the watch detected by itself (Move IQ) on each of [days], from Garmin's daily events. The last answer is
+     * kept in the cache (garmin_events.json) so it can be shared when nothing is found.
+     */
+    suspend fun autoMoves(days: List<java.time.LocalDate>): Map<java.time.LocalDate, List<app.stride.model.AutoMove>> = withContext(Dispatchers.IO) {
+        days.associateWith { d ->
+            val json = apiRaw("GET", "/wellness-service/wellness/dailyEvents?calendarDate=$d", null, "the day's events") ?: return@associateWith emptyList()
+            if (d == days.max()) runCatching { java.io.File(context.cacheDir, EVENTS_FILE).writeText(json.toString()) }
+            app.stride.domain.AutoMoves.parse(json, d)
+        }
+    }
+
+    /**
      * Creates the workout in Garmin Connect and puts it on the calendar for [date]; returns the workout id.
      * When Garmin rejects [workout] (e.g. an exercise name it doesn't know), [fallback] is sent instead.
      */
@@ -283,6 +295,7 @@ class GarminClient(private val context: Context) {
     }
 
     companion object {
+        const val EVENTS_FILE = "garmin_events.json"
         private const val SSO = "https://sso.garmin.com/sso"
         private const val API = "https://connectapi.garmin.com"
         private const val CONSUMER_URL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json"

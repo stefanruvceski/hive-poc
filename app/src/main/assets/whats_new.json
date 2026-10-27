@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-27-auto-walks",
+    "title": "Walks count without starting them",
+    "items": [
+      {
+        "icon": "watch",
+        "text": "Walks (and runs or rides) your Garmin detects by itself now count toward Training time, so a short hard workout plus a walk can close the ring. A walk you did start on the watch still counts once. Needs Garmin connected in Health → Settings; the day screen lists what the watch detected."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-prices",
     "title": "Prices of everything, per chain",
     "items": [

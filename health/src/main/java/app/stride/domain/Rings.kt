@@ -36,7 +36,7 @@ object Rings {
         return rings.take(MAX).map { r ->
             val current: Double = when (r.kind) {
                 RingKind.STEPS -> well?.steps ?: 0.0
-                RingKind.MINUTES -> acts.sumOf { it.movingTime ?: 0.0 } / 60
+                RingKind.MINUTES -> acts.sumOf { it.movingTime ?: 0.0 } / 60 + AutoMoves.forDay(data, date).sumOf { it.second }
                 RingKind.CALORIES -> acts.sumOf { it.calories ?: 0.0 }
                 RingKind.PLAN -> if (Analyzer.day(date, today, data).status == DayStatus.DONE) 1.0 else 0.0
                 RingKind.ZONE2 -> acts.sumOf { it.hrZoneTimes?.getOrNull(1) ?: 0.0 } / 60

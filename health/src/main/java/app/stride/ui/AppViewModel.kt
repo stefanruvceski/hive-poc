@@ -96,6 +96,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sync(silent: Boolean = false) {
         syncHealth(silent)
+        syncAutoMoves()
         val api = api()
         if (api == null) {
             if (!silent && !_data.value.settings.healthConnect) toast("Add your intervals.icu API key in Settings first.")
@@ -339,6 +340,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun garminCancelMfa() {
         pendingMfa = null
         refreshGarmin()
+    }
+
+    private val _autoMoves = MutableStateFlow<String?>(null)
+    /** How the last fetch of auto-detected moves went (Settings → Garmin), null before the first. */
+    val autoMovesStatus: StateFlow<String?> = _autoMoves.asStateFlow()
+
+    /** Walks the watch detected by itself (Move IQ), today and the two days before; they count as training time. */
+    fun syncAutoMoves() {
+        if (!garmin.connected) return
+        viewModelScope.launch {
+            val today = LocalDate.now()
+            try {
+                val days = garmin.autoMoves((0L..2L).map { today.minusDays(it) })
+                update { d -> d.copy(autoMoves = app.stride.domain.AutoMoves.merge(d.autoMoves, days, today)) }
+                val t = days[today].orEmpty()
+                _autoMoves.value = if (t.isEmpty()) "No moves detected today yet." else
+                    "Today: ${t.size} detected (${t.sumOf { it.minutes }.toInt()} min) · ${t.joinToString { app.stride.domain.AutoMoves.label(it.type) }}"
+            } catch (e: Exception) {
+                _autoMoves.value = "Couldn't read detected moves: ${e.message}"
+            }
+        }
     }
 
     fun garminDisconnect() {
