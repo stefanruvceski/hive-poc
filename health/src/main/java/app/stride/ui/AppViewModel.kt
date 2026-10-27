@@ -62,6 +62,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _intervals = MutableStateFlow<Map<String, List<Interval>>>(emptyMap())
     val intervals: StateFlow<Map<String, List<Interval>>> = _intervals.asStateFlow()
 
+    // Declared before init: init runs sync(), which reaches these (properties below init are still null then).
+    private val garmin by lazy { GarminClient(getApplication()) }
+    private val _autoMoves = MutableStateFlow<String?>(null)
+    /** How the last fetch of auto-detected moves went (Settings → Garmin), null before the first. */
+    val autoMovesStatus: StateFlow<String?> = _autoMoves.asStateFlow()
+
     init {
         // Notification actions (tick off a set from the lock screen) write the store directly.
         viewModelScope.launch {
@@ -291,7 +297,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     data class GarminUi(val connected: Boolean, val account: String?, val needsMfa: Boolean = false, val busy: Boolean = false)
 
-    private val garmin by lazy { GarminClient(getApplication()) }
     private var pendingMfa: GarminClient.PendingMfa? = null
     private var pendingEmail = ""
     private val _garmin = MutableStateFlow(GarminUi(false, null))
@@ -341,10 +346,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         pendingMfa = null
         refreshGarmin()
     }
-
-    private val _autoMoves = MutableStateFlow<String?>(null)
-    /** How the last fetch of auto-detected moves went (Settings → Garmin), null before the first. */
-    val autoMovesStatus: StateFlow<String?> = _autoMoves.asStateFlow()
 
     /** Walks the watch detected by itself (Move IQ), today and the two days before; they count as training time. */
     fun syncAutoMoves() {

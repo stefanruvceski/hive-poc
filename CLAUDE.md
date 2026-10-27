@@ -117,6 +117,10 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   sized to the card width and centered (`PrintedReceipt`), "PDF" shares it via `ui/ReceiptPdf` (white A4, monospace,
   pages from `domain/ReceiptPdfLayout`, tested; cache/share + the app's FileProvider); open targets
   "wallet/cards", "wallet/card:<id>", "wallet/receipt:<id>", "wallet/noqr", "wallet/fuel".
+  Receipt rows: `ui/SwipeToDelete` (swipe left: past half deletes, with Undo snackbar + `restoreReceipt`; less stays
+  open on a tappable red bin). Photos: `PickMultipleVisualMedia(50)`; one photo opens its receipt, several go through
+  `Scanner.read` one by one (`domain/BatchImport`, tested: links per photo, live state, summary) and `ui/BatchPhotos`'
+  `BatchReport` dialog lists each photo with its outcome.
   **Later (asked for, not built yet):** company report: one tap → PDF/CSV of a month's receipts for a company
   (e.g. Obsidian IT) with totals and VAT per rate (the receipts' VAT labels / journal tax table), to send to the
   accountant; plus a "submitted / refunded" mark per receipt.
@@ -238,8 +242,9 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   After a workout, `GarminSets` (tested) copies the phone's sets (reps, kg, exercise) into the watch's strength activity
   that day (activitylist search → `activity-service/activity/{id}/exerciseSets` GET/PUT; watch timing and rests kept,
   extra watch sets dropped, extra phone sets appended); automatic on Finish, or "Copy sets to Garmin" on the Day screen.
-  Auto-detected moves (Move IQ): `GarminClient.autoMoves` reads `/wellness-service/wellness/dailyEvents?calendarDate=`
-  (undocumented; `domain/AutoMoves.parse`, tested, matches field names loosely; the last answer is kept in
+  Auto-detected moves (Move IQ): `GarminClient.autoMoves` asks four undocumented sources and `AutoMoves.combine`s them
+  (dailyEvents with and without the display name, GraphQL `dailyEventsScalar` and `pendingActivities`;
+  `domain/AutoMoves.parse`, tested, matches field names loosely; every answer for the newest day is kept in
   cache/garmin_events.json, shareable from Settings → Garmin). `AppData.autoMoves` (120 days), fetched on sync and by
   the worker every ~2 h; minutes not covered by a recorded workout count toward the MINUTES ring; Day screen card.
 - Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last

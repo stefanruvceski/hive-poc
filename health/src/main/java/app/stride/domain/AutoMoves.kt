@@ -26,7 +26,7 @@ object AutoMoves {
     private val SECONDS = listOf("durationInSeconds", "durationSecs", "durationSeconds", "duration", "elapsedDuration", "elapsedTime")
     private val MILLIS = listOf("durationInMillis", "durationMillis", "durationMs")
     private val NOT_MOVES = listOf("sleep", "nap", "stress", "rest", "relax", "breath", "meditat")
-    private val TYPE = listOf("activityType", "activityTypeKey", "typeKey", "activityName", "eventType", "type", "name")
+    private val TYPE = listOf("activityTypePredictionKeys", "activityType", "activityTypeKey", "typeKey", "activityName", "eventType", "type", "name")
 
     private fun str(o: JsonObject, k: String): String? = (o[k] as? JsonPrimitive)?.takeIf { it.isString || it.longOrNull != null }?.content
 
@@ -58,6 +58,7 @@ object AutoMoves {
             when (val v = o[k]) {
                 is JsonPrimitive -> if (v.isString && v.content.isNotBlank()) return v.content
                 is JsonObject -> (str(v, "typeKey") ?: str(v, "key"))?.let { return it }
+                is JsonArray -> (v.firstOrNull() as? JsonPrimitive)?.takeIf { it.isString }?.let { return it.content }
                 else -> {}
             }
         }
@@ -82,6 +83,25 @@ object AutoMoves {
             if (start.toLocalDate() != date || secs < 180 || secs > 6 * 3600 || NOT_MOVES.any { it in kind }) return@mapNotNull null
             AutoMove(date.toString(), start.truncatedTo(ChronoUnit.SECONDS).toString(), secs / 60, kind)
         }.distinctBy { it.start }.sortedBy { it.start }.toList()
+
+    /**
+     * One list from several sources: the same walk reported twice (starts and lengths a little apart) is kept once,
+     * the longer report winning.
+     */
+    fun combine(lists: List<List<AutoMove>>): List<AutoMove> {
+        val kept = mutableListOf<AutoMove>()
+        for (m in lists.flatten().sortedByDescending { it.minutes }) {
+            val s = LocalDateTime.parse(m.start)
+            val e = s.plusSeconds((m.minutes * 60).toLong())
+            val dup = kept.any { k ->
+                val ks = LocalDateTime.parse(k.start); val ke = ks.plusSeconds((k.minutes * 60).toLong())
+                val over = ChronoUnit.SECONDS.between(maxOf(s, ks), minOf(e, ke))
+                over > 0 && over >= 0.5 * m.minutes * 60
+            }
+            if (!dup) kept += m
+        }
+        return kept.sortedBy { it.start }
+    }
 
     private fun span(a: Activity): Pair<LocalDateTime, LocalDateTime>? {
         val s = a.startLocal?.let { runCatching { LocalDateTime.parse(it.take(19)) }.getOrNull() } ?: return null

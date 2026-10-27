@@ -56,4 +56,19 @@ class AutoMovesTest {
         assertEquals(listOf("2026-10-26T10:00", "2026-10-27T18:00"), merged.map { it.start })
         assertEquals("Hiking", AutoMoves.label("hiking_v2"))
     }
+
+    @Test fun pendingActivitiesAndCombine() {
+        val json = StrideJson.parseToJsonElement(
+            """{"data": {"pendingActivities": {"pendingActivities": [
+              {"pendingActivityUUID": "x", "calendarDate": "2026-10-27", "startTimeLocal": "2026-10-27T17:06:00.0",
+               "endTimeLocal": "2026-10-27T17:40:00.0", "duration": 2040.0, "activityTypePredictionKeys": ["walking"]}
+            ]}}}""",
+        )
+        val pending = AutoMoves.parse(json, day, zone)
+        assertEquals(listOf("walking"), pending.map { it.type })
+        val events = listOf(AutoMove("2026-10-27", "2026-10-27T17:05", 32.0), AutoMove("2026-10-27", "2026-10-27T09:00", 15.0))
+        val all = AutoMoves.combine(listOf(events, pending))
+        assertEquals(listOf("2026-10-27T09:00", "2026-10-27T17:06"), all.map { it.start })
+        assertEquals(34.0, all[1].minutes, 0.01)
+    }
 }

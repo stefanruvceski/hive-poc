@@ -91,6 +91,7 @@ fun ReceiptsTab(
     onNoQr: () -> Unit,
     onFuel: () -> Unit,
     onPrices: () -> Unit = {},
+    onDelete: (Receipt) -> Unit = {},
     onReceipt: (String) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -187,7 +188,7 @@ fun ReceiptsTab(
                     if (ym != null) Caps(rsd(ReceiptStats.total(rs)))
                 }
             }
-            items(rs, key = { it.id }) { r -> ReceiptRow(r, d.companies, r.id in loading, today) { onReceipt(r.id) } }
+            items(rs, key = { it.id }) { r -> SwipeToDelete({ onDelete(r) }) { ReceiptRow(r, d.companies, r.id in loading, today) { onReceipt(r.id) } } }
         }
     }
 }
@@ -217,7 +218,7 @@ fun AddButtons(onScan: () -> Unit, onPhoto: () -> Unit, onLink: () -> Unit) {
         OutlinedButton(onClick = onPhoto, modifier = Modifier.weight(1f)) {
             Icon(Icons.Filled.Image, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(6.dp))
-            Text("From a photo")
+            Text("From photos")
         }
         TextButton(onClick = onLink, modifier = Modifier.weight(1f)) { Text("Paste a link") }
     }

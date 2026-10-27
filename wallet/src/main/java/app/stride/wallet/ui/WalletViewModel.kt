@@ -208,6 +208,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteReceipt(id: String) = update { d -> d.copy(receipts = d.receipts.filter { it.id != id }) }
 
+    /** Undo of a delete: puts the receipt back as it was. */
+    fun restoreReceipt(r: Receipt) = update { d -> if (d.receipts.any { it.id == r.id }) d else d.copy(receipts = d.receipts + r) }
+
     // ---------------------------------------------------------------- prices: products and shops merged by hand
 
     /** [b]'s product becomes a spelling of [a]'s (a keeps its name). */
