@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-27-receipt-pdf",
+    "title": "Receipts as PDF",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "Wallet → a receipt → Receipt as printed now fits the screen width and sits in the middle. Tap PDF to share it as a clean black-on-white PDF, e.g. for the accountant."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-music-crash-fix",
     "title": "Music opens again",
     "items": [

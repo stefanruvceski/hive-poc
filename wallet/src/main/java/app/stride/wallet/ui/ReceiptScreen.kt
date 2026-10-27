@@ -3,7 +3,14 @@ package app.stride.wallet.ui
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -216,15 +223,41 @@ fun ReceiptScreen(vm: WalletViewModel, d: WalletData, id: String, loading: Boole
             }
         }
         if (r.journal != null) item {
+            val scope = rememberCoroutineScope()
             Glass(onClick = { showText = !showText }) {
-                Caps(if (showText) "Receipt as printed ▲" else "Receipt as printed ▼")
-                if (showText) Text(
-                    r.journal, color = StrideColors.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, lineHeight = 13.sp, softWrap = false,
-                    modifier = Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Caps(if (showText) "Receipt as printed ▲" else "Receipt as printed ▼", modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        scope.launch {
+                            val file = withContext(Dispatchers.IO) { runCatching { ReceiptPdf.write(context, r) }.getOrNull() }
+                            if (file != null) ReceiptPdf.share(context, file)
+                            else android.widget.Toast.makeText(context, "Couldn't make the PDF", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(Icons.Filled.Share, null, tint = WalletAccent, modifier = Modifier.size(18.dp))
+                        Text(" PDF", color = WalletAccent, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                if (showText) PrintedReceipt(r.journal)
             }
         }
         r.invoiceNumber?.let { n -> item { Text("PFR $n", color = StrideColors.Faint, fontSize = 11.sp) } }
+    }
+}
+
+/** The printed text, sized so its widest line fits the card and centered (receipts are fixed-width, ~40 columns). */
+@Composable
+private fun PrintedReceipt(journal: String) {
+    val lines = remember(journal) { app.stride.wallet.domain.ReceiptPdfLayout.lines(journal) }
+    val columns = (lines.maxOfOrNull { it.length } ?: 40).coerceAtLeast(20)
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.TopCenter) {
+        val density = LocalDensity.current
+        // A monospace character is ~0.6 em wide; leave a little slack so nothing clips.
+        val size = with(density) { (maxWidth.toPx() / (columns * 0.62f)).toSp() }.value.coerceAtMost(13f).sp
+        Text(
+            lines.joinToString("\n"), color = StrideColors.Text, fontFamily = FontFamily.Monospace,
+            fontSize = size, lineHeight = size * 1.3f, softWrap = false, maxLines = Int.MAX_VALUE,
+        )
     }
 }
 
