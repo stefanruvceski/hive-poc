@@ -72,6 +72,19 @@ object Barcodes {
     }
 
     /** "1234 5678 9012 3" for reading the number aloud at the till; QR contents stay as they are. */
+    /**
+     * Whether the code is worth showing as text, so a cashier can type it in when the scan fails: digits (spaces and
+     * dashes allowed, up to 24) or a short code of capitals and digits (up to 16). A long random token inside a QR
+     * code isn't something anyone reads out, so it stays hidden.
+     */
+    fun readable(number: String): Boolean {
+        val t = number.trim()
+        if (t.isEmpty()) return false
+        val compact = t.replace(" ", "").replace("-", "")
+        return (compact.all { it.isDigit() } && compact.length in 1..24) ||
+            (t.length <= 16 && t.all { it.isDigit() || it in 'A'..'Z' || it == '-' || it == ' ' })
+    }
+
     fun spaced(number: String, format: CardFormat): String =
         if (format.square || number.length < 8 || number.any { it.isWhitespace() }) number else number.chunked(4).joinToString(" ")
 }

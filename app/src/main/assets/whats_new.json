@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-27-cards-tidy",
+    "title": "Tidier loyalty cards",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "The number under a card's code only shows when it's something a cashier could type in (like 124321254); long random QR codes no longer print a wall of characters."
+      },
+      {
+        "icon": "speed",
+        "text": "Saving a new card takes you straight back to all your cards, where it now sits, with a small Card saved note."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-receipt-pdf",
     "title": "Receipts as PDF",
     "items": [
