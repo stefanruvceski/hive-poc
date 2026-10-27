@@ -25,6 +25,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   FileProvider, backup rules. `Modules.all` = Health, Habits, Money, Books, Drawify, Wallet, Music. `ModuleHost` is the home screen (greeting, update banner, one card per module with its
   `HomeSummary`; order and hidden apps in `host/HomeOrder`, tested, prefs `hive_home`, edited with the pencil or a long press); opening the app lands there, deep links go straight into a module, back returns home.
 - `:core` is shared by every module: theme + components (`ui/theme`, `ui/Components.kt`), in-app updates (`update/`),
+  crash log (`crash/CrashLog`: last uncaught exception → filesDir/last_crash.txt, `CrashCard` on home with Share),
   the Claude client (`coach/CoachClient`), `StrideJson`, `DataEvents`, fonts and the notification icon (`ic_stat_hive`, the comb; `app.stride.core.R`),
   and the host contract in `host/`: `AppModule`, `Host` (open the app via `Host.openIntent` / `Host.component`, never a
   direct `MainActivity` reference), `OpenRequest`, `AppInfo` (library modules have no `BuildConfig` of their own).
@@ -122,7 +123,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `MusicBrand2` teal, `MusicDeep` blue, `MusicFill` gradient for slider / progress; the Download button stays tinted
   glass with a hint when there's no link yet. Frost: Haze 1.1.1 (last on Kotlin 2.0 / Compose 1.7; don't bump without
   upgrading those): `MusicBackdrop` (glow + floating tiles + the playing cover) is the `haze` source, every
-  `glassSurface(haze = LocalHaze.current)` is a `hazeChild`; glass must never sit inside the backdrop (Haze throws). Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
+  `glassSurface(haze = LocalHaze.current)` is a `hazeChild`; glass must never sit inside the backdrop, and `HazeStyle` needs an opaque `backgroundColor` (Haze throws otherwise). Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
   with the active preset, or opens "music/add:<url>" when "Ask on Share" is on; "music/player" opens the player.
   The app packs only arm64-v8a and `useLegacyPackaging` (the library runs binaries from the lib folder).
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module

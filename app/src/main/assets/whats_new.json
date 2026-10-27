@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-27-music-crash-fix",
+    "title": "Music opens again",
+    "items": [
+      {
+        "icon": "bug",
+        "text": "Fixed the crash when opening Music with the new frosted glass."
+      },
+      {
+        "icon": "apps",
+        "text": "If Hive ever crashes, the home screen shows what broke next time, with Share details, so it can be fixed fast."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-music-abyss",
     "title": "Music goes Abyss 🌊",
     "items": [

@@ -117,7 +117,8 @@ private val Rim = Brush.sweepGradient(
 val LocalHaze = staticCompositionLocalOf<HazeState?> { null }
 
 /** Frosted, not milky: a strong blur of the lights behind with only a whisper of white. */
-private val Frost = HazeStyle(tint = HazeTint(Color.White.copy(alpha = 0.03f)), blurRadius = 28.dp, noiseFactor = 0.06f)
+// Haze needs an opaque backgroundColor under the blur (it throws without one on Android 12+).
+private val Frost = HazeStyle(backgroundColor = MusicBg, tint = HazeTint(Color.White.copy(alpha = 0.03f)), blurRadius = 28.dp, noiseFactor = 0.06f)
 
 /**
  * The screen's backdrop and the source of the frost: [musicGlow] plus a few floating rounded tiles (and the cover

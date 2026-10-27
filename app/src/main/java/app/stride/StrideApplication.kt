@@ -7,6 +7,7 @@ import app.stride.host.AppInfo
 class StrideApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        app.stride.crash.CrashLog.install(this)
         AppInfo.init(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, BuildConfig.DEBUG)
         app.stride.format.Dates.init(this)
         Modules.all.forEach { it.onAppStart(this) }
