@@ -121,9 +121,11 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   open on a tappable red bin). Photos: `PickMultipleVisualMedia(50)`; one photo opens its receipt, several go through
   `Scanner.read` one by one (`domain/BatchImport`, tested: links per photo, live state, summary) and `ui/BatchPhotos`'
   `BatchReport` dialog lists each photo with its outcome.
-  **Later (asked for, not built yet):** company report: one tap → PDF/CSV of a month's receipts for a company
-  (e.g. Obsidian IT) with totals and VAT per rate (the receipts' VAT labels / journal tax table), to send to the
-  accountant; plus a "submitted / refunded" mark per receipt.
+  Company report (route / open target "company:<pib>", `ui/CompanyReportScreen`, entry on the Receipts tab when a company
+  chip is picked): `domain/CompanyReport` (tested) builds a month (or all) of a PIB's OK receipts with total and VAT per
+  rate, from the journal's tax table ("Ознака Име Стопа Порез") else item labels (Ђ 20, Е 10, Г/А 0; Mani imports have
+  none); `csv` (semicolons, decimal commas, BOM added when shared) and `lines` (monospace) → `ReceiptPdf.writeLines`.
+  **Later (asked for, not built yet):** a "submitted / refunded" mark per receipt.
 - `:music` (`MusicModule`, package `app.stride.music`, neon cyan `MusicAccent`): Tempo (the user's yt-dlp app, its repo is
   gone; rebuilt from the session that wrote it). youtubedl-android 0.17.3 (yt-dlp + ffmpeg + aria2c, `engine/Engine`:
   init off the main thread in `onAppStart`, yt-dlp self-update once a day, prefs `music_engine`). `music.json`

@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-27-company-report",
+    "title": "Company report for the accountant",
+    "items": [
+      {
+        "icon": "chart",
+        "text": "Wallet → Receipts → pick a company (e.g. Obsidian IT) → Report: the month's total, VAT per rate (20%, 10%) and every receipt. Send it as a PDF or a CSV for Excel with the buttons at the top; pick another month or All."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-receipts-swipe-photos",
     "title": "Delete by swiping, many photos at once",
     "items": [
