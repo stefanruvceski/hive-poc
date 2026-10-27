@@ -1,5 +1,6 @@
 package app.stride.wallet.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,8 +35,10 @@ import java.util.Locale
  * and liters per 100 km where fill-ups have the odometer (typed on the fuel receipt).
  */
 @Composable
-fun FuelScreen(d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
-    val fills = FuelLog.fills(d.receipts)
+fun FuelScreen(vm: WalletViewModel, d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
+    val fills = FuelLog.fills(d.receipts, d.shopGroups)
+    var shop by rememberSaveable { mutableStateOf<String?>(null) }
+    shop?.let { ShopDialog(vm, d, it, onDismiss = { shop = null }) }
     val year = LocalDate.now().year
     val (liters, money) = FuelLog.yearTotals(fills, year)
     val months = FuelLog.monthlyPrice(fills).takeLast(12)
@@ -72,15 +79,16 @@ fun FuelScreen(d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
         }
         item {
             Glass {
-                Caps("Stations · cheapest first")
+                Caps("Chains · cheapest first")
+                Text("Tap a chain to rename it or join it with another.", color = StrideColors.Faint, fontSize = 11.sp)
                 Spacer(Modifier.height(6.dp))
                 val lo = stations.minOf { it.pricePerLiter }
                 val hi = stations.maxOf { it.pricePerLiter }
                 stations.forEach { s ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { shop = s.key }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(s.station, color = StrideColors.Text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${s.fills} fill-up${if (s.fills == 1) "" else "s"}", color = StrideColors.Dim, fontSize = 12.sp)
+                            Text("${s.fills} fill-up${if (s.fills == 1) "" else "s"}" + if (s.locations > 1) " · ${s.locations} pumps" else "", color = StrideColors.Dim, fontSize = 12.sp)
                             ThinBar(if (hi > lo) ((s.pricePerLiter - lo) / (hi - lo)).toFloat() else 0f, StrideColors.Amber, Modifier.padding(top = 4.dp), height = 4)
                         }
                         Spacer(Modifier.size(10.dp))
@@ -99,7 +107,7 @@ fun FuelScreen(d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(f.station, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            listOfNotNull(Dates.full(f.date), ReceiptStats.litersText(f.liters), f.odometer?.let { String.format(Locale.GERMANY, "%,d km", it) }).joinToString(" · "),
+                            listOfNotNull(Dates.full(f.date), f.location, ReceiptStats.litersText(f.liters), f.odometer?.let { String.format(Locale.GERMANY, "%,d km", it) }).joinToString(" · "),
                             color = StrideColors.Dim, fontSize = 12.sp,
                         )
                     }

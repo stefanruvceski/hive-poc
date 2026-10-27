@@ -90,6 +90,7 @@ fun ReceiptsTab(
     onImport: () -> Unit,
     onNoQr: () -> Unit,
     onFuel: () -> Unit,
+    onPrices: () -> Unit = {},
     onReceipt: (String) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -147,6 +148,11 @@ fun ReceiptsTab(
                     Icon(Icons.Filled.LocalGasStation, null, tint = StrideColors.Amber, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.size(6.dp))
                     Text("Fuel diary ›", color = StrideColors.Amber, fontSize = 13.sp)
+                }
+                if (d.receipts.any { it.items.isNotEmpty() }) TextButton(onClick = onPrices, contentPadding = PaddingValues(0.dp)) {
+                    Icon(Icons.Filled.Search, null, tint = WalletAccent, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Prices: what costs what, and where ›", color = WalletAccent, fontSize = 13.sp)
                 }
             }
         }

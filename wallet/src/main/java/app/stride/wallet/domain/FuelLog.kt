@@ -1,15 +1,19 @@
 package app.stride.wallet.domain
 
+import app.stride.wallet.model.AliasGroup
 import app.stride.wallet.model.Receipt
 import app.stride.wallet.model.ReceiptStatus
 import java.time.LocalDate
 import java.time.YearMonth
 
-/** One fill-up: from a fuel receipt, with the odometer if the user typed it. */
-data class Fill(val receiptId: String, val date: LocalDate, val station: String, val fuel: String, val liters: Double, val pricePerLiter: Double, val amount: Double, val odometer: Int?)
+/**
+ * One fill-up: from a fuel receipt, with the odometer if the user typed it. [station] is the chain (NIS, Lukoil…; the
+ * same company everywhere, [stationKey] its [Chains] key with hand merges applied), [location] the pump it was at.
+ */
+data class Fill(val receiptId: String, val date: LocalDate, val station: String, val fuel: String, val liters: Double, val pricePerLiter: Double, val amount: Double, val odometer: Int?, val location: String? = null, val stationKey: String = station)
 
 /** A station's average price per liter over the fills there. */
-data class StationPrice(val station: String, val pricePerLiter: Double, val fills: Int)
+data class StationPrice(val station: String, val pricePerLiter: Double, val fills: Int, val locations: Int = 1, val key: String = station)
 
 /** Consumption between two odometer readings (fill-to-full: the later fill's liters over the km driven). */
 data class Consumption(val from: LocalDate, val to: LocalDate, val km: Int, val per100: Double)
@@ -19,26 +23,23 @@ data class Consumption(val from: LocalDate, val to: LocalDate, val km: Int, val 
  * and, with odometer readings, liters per 100 km.
  */
 object FuelLog {
-    fun fills(rs: List<Receipt>): List<Fill> = rs.filter { it.status == ReceiptStatus.OK }.mapNotNull { r ->
+    fun fills(rs: List<Receipt>, shopGroups: List<AliasGroup> = emptyList()): List<Fill> = rs.filter { it.status == ReceiptStatus.OK }.mapNotNull { r ->
         val f = ReceiptStats.fuel(r) ?: return@mapNotNull null
         val d = ReceiptStats.date(r).takeIf { it != LocalDate.MIN } ?: return@mapNotNull null
-        Fill(r.id, d, station(r), f.name, f.liters, f.pricePerLiter, f.amount, r.odometer)
+        val (key, name) = Chains.of(r, shopGroups)
+        Fill(r.id, d, name, f.name, f.liters, f.pricePerLiter, f.amount, r.odometer, location(r), key)
     }.sortedBy { it.date }
 
-    /** "NIS · Bs Novi Sad 1". */
-    fun station(r: Receipt): String {
-        val brand = Brands.title(r)
-        val shop = Brands.shopName(r.shop)
-        return if (shop == null || shop == brand) brand else "$brand · $shop"
-    }
+    /** The pump itself ("Bs Novi Sad 1"), shown as a detail; null when it's just the chain's name again. */
+    fun location(r: Receipt): String? = Brands.shopName(r.shop)?.takeIf { it != Brands.title(r) }
 
     /** Average price per liter per month (weighted by liters), oldest first. */
     fun monthlyPrice(fills: List<Fill>): List<Pair<YearMonth, Double>> =
         fills.groupBy { YearMonth.from(it.date) }.toSortedMap().map { (m, f) -> m to f.sumOf { it.amount } / f.sumOf { it.liters } }
 
-    /** Stations by average price per liter, cheapest first. */
+    /** Chains by average price per liter, cheapest first, with how many of their pumps you used. */
     fun stations(fills: List<Fill>): List<StationPrice> =
-        fills.groupBy { it.station }.map { (s, f) -> StationPrice(s, f.sumOf { it.amount } / f.sumOf { it.liters }, f.size) }
+        fills.groupBy { it.stationKey }.map { (k, f) -> StationPrice(f.last().station, f.sumOf { it.amount } / f.sumOf { it.liters }, f.size, f.map { it.location }.distinct().size, k) }
             .sortedBy { it.pricePerLiter }
 
     /**
