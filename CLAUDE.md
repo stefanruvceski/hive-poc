@@ -116,7 +116,9 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   stored), files saved with MediaStore into Music|Movies/Hive Music or Download (why minSdk is 29 for the whole app).
   Player: Media3 `player/PlaybackService` (MediaSession, lock screen) + `Playback` (MediaController state for Compose).
   UI: `ui/MusicApp` (link, presets, speed card, options, downloads, settings), `ui/PlayerViews` (mini player, now
-  playing), glass helpers in `ui/MusicCommon`. Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
+  playing), glass helpers in `ui/MusicCommon`: colors and glass copied from the user's site (repo `stefanruvceski/ruvceski.com`,
+  theme "glacier" in `src/styles/theme.css`, `.glass` / `.ambient` in `globals.css`): `MusicBrand` ice (main buttons, ink text
+  `MusicInk`), `MusicBrand2` teal (highlights, = `MusicAccent`), `MusicBg`, `musicGlow()` = the four ambient lights, `glassSurface`. Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
   with the active preset, or opens "music/add:<url>" when "Ask on Share" is on; "music/player" opens the player.
   The app packs only arm64-v8a and `useLegacyPackaging` (the library runs binaries from the lib folder).
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
