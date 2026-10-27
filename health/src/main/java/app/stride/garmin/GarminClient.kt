@@ -263,15 +263,47 @@ class GarminClient(private val context: Context) {
     }
 
     /**
-     * Moves the watch detected by itself (Move IQ) on each of [days], from Garmin's daily events. The last answer is
-     * kept in the cache (garmin_events.json) so it can be shared when nothing is found.
+     * Moves the watch detected by itself (Move IQ, or "pending" auto-detected activities on newer watches) on each of
+     * [days]. Garmin keeps them in several undocumented places, so all are asked and the results combined: the daily
+     * events (with and without the display name), the web timeline's GraphQL query and the pending activities. Every
+     * answer for the newest day is kept in the cache (garmin_events.json) so it can be shared when a walk is missing.
      */
     suspend fun autoMoves(days: List<java.time.LocalDate>): Map<java.time.LocalDate, List<app.stride.model.AutoMove>> = withContext(Dispatchers.IO) {
+        val name = runCatching { displayName() }.getOrNull()
+        val pending = tryRaw("POST", "/graphql-gateway/graphql", gql(PENDING_QUERY))
+        val newest = days.max()
         days.associateWith { d ->
-            val json = apiRaw("GET", "/wellness-service/wellness/dailyEvents?calendarDate=$d", null, "the day's events") ?: return@associateWith emptyList()
-            if (d == days.max()) runCatching { java.io.File(context.cacheDir, EVENTS_FILE).writeText(json.toString()) }
-            app.stride.domain.AutoMoves.parse(json, d)
+            val answers = linkedMapOf(
+                "dailyEvents" to tryRaw("GET", "/wellness-service/wellness/dailyEvents?calendarDate=$d"),
+                "dailyEventsByName" to (name?.let { tryRaw("GET", "/wellness-service/wellness/dailyEvents/${URLEncoder.encode(it, "UTF-8")}?calendarDate=$d") }
+                    ?: kotlinx.serialization.json.JsonPrimitive("no display name")),
+                "timeline" to tryRaw("POST", "/graphql-gateway/graphql", gql("query{dailyEventsScalar(date:\"$d\")}")),
+                "pending" to pending,
+            )
+            if (d == newest) runCatching {
+                java.io.File(context.cacheDir, EVENTS_FILE).writeText(JsonObject(mapOf("date" to kotlinx.serialization.json.JsonPrimitive(d.toString())) + answers).toString())
+            }
+            app.stride.domain.AutoMoves.combine(answers.values.map { app.stride.domain.AutoMoves.parse(it, d) })
         }
+    }
+
+    private fun gql(query: String) = JsonObject(mapOf("query" to kotlinx.serialization.json.JsonPrimitive(query)))
+
+    /** The answer, or the error as a string (one source failing must not stop the others). */
+    private fun tryRaw(method: String, path: String, json: JsonObject? = null): JsonElement = try {
+        apiRaw(method, path, json, "the day's events") ?: kotlinx.serialization.json.JsonNull
+    } catch (e: GarminException) {
+        if (e.message?.contains("expired") == true) throw e
+        kotlinx.serialization.json.JsonPrimitive("error: ${e.message}")
+    }
+
+    /** The account's display name (some wellness paths need it), asked once and kept with the tokens. */
+    private fun displayName(): String? {
+        prefs.getString(KEY_DISPLAY, null)?.let { return it }
+        val p = apiRaw("GET", "/userprofile-service/socialProfile", null, "the profile") as? JsonObject ?: return null
+        val n = (p["displayName"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.isNotBlank() } ?: return null
+        prefs.edit().putString(KEY_DISPLAY, n).apply()
+        return n
     }
 
     /**
@@ -296,6 +328,8 @@ class GarminClient(private val context: Context) {
 
     companion object {
         const val EVENTS_FILE = "garmin_events.json"
+        private const val KEY_DISPLAY = "display_name"
+        private const val PENDING_QUERY = "query { pendingActivities { pendingActivities { pendingActivityUUID calendarDate startTimeLocal endTimeLocal startTimeGMT endTimeGMT averageHR calories duration activityTypePredictionKeys } } }"
         private const val SSO = "https://sso.garmin.com/sso"
         private const val API = "https://connectapi.garmin.com"
         private const val CONSUMER_URL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json"
