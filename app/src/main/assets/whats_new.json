@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-27-receipts-swipe-photos",
+    "title": "Delete by swiping, many photos at once",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "Wallet: swipe a receipt from right to left to delete it. Swipe all the way and it's gone (Undo in the bar below); stop halfway and a red bin stays there to tap."
+      },
+      {
+        "icon": "chart",
+        "text": "From photos: pick many receipt photos at once. Hive reads every QR code (even several in one photo) and lists each photo with what happened: saved, already there, or why it failed."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-auto-walks",
     "title": "Walks count without starting them",
     "items": [

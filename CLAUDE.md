@@ -117,6 +117,10 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   sized to the card width and centered (`PrintedReceipt`), "PDF" shares it via `ui/ReceiptPdf` (white A4, monospace,
   pages from `domain/ReceiptPdfLayout`, tested; cache/share + the app's FileProvider); open targets
   "wallet/cards", "wallet/card:<id>", "wallet/receipt:<id>", "wallet/noqr", "wallet/fuel".
+  Receipt rows: `ui/SwipeToDelete` (swipe left: past half deletes, with Undo snackbar + `restoreReceipt`; less stays
+  open on a tappable red bin). Photos: `PickMultipleVisualMedia(50)`; one photo opens its receipt, several go through
+  `Scanner.read` one by one (`domain/BatchImport`, tested: links per photo, live state, summary) and `ui/BatchPhotos`'
+  `BatchReport` dialog lists each photo with its outcome.
   **Later (asked for, not built yet):** company report: one tap → PDF/CSV of a month's receipts for a company
   (e.g. Obsidian IT) with totals and VAT per rate (the receipts' VAT labels / journal tax table), to send to the
   accountant; plus a "submitted / refunded" mark per receipt.
