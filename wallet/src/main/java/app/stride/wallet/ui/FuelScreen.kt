@@ -72,7 +72,7 @@ fun FuelScreen(d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
         }
         item {
             Glass {
-                Caps("Stations · cheapest first")
+                Caps("Chains · cheapest first")
                 Spacer(Modifier.height(6.dp))
                 val lo = stations.minOf { it.pricePerLiter }
                 val hi = stations.maxOf { it.pricePerLiter }
@@ -80,7 +80,7 @@ fun FuelScreen(d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(s.station, color = StrideColors.Text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${s.fills} fill-up${if (s.fills == 1) "" else "s"}", color = StrideColors.Dim, fontSize = 12.sp)
+                            Text("${s.fills} fill-up${if (s.fills == 1) "" else "s"}" + if (s.locations > 1) " · ${s.locations} pumps" else "", color = StrideColors.Dim, fontSize = 12.sp)
                             ThinBar(if (hi > lo) ((s.pricePerLiter - lo) / (hi - lo)).toFloat() else 0f, StrideColors.Amber, Modifier.padding(top = 4.dp), height = 4)
                         }
                         Spacer(Modifier.size(10.dp))
@@ -99,7 +99,7 @@ fun FuelScreen(d: WalletData, onReceipt: (String) -> Unit, onBack: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(f.station, color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            listOfNotNull(Dates.full(f.date), ReceiptStats.litersText(f.liters), f.odometer?.let { String.format(Locale.GERMANY, "%,d km", it) }).joinToString(" · "),
+                            listOfNotNull(Dates.full(f.date), f.location, ReceiptStats.litersText(f.liters), f.odometer?.let { String.format(Locale.GERMANY, "%,d km", it) }).joinToString(" · "),
                             color = StrideColors.Dim, fontSize = 12.sp,
                         )
                     }

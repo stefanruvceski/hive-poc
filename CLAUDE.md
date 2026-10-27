@@ -101,6 +101,10 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   (`https://suf.purs.gov.rs/verify`) in a visible WebView; `FILL_JS` fills inputs by label and presses Провери, and
   every page load / 1.5 s the HTML is checked (`WalletViewModel.addFromVerifyPage`: QR link → normal fetch, else
   `FiscalParse.parseHtml`). The form's real markup was never seen when this was written; the user can fix it by hand.
+  Chains, not branches: everything per shop keys on `Brands.title` (the chain / company), e.g. every NIS pump is "NIS";
+  the branch is only a detail (`Fill.location`). Prices `ui/PricesScreen` (route "prices", product "product:<key>") from
+  `domain/PriceBook` (tested): receipt items → normalized name (Latin, no diacritics, codes, unit suffix or VAT mark) →
+  per-chain last / low / avg, cheapest first, history; forgiving search (word stems: "jabuke" → JABUKA).
   Fuel diary `ui/FuelScreen` (route "fuel") from `domain/FuelLog` (tested: fills, monthly price per liter, stations,
   L/100 km fill-to-full from `Receipt.odometer`). Till: `CardScreen` is a white screen with only the code; ⋯ = pin /
   edit / delete. `LoyaltyCard.pinned`, order in `domain/CardOrder` (tested). Widget `widget/WalletWidgets` (Glance,

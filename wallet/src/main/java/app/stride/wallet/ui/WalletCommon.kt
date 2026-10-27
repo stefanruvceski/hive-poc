@@ -157,7 +157,8 @@ fun WalletScreen(
                 title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = actions,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                // A dark tinted bar, so the list doesn't show through the title and buttons as it scrolls under them.
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = StrideColors.Bg.copy(alpha = 0.92f)),
             )
         },
     ) { p ->
