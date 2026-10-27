@@ -42,6 +42,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -132,8 +134,12 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (onHome != null) GlassIconButton(Icons.Filled.Apps, "All apps", onClick = onHome)
                     Column(Modifier.weight(1f).padding(start = if (onHome != null) 12.dp else 4.dp)) {
-                        Text("AUDIO & VIDEO", color = StrideColors.Dim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Text("Music", color = StrideColors.Text, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // The site's eyebrow: a small teal dot with a glow, then the label in ice.
+                            Box(Modifier.size(6.dp).shadow(6.dp, androidx.compose.foundation.shape.CircleShape, ambientColor = MusicBrand2, spotColor = MusicBrand2).background(MusicBrand2, androidx.compose.foundation.shape.CircleShape))
+                            Text("  AUDIO & VIDEO", color = MusicBrand, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                        Text("Music", color = MusicText, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
                     }
                     GlassIconButton(Icons.Filled.Settings, "Music settings", onClick = onSettings)
                 }
@@ -141,7 +147,7 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
 
             item {
                 Glass(tint = MusicAccent) {
-                    Text("New download", color = StrideColors.Dim, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("New download", color = MusicMuted, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
                     GlassField(
                         url, { url = it; error = null }, "Paste a link…", keyboardType = KeyboardType.Uri,
@@ -175,8 +181,8 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
             item {
                 Glass(onClick = { showMore = !showMore }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Download options", color = StrideColors.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(if (showMore) "Hide" else "Show", color = MusicAccent, fontSize = 14.sp)
+                        Text("Download options", color = MusicText, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(if (showMore) "Hide" else "Show", color = MusicBrand2, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     }
                     if (showMore) OptionsBody(opts, { opts = it }, onSavePreset = { saveDialog = true })
                 }
@@ -186,14 +192,14 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                     Text(
                         if (active > 0) "In progress · $active" else "Downloads",
-                        color = if (active > 0) StrideColors.Amber else StrideColors.Dim, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
+                        color = if (active > 0) StrideColors.Amber else MusicMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
                     )
                     if (finished > 0) GlassPill("Clear finished", selected = false) { MusicRepo.clearFinished() }
                 }
             }
             if (rows.isEmpty()) item {
                 Glass {
-                    Text("Nothing here yet. Paste a link above, or tap Share → Hive Music in YouTube.", color = StrideColors.Dim, fontSize = 13.sp)
+                    Text("Nothing here yet. Paste a link above, or tap Share → Hive Music in YouTube.", color = MusicMuted, fontSize = 13.sp)
                 }
             }
             items(rows, key = { it.id }) { item ->
@@ -214,7 +220,7 @@ private fun MusicHome(onHome: (() -> Unit)?, initialUrl: String, onSettings: () 
     if (saveDialog) {
         var name by remember { mutableStateOf("") }
         GlassDialog("New preset", onDismiss = { saveDialog = false }) {
-            Text(Args.summary(opts), color = StrideColors.Dim, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
+            Text(Args.summary(opts), color = MusicMuted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
             GlassField(name, { name = it }, "Name, e.g. Pool 1.6×")
             Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 GlassPill("Cancel", selected = false, modifier = Modifier.weight(1f)) { saveDialog = false }
@@ -232,10 +238,10 @@ private fun SpeedCard(o: DlOptions, onChange: (DlOptions) -> Unit) {
             app.stride.ui.ProgressRing((o.speed - 0.5f) / 2.5f, size = 92, stroke = 9, color = MusicAccent, label = "${Args.fmtSpeed(o.speed)}×")
             Column(Modifier.padding(start = 18.dp)) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(Args.fmtSpeed(o.speed), color = StrideColors.Text, fontSize = 40.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(" × speed", color = StrideColors.Dim, fontSize = 18.sp, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(Args.fmtSpeed(o.speed), color = MusicText, fontSize = 40.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(" × speed", color = MusicMuted, fontSize = 18.sp, modifier = Modifier.padding(bottom = 6.dp))
                 }
-                Text(if (o.speed == 1f) "Original speed" else "Pitch stays the same", color = StrideColors.Dim, fontSize = 13.sp)
+                Text(if (o.speed == 1f) "Original speed" else "Pitch stays the same", color = MusicMuted, fontSize = 13.sp)
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -248,7 +254,7 @@ private fun SpeedCard(o: DlOptions, onChange: (DlOptions) -> Unit) {
 @Composable
 private fun Labeled(label: String, content: @Composable () -> Unit) {
     Column(Modifier.padding(vertical = 8.dp)) {
-        Text(label, color = StrideColors.Dim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
+        Text(label, color = MusicMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
         content()
     }
 }
@@ -303,17 +309,17 @@ private fun DownloadRow(
     val playable = Playback.playable(item)
     val tone = when (item.status) {
         DlStatus.QUEUED -> StrideColors.Amber
-        DlStatus.FETCHING, DlStatus.RUNNING -> Color(0xFF60A5FA)
-        DlStatus.DONE -> StrideColors.Accent
+        DlStatus.FETCHING, DlStatus.RUNNING -> MusicBrand
+        DlStatus.DONE -> MusicBrand2
         DlStatus.FAILED -> StrideColors.Danger
         DlStatus.CANCELED -> StrideColors.Faint
     }
-    Glass(tint = if (nowPlaying) MusicAccent else if (item.status == DlStatus.RUNNING) Color(0xFF60A5FA) else Color.White, onClick = if (playable) onPlay else null, padding = 12) {
+    Glass(tint = if (nowPlaying) MusicBrand2 else if (item.status == DlStatus.RUNNING) MusicBrand else null, onClick = if (playable) onPlay else null, padding = 12) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Artwork(item.thumbnail, Modifier.size(52.dp), 12.dp)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(item.title.ifBlank { item.url }, color = StrideColors.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                item.uploader?.let { Text(it, color = StrideColors.Dim, fontSize = 12.sp, maxLines = 1) }
+                Text(item.title.ifBlank { item.url }, color = MusicText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                item.uploader?.let { Text(it, color = MusicMuted, fontSize = 12.sp, maxLines = 1) }
                 Text(statusText(item, prog), color = tone, fontSize = 12.sp, maxLines = 2)
             }
         }
@@ -368,12 +374,12 @@ private fun MusicSettings(onBack: () -> Unit) {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
                 GlassIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
                 Spacer(Modifier.size(12.dp))
-                Text("Music settings", color = StrideColors.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("Music settings", color = MusicText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
         }
         item {
             Glass {
-                Text("Downloads at once", color = StrideColors.Dim, fontSize = 12.sp)
+                Text("Downloads at once", color = MusicMuted, fontSize = 12.sp)
                 Spacer(Modifier.height(6.dp))
                 Segmented(listOf("1", "2", "3", "4"), s.concurrency - 1) { MusicRepo.setSettings(s.copy(concurrency = it + 1)) }
                 SwitchRow("Save to Downloads", s.saveToDownloads, "Otherwise Music/Hive Music (Movies for video)") { MusicRepo.setSettings(s.copy(saveToDownloads = it)) }
@@ -383,7 +389,7 @@ private fun MusicSettings(onBack: () -> Unit) {
         }
         item {
             Glass {
-                Text("yt-dlp " + (version ?: "…"), color = StrideColors.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("yt-dlp " + (version ?: "…"), color = MusicText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 GlassPill("Update now", selected = true, modifier = Modifier.padding(vertical = 8.dp)) {
                     updateText = "Updating…"
                     scope.launch {
@@ -391,17 +397,17 @@ private fun MusicSettings(onBack: () -> Unit) {
                         version = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Engine.version(ctx) }
                     }
                 }
-                updateText?.let { Text(it, color = StrideColors.Dim, fontSize = 12.sp) }
+                updateText?.let { Text(it, color = MusicMuted, fontSize = 12.sp) }
             }
         }
         item {
             Glass {
-                Text("Presets", color = StrideColors.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Presets", color = MusicText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 d.presets.forEach { p ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(p.name, color = StrideColors.Text, fontSize = 15.sp)
-                            Text(Args.summary(p.options), color = StrideColors.Dim, fontSize = 12.sp)
+                            Text(p.name, color = MusicText, fontSize = 15.sp)
+                            Text(Args.summary(p.options), color = MusicMuted, fontSize = 12.sp)
                         }
                         if (!p.builtin) GlassPill("Delete", selected = true, tint = StrideColors.Danger) { MusicRepo.deletePreset(p.id) }
                     }

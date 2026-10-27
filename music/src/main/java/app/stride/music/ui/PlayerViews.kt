@@ -88,9 +88,7 @@ private fun RoundButton(size: Dp, filled: Boolean, enabled: Boolean = true, onCl
     Box(
         Modifier.size(size).scale(s).clip(CircleShape)
             .then(
-                if (filled) Modifier.background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.08f))))
-                    .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.06f))), CircleShape)
-                else Modifier,
+                if (filled) Modifier.background(MusicBrand) else Modifier,
             )
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
@@ -108,22 +106,20 @@ fun MiniPlayer(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(26.dp)
     Box(
         modifier.padding(horizontal = 12.dp).navigationBarsPadding().padding(bottom = 10.dp).fillMaxWidth().clip(shape)
-            .background(Color(0xE6111A30))
-            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.08f), Color.Transparent)))
-            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.04f))), shape)
+            .glassSurface(shape, fill = MusicBg.copy(alpha = 0.88f))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onOpen),
     ) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Artwork(Playback.artwork, Modifier.size(48.dp), 14.dp)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(Playback.title, color = StrideColors.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Playback.artist?.let { Text(it, color = StrideColors.Dim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                Text(Playback.title, color = MusicText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Playback.artist?.let { Text(it, color = MusicMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
             RoundButton(44.dp, filled = false, onClick = { Playback.toggle() }) {
-                Icon(if (Playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play or pause", tint = StrideColors.Text, modifier = Modifier.size(28.dp))
+                Icon(if (Playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play or pause", tint = MusicText, modifier = Modifier.size(28.dp))
             }
             RoundButton(44.dp, filled = false, enabled = Playback.hasNext, onClick = { Playback.next() }) {
-                Icon(Icons.Filled.SkipNext, "Next", tint = if (Playback.hasNext) StrideColors.Text else StrideColors.Faint, modifier = Modifier.size(26.dp))
+                Icon(Icons.Filled.SkipNext, "Next", tint = if (Playback.hasNext) MusicText else StrideColors.Faint, modifier = Modifier.size(26.dp))
             }
         }
         val f = if (Playback.duration > 0) (pos.toFloat() / Playback.duration).coerceIn(0f, 1f) else 0f
@@ -143,23 +139,23 @@ fun NowPlaying(onClose: () -> Unit) {
     val fraction = if (dragging) dragFraction else if (dur > 0) (pos.toFloat() / dur).coerceIn(0f, 1f) else 0f
     val artScale by animateFloatAsState(if (Playback.isPlaying) 1f else 0.86f, spring(dampingRatio = 0.6f, stiffness = 300f), label = "art")
 
-    Box(Modifier.fillMaxSize().background(StrideColors.Bg)) {
+    Box(Modifier.fillMaxSize().background(MusicBg)) {
         Playback.artwork?.let {
             AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(90.dp).scale(1.4f), alpha = 0.6f)
         }
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(StrideColors.Bg.copy(alpha = 0.35f), StrideColors.Bg.copy(alpha = 0.7f), StrideColors.Bg))))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MusicBg.copy(alpha = 0.35f), MusicBg.copy(alpha = 0.7f), MusicBg))))
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "Close", tint = StrideColors.Dim, modifier = Modifier.size(30.dp)) }
-                Text("NOW PLAYING", color = StrideColors.Dim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "Close", tint = MusicMuted, modifier = Modifier.size(30.dp)) }
+                Text("NOW PLAYING", color = MusicMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Box(Modifier.size(48.dp))
             }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Artwork(Playback.artwork, Modifier.fillMaxWidth().aspectRatio(1f).scale(artScale), 28.dp)
             }
             Column(Modifier.fillMaxWidth()) {
-                Text(Playback.title, color = StrideColors.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(Playback.artist ?: " ", color = StrideColors.Dim, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(Playback.title, color = MusicText, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(Playback.artist ?: " ", color = MusicMuted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.padding(top = 24.dp))
             Scrubber(
@@ -172,16 +168,16 @@ fun NowPlaying(onClose: () -> Unit) {
             )
             val shown = if (dragging) (dragFraction * dur).toLong() else pos
             Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text(fmtTime(shown), color = StrideColors.Dim, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text("-" + fmtTime(dur - shown), color = StrideColors.Dim, fontSize = 12.sp)
+                Text(fmtTime(shown), color = MusicMuted, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text("-" + fmtTime(dur - shown), color = MusicMuted, fontSize = 12.sp)
             }
             Row(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(64.dp, filled = false, onClick = { Playback.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", tint = StrideColors.Text, modifier = Modifier.size(40.dp)) }
+                RoundButton(64.dp, filled = false, onClick = { Playback.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", tint = MusicText, modifier = Modifier.size(40.dp)) }
                 RoundButton(88.dp, filled = true, onClick = { Playback.toggle() }) {
-                    Icon(if (Playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play or pause", tint = StrideColors.Text, modifier = Modifier.size(48.dp))
+                    Icon(if (Playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play or pause", tint = MusicInk, modifier = Modifier.size(48.dp))
                 }
                 RoundButton(64.dp, filled = false, enabled = Playback.hasNext, onClick = { Playback.next() }) {
-                    Icon(Icons.Filled.SkipNext, "Next", tint = if (Playback.hasNext) StrideColors.Text else StrideColors.Faint, modifier = Modifier.size(40.dp))
+                    Icon(Icons.Filled.SkipNext, "Next", tint = if (Playback.hasNext) MusicText else StrideColors.Faint, modifier = Modifier.size(40.dp))
                 }
             }
             Row(Modifier.padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -209,7 +205,7 @@ private fun Scrubber(fraction: Float, active: Boolean, onDrag: (Float) -> Unit, 
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.14f))) {
-            Box(Modifier.fillMaxWidth(fraction).height(h).background(if (active) StrideColors.Text else StrideColors.Text.copy(alpha = 0.8f)))
+            Box(Modifier.fillMaxWidth(fraction).height(h).background(if (active) MusicText else MusicText.copy(alpha = 0.8f)))
         }
     }
 }
