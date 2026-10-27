@@ -150,6 +150,8 @@ private fun Home(modules: List<AppModule>, onOpen: (AppModule) -> Unit) {
         }
         // A fresh install with no data yet: offer to bring everything back from a Hive backup.
         item { app.stride.backup.RestoreOffer() }
+        // After a crash: what broke, with a Share button.
+        item { app.stride.crash.CrashCard() }
         if (editing) {
             item { Text("Move apps up or down and switch off the ones you don't use. Their data stays.", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim, modifier = Modifier.padding(horizontal = 4.dp)) }
             val sorted = order.sorted(ids)
