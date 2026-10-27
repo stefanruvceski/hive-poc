@@ -77,7 +77,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   Cyrillic is shown in Latin. Offline scans stay PENDING and are retried when Wallet opens. `domain/ReceiptStats` (tested):
   months, search, fuel (liters, price per liter, by item name). Loyalty cards: number + `CardFormat`;
   `domain/Barcodes` (tested) guesses the type (EAN check digits, else Code 128), validates and draws it with ZXing;
-  the card screen shows it on white at full brightness. Scanning (`ui/Scanner`) is Google Play services: the code
+  the card screen shows it on white at full brightness, with the number as text only when `Barcodes.readable` (digits ≤ 24 or a short
+  capitals/digits code ≤ 16; random QR tokens stay hidden; also the tile and widget). Saving a new card returns to the Cards tab with a toast. Scanning (`ui/Scanner`) is Google Play services: the code
   scanner UI for the camera (no camera permission) and ML Kit (unbundled) for a picked photo. Open targets "scan", "cards".
   Who a receipt is for: `Receipt.buyerTin` = the buyer's PIB when the buyer id is type 10 or 12 (`FiscalParse.companyTin`;
   other types are a person: personal), `ownerManual` keeps the user's choice; companies are named in `WalletData.companies`;

@@ -86,7 +86,7 @@ private fun CardsContent(cards: List<LoyaltyCard>) {
                 Spacer(GlanceModifier.width(10.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     Text((if (c.pinned) "📌 " else "") + c.name.ifBlank { "Card" }, style = style(StrideColors.Text, sp(13.5f, k), bold = true), maxLines = 1)
-                    if (c.number.length > 4) Text("•••• " + c.number.takeLast(4), style = style(StrideColors.Dim, sp(10.5f, k)), maxLines = 1)
+                    if (c.number.length > 4 && app.stride.wallet.domain.Barcodes.readable(c.number)) Text("•••• " + c.number.takeLast(4), style = style(StrideColors.Dim, sp(10.5f, k)), maxLines = 1)
                 }
             }
         }

@@ -138,10 +138,13 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
             route == "noqr" -> NoQrScreen(vm, onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
             route == "fuel" -> FuelScreen(d, onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route.startsWith("card:") -> CardScreen(vm, d, route.removePrefix("card:"), onEdit = { push("edit:" + route.removePrefix("card:")) }, onBack = ::pop)
-            route == "new-card" -> CardForm(LoyaltyCard("", "", ""), onSave = { c -> val id = vm.saveCard(c); pop(); push("card:$id") }, onBack = ::pop)
+            // Saved: back to all cards, where the new one now sits, with a small note.
+            route == "new-card" -> CardForm(LoyaltyCard("", "", ""), onSave = { c ->
+                vm.saveCard(c); stack.clear(); tab = "cards"; Toast.makeText(context, "Card saved", Toast.LENGTH_SHORT).show()
+            }, onBack = ::pop)
             route.startsWith("edit:") -> {
                 val c = d.cards.firstOrNull { it.id == route.removePrefix("edit:") }
-                if (c == null) LaunchedEffect(route) { pop() } else CardForm(c, onSave = { vm.saveCard(it); pop() }, onBack = ::pop)
+                if (c == null) LaunchedEffect(route) { pop() } else CardForm(c, onSave = { vm.saveCard(it); pop(); Toast.makeText(context, "Card saved", Toast.LENGTH_SHORT).show() }, onBack = ::pop)
             }
             else -> LaunchedEffect(route) { pop() }
         }

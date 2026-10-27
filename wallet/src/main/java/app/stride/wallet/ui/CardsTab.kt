@@ -155,7 +155,7 @@ fun CardTile(c: LoyaltyCard, modifier: Modifier = Modifier, onClick: (() -> Unit
                 c.name.ifBlank { "Card" }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 style = TextStyle(shadow = shadow), modifier = Modifier.padding(end = 36.dp),
             )
-            Text(
+            if (Barcodes.readable(c.number)) Text(
                 c.number.takeLast(4).let { if (c.number.length > 4) "•••• $it" else it }, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace, style = TextStyle(shadow = shadow), modifier = Modifier.align(Alignment.BottomStart),
             )
@@ -210,7 +210,8 @@ fun CardScreen(vm: WalletViewModel, d: WalletData, id: String, onEdit: () -> Uni
             Spacer(Modifier.height(28.dp))
             BarcodeImage(c.number, c.format, Modifier.padding(horizontal = if (c.format.square) 24.dp else 0.dp))
             Spacer(Modifier.height(20.dp))
-            Text(Barcodes.spaced(c.number, c.format), color = Color(0xFF111827), fontSize = 24.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            // Only a number a cashier could type in; a long random QR token isn't shown.
+            if (Barcodes.readable(c.number)) Text(Barcodes.spaced(c.number, c.format), color = Color(0xFF111827), fontSize = 24.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             if (c.note.isNotBlank()) Text(c.note, color = Color(0xFF6B7280), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
         }
         Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {

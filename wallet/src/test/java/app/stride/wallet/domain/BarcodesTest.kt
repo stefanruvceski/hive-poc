@@ -48,4 +48,14 @@ class BarcodesTest {
         assertEquals(CardFormat.QR_CODE, Barcodes.fromScanner(256))
         assertNull(Barcodes.fromScanner(0))
     }
+
+    @Test fun readableNumbersOnly() {
+        assertTrue(Barcodes.readable("124321254"))
+        assertTrue(Barcodes.readable("4006 3812 3456"))
+        assertTrue(Barcodes.readable("AB-12345"))
+        assertFalse(Barcodes.readable("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEyMyJ9.x7Qz"))
+        assertFalse(Barcodes.readable("a8F3k2LmQp9xZ7wR"))
+        assertFalse(Barcodes.readable("1".repeat(40)))
+        assertFalse(Barcodes.readable("  "))
+    }
 }
