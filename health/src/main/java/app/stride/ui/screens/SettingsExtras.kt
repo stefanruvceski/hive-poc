@@ -461,6 +461,7 @@ fun GarminCard(vm: AppViewModel) {
 }
 
 /** Where coach notifications land: today's check-in on top, the weekly review below, each one tap from the Claude app. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CoachScreen(vm: AppViewModel, data: AppData, today: java.time.LocalDate, busy: Boolean, onBack: () -> Unit, onSettings: () -> Unit) {
     val context = LocalContext.current
