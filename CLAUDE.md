@@ -114,7 +114,7 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   L/100 km fill-to-full from `Receipt.odometer`). Till: `CardScreen` is a white screen with only the code; ⋯ = pin /
   edit / delete. `LoyaltyCard.pinned`, order in `domain/CardOrder` (tested). Widget `widget/WalletWidgets` (Glance,
   `CardsWidget`, refreshed on every card change), Quick Settings `CardsTile`, app shortcut "cards"; the printed receipt is
-  sized to the card width and centered (`PrintedReceipt`), "PDF" shares it via `ui/ReceiptPdf` (white A4, monospace,
+  sized to the card width and centered (`PrintedReceipt`), "PDF" shares it via `ui/ReceiptPdf` (white A4, monospace, the receipt's QR link drawn under the text with `Barcodes.matrix`,
   pages from `domain/ReceiptPdfLayout`, tested; cache/share + the app's FileProvider); open targets
   "wallet/cards", "wallet/card:<id>", "wallet/receipt:<id>", "wallet/noqr", "wallet/fuel".
   Receipt rows: `ui/SwipeToDelete` (swipe left: past half deletes, with Undo snackbar + `restoreReceipt`; less stays

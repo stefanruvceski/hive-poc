@@ -7,7 +7,10 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
+import app.stride.wallet.domain.Barcodes
+import app.stride.wallet.domain.FiscalParse
 import app.stride.wallet.domain.ReceiptPdfLayout
+import app.stride.wallet.model.CardFormat
 import app.stride.wallet.model.Receipt
 import java.io.File
 
@@ -19,10 +22,16 @@ object ReceiptPdf {
 
     /** Writes the PDF into cache/share (served by the app's FileProvider). Call off the main thread. */
     fun write(context: Context, r: Receipt): File =
-        writeLines(context, ReceiptPdfLayout.lines(r.journal.orEmpty()), ReceiptPdfLayout.fileName(r.shop ?: r.company, r.time), centered = true)
+        writeLines(
+            context, ReceiptPdfLayout.lines(r.journal.orEmpty()), ReceiptPdfLayout.fileName(r.shop ?: r.company, r.time), centered = true,
+            qr = FiscalParse.verificationUrl(r.url),
+        )
 
-    /** Any monospace text as A4 pages: shrunk so the widest line fits (10 pt at most), centered or from the left margin. */
-    fun writeLines(context: Context, lines: List<String>, fileName: String, centered: Boolean): File {
+    /**
+     * Any monospace text as A4 pages: shrunk so the widest line fits (10 pt at most), centered or from the left margin.
+     * [qr] (the receipt's tax-office link) is drawn as a QR code under the text, like on the paper receipt.
+     */
+    fun writeLines(context: Context, lines: List<String>, fileName: String, centered: Boolean, qr: String? = null): File {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.MONOSPACE; color = Color.BLACK; textSize = 10f }
         val widest = lines.maxOfOrNull { paint.measureText(it) } ?: 0f
         // The widest line fills the page width at most; never larger than 10 pt.
@@ -33,12 +42,36 @@ object ReceiptPdf {
         val perPage = ((PAGE_H - 2 * MARGIN) / lineHeight).toInt()
 
         val doc = PdfDocument()
-        ReceiptPdfLayout.pages(lines, perPage).forEachIndexed { i, page ->
-            val p = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, i + 1).create())
+        val pages = ReceiptPdfLayout.pages(lines, perPage)
+        val matrix = qr?.let { Barcodes.matrix(it, CardFormat.QR_CODE) }
+        val qrSize = 150f
+        val caption = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 8f; textAlign = Paint.Align.CENTER }
+        var pageNo = 0
+        fun page(draw: (android.graphics.Canvas) -> Unit) {
+            val p = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, ++pageNo).create())
             p.canvas.drawColor(Color.WHITE)
-            page.forEachIndexed { n, line -> p.canvas.drawText(line, left, MARGIN + paint.textSize + n * lineHeight, paint) }
+            draw(p.canvas)
             doc.finishPage(p)
         }
+        fun drawQr(c: android.graphics.Canvas, top: Float) {
+            val m = matrix ?: return
+            val cell = qrSize / m.width
+            val x0 = (PAGE_W - qrSize) / 2
+            val black = Paint().apply { color = Color.BLACK; style = Paint.Style.FILL }
+            for (y in 0 until m.height) for (x in 0 until m.width) {
+                if (m.get(x, y)) c.drawRect(x0 + x * cell, top + y * cell, x0 + (x + 1) * cell, top + (y + 1) * cell, black)
+            }
+            c.drawText("Scan to check this receipt with the Tax Administration", PAGE_W / 2f, top + qrSize + 14f, caption)
+        }
+        pages.forEachIndexed { i, lines0 ->
+            page { c ->
+                lines0.forEachIndexed { n, line -> c.drawText(line, left, MARGIN + paint.textSize + n * lineHeight, paint) }
+                // The QR goes under the last line when it fits, else on a page of its own.
+                val bottom = MARGIN + lines0.size * lineHeight + 16f
+                if (i == pages.lastIndex && matrix != null && bottom + qrSize + 24f <= PAGE_H - MARGIN) drawQr(c, bottom)
+            }
+        }
+        if (matrix != null && MARGIN + pages.last().size * lineHeight + 16f + qrSize + 24f > PAGE_H - MARGIN) page { c -> drawQr(c, MARGIN) }
         val file = File(File(context.cacheDir, "share").apply { mkdirs() }, fileName)
         file.outputStream().use { doc.writeTo(it) }
         doc.close()

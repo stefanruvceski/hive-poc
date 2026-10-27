@@ -6,6 +6,10 @@
       {
         "icon": "chart",
         "text": "Wallet → Receipts → pick a company (e.g. Obsidian IT) → Report: the month's total, VAT per rate (20%, 10%) and every receipt. Send it as a PDF or a CSV for Excel with the buttons at the top; pick another month or All."
+      },
+      {
+        "icon": "apps",
+        "text": "A receipt's PDF now has its QR code under the text, like the paper one, so anyone can check it with the Tax Administration."
       }
     ]
   },
