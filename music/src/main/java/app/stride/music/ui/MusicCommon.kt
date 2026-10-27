@@ -66,44 +66,60 @@ import app.stride.ui.theme.StrideColors
 import coil.compose.AsyncImage
 
 /**
- * Colors and glass from ruvceski.com (theme "glacier", src/styles/theme.css + globals.css): ice white for the main
- * actions, teal for highlights, deep blue-black behind, and colored light (teal, blue) the glass sits on.
+ * "Abyss": near-black navy with neon cyan, teal and electric blue light behind clear, Apple-style liquid glass.
+ * Glass = white 11% → 2% with a bright top edge and a chromatic rim (cyan → blue) where the light refracts.
  */
-val MusicBrand = Color(0xFFE4ECFB) // --brand
-val MusicBrand2 = Color(0xFF3FE0C5) // --brand-2
-val MusicInk = Color(0xFF0A1220) // --brand-ink: text on ice
-val MusicBg = Color(0xFF080B0C) // --background (dark)
-val MusicText = Color(0xFFF5F8FA) // --foreground
-val MusicMuted = Color(0xFFA2B3B9) // --muted-foreground
+val MusicBrand = Color(0xFF00D9FF) // neon cyan: main actions, selected pills, fills
+val MusicBrand2 = Color(0xFF00F0E0) // teal: highlights
+val MusicDeep = Color(0xFF0B3BFF) // electric blue: the far end of gradients
+val MusicInk = Color(0xFF00141F) // text on solid cyan
+val MusicBg = Color(0xFF000000)
+val MusicText = Color(0xFFFFFFFF)
+val MusicMuted = Color(0x9EC8F0FF) // pale cyan-white, 62%
+val MusicEyebrow = Color(0xFF38F2FF)
 
-/** Highlights (rings, fills, switches); the module's color on the home screen. */
-val MusicAccent = MusicBrand2
+/** Highlights (rings, switches); the module's color on the home screen. */
+val MusicAccent = MusicBrand
 private val GlassShape = RoundedCornerShape(24.dp)
 
-/** The site's .ambient: four soft lights (teal, blue, blue, faint teal) on the dark background, opacity 0.55. */
+/** Gradient used by the slider, progress bars and the ring: teal → cyan → electric blue. */
+val MusicFill: Brush get() = Brush.horizontalGradient(listOf(MusicBrand2, MusicBrand, MusicDeep))
+
+/** The background: navy glow from the top fading to black, with three soft neon lights (cyan, blue, teal). */
 fun Modifier.musicGlow(): Modifier = drawBehind {
     drawRect(MusicBg)
     val w = size.width
+    drawRect(Brush.radialGradient(listOf(Color(0xFF0A2A6E), Color(0xFF030A1E), Color.Black), center = Offset(w / 2, 0f), radius = maxOf(w, size.height) * 0.75f))
     fun light(color: Color, cx: Float, cy: Float, r: Float, alpha: Float) =
-        drawCircle(Brush.radialGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = alpha * 0.35f), Color.Transparent), center = Offset(cx, cy), radius = r), radius = r, center = Offset(cx, cy))
-    light(Color(0xFF0F8F7E), w * 0.10f, w * 0.12f, w * 0.75f, 0.55f) // --glow-1
-    light(Color(0xFF2A4BB0), w * 0.95f, size.height * 0.16f, w * 0.70f, 0.55f) // .b
-    light(Color(0xFF3A5FB0), w * 0.55f, size.height * 0.95f, w * 0.85f, 0.55f) // --glow-3
-    light(Color(0xFF3CE0BD), w * 0.55f, w * 0.10f, w * 0.55f, 0.25f) // --glow-hero
+        drawCircle(Brush.radialGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = alpha * 0.4f), Color.Transparent), center = Offset(cx, cy), radius = r), radius = r, center = Offset(cx, cy))
+    val k = w / 390f // the mock was drawn 390 wide
+    light(MusicBrand, 330 * k, 140 * k, 190 * k, 0.55f)
+    light(MusicDeep, 50 * k, 510 * k, 240 * k, 0.6f)
+    light(MusicBrand2, 320 * k, 700 * k, 150 * k, 0.4f)
 }
 
-/** The site's .glass: white 11% → 4.5% at 140°, a 14% white rim and a 22% white line along the top edge. */
+/** The chromatic rim: cyan where the light enters, a short blue band opposite, clear in between. */
+private val Rim = Brush.sweepGradient(
+    0f to MusicBrand.copy(alpha = 0.9f), 0.14f to Color.Transparent, 0.39f to Color.Transparent,
+    0.49f to MusicDeep.copy(alpha = 0.95f), 0.54f to MusicBrand.copy(alpha = 0.6f), 0.65f to Color.Transparent,
+    0.83f to Color.Transparent, 1f to MusicBrand.copy(alpha = 0.9f),
+)
+
+/** Liquid glass: a faint white body, a hairline white edge, the chromatic rim and a bright line along the top. */
 fun Modifier.glassSurface(shape: Shape, tint: Color? = null, fill: Color? = null): Modifier = clip(shape)
     .then(if (fill != null) Modifier.background(fill) else Modifier)
-    .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.11f), Color.White.copy(alpha = 0.045f)), start = Offset.Zero, end = Offset.Infinite))
-    .then(if (tint != null) Modifier.background(Brush.linearGradient(listOf(tint.copy(alpha = 0.10f), Color.Transparent), start = Offset.Zero, end = Offset.Infinite)) else Modifier)
-    .border(1.dp, Color.White.copy(alpha = 0.14f), shape)
+    .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.11f), Color.White.copy(alpha = 0.02f)), start = Offset.Zero, end = Offset.Infinite))
+    .then(if (tint != null) Modifier.background(Brush.linearGradient(listOf(tint.copy(alpha = 0.16f), Color.Transparent), start = Offset.Zero, end = Offset.Infinite)) else Modifier)
+    .background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent), center = Offset(0f, 0f), radius = 900f))
+    .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
+    .border(1.5.dp, Rim, shape)
     .drawWithContent {
         drawContent()
         val y = 1.dp.toPx()
+        val inset = size.height.coerceAtMost(28.dp.toPx()) / 2
         drawLine(
-            Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.22f), Color.Transparent)),
-            Offset(size.height.coerceAtMost(28.dp.toPx()) / 2, y), Offset(size.width - size.height.coerceAtMost(28.dp.toPx()) / 2, y), strokeWidth = 1.dp.toPx(),
+            Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.45f), Color.Transparent)),
+            Offset(inset, y), Offset(size.width - inset, y), strokeWidth = 1.dp.toPx(),
         )
     }
 
@@ -115,21 +131,21 @@ fun Glass(modifier: Modifier = Modifier, tint: Color? = null, onClick: (() -> Un
     )
 }
 
-/** A pill like the site's chips: glass when off, ice wash with ice text when on ([tint] for other colors, e.g. red). */
+/** A glass pill: clear when off, a cyan wash with white text when on ([tint] for other colors, e.g. red). */
 @Composable
 fun GlassPill(text: String, selected: Boolean, tint: Color = MusicBrand, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)
     Box(
         modifier
             .then(
-                if (selected) Modifier.clip(shape).background(tint.copy(alpha = 0.14f)).border(1.dp, tint.copy(alpha = 0.35f), shape)
+                if (selected) Modifier.glassSurface(shape, fill = tint.copy(alpha = 0.22f))
                 else Modifier.glassSurface(shape),
             )
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = if (!enabled) StrideColors.Faint else if (selected) tint else MusicMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(text, color = if (!enabled) StrideColors.Faint else if (selected) (if (tint == MusicBrand) MusicText else tint) else MusicMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -158,12 +174,12 @@ fun Artwork(url: String?, modifier: Modifier, corner: Dp) {
     val shape = RoundedCornerShape(corner)
     Box(
         modifier.clip(shape)
-            .background(Brush.linearGradient(listOf(MusicBrand, MusicBrand2)))
+            .background(Brush.linearGradient(listOf(MusicBrand2, MusicDeep)))
             .border(1.dp, Color.White.copy(alpha = 0.18f), shape),
         contentAlignment = Alignment.Center,
     ) {
         if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        else Text("♪", color = MusicInk, fontSize = (corner.value * 1.4f).sp)
+        else Text("♪", color = MusicText, fontSize = (corner.value * 1.4f).sp)
     }
 }
 
@@ -178,11 +194,11 @@ fun GlassField(
 ) {
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
-    val rim by animateColorAsState(if (focused) MusicBrand2.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.14f), label = "rim")
+    val rim by animateColorAsState(if (focused) MusicBrand.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.14f), label = "rim")
     BasicTextField(
         value, onChange, singleLine = true,
         textStyle = TextStyle(color = MusicText, fontSize = 15.sp),
-        cursorBrush = SolidColor(MusicBrand2),
+        cursorBrush = SolidColor(MusicBrand),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
         decorationBox = { inner ->
@@ -203,23 +219,36 @@ fun GlassField(
     )
 }
 
-/** The site's main button: solid ice, dark ink text, fully round; lifts a little (here: shrinks) when pressed. */
+/**
+ * The main action. Ready: solid cyan → electric blue with a glow and white text. Not ready yet: cyan-tinted clear
+ * glass with the chromatic rim and pale cyan text, so it still looks alive; [hint] shows under it.
+ */
 @Composable
-fun GlassButton(title: String, modifier: Modifier = Modifier, subtitle: String? = null, enabled: Boolean = true, tint: Color = MusicBrand, onClick: () -> Unit) {
+fun GlassButton(title: String, modifier: Modifier = Modifier, subtitle: String? = null, enabled: Boolean = true, tint: Color = MusicBrand, hint: String? = null, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.97f else 1f, spring(stiffness = 700f), label = "press")
-    Box(
-        modifier.fillMaxWidth().height(56.dp).scale(scale).clip(shape)
-            .background(tint.copy(alpha = if (enabled) 1f else 0.35f))
-            .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, color = MusicInk, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            if (subtitle != null) Text(subtitle, color = MusicInk.copy(alpha = 0.65f), fontSize = 11.sp)
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.fillMaxWidth().height(58.dp).scale(scale)
+                .then(
+                    if (enabled) Modifier.shadow(20.dp, shape, ambientColor = tint, spotColor = tint).clip(shape)
+                        .background(Brush.horizontalGradient(listOf(tint, if (tint == MusicBrand) MusicDeep else tint.copy(alpha = 0.7f))))
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.Transparent), endY = 70f))
+                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.7f), Color.White.copy(alpha = 0.05f))), shape)
+                    else Modifier.glassSurface(shape, fill = tint.copy(alpha = 0.13f)),
+                )
+                .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            val color = if (enabled) Color.White else Color(0xFFBDFBFF)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (subtitle != null) Text(subtitle, color = color.copy(alpha = 0.75f), fontSize = 11.sp)
+            }
         }
+        if (!enabled && hint != null) Text(hint, color = MusicMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
@@ -232,22 +261,22 @@ fun GlassIconButton(icon: ImageVector, description: String, size: Dp = 40.dp, on
     ) { Icon(icon, description, tint = MusicText, modifier = Modifier.size(size * 0.5f)) }
 }
 
-/** An iOS-style switch: glass when off, teal when on, a white knob that slides. */
+/** An iOS-style switch: glass when off, neon cyan when on, a white knob that slides. */
 @Composable
 fun GlassSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     val shape = RoundedCornerShape(50)
     val x by animateDpAsState(if (checked) 22.dp else 2.dp, spring(dampingRatio = 0.65f, stiffness = 500f), label = "knob")
-    val fill by animateColorAsState(if (checked) MusicBrand2 else Color.White.copy(alpha = 0.08f), label = "fill")
+    val fill by animateColorAsState(if (checked) MusicBrand else Color.White.copy(alpha = 0.08f), label = "fill")
     Box(
         Modifier.size(52.dp, 32.dp).clip(shape).background(fill)
             .border(1.dp, Color.White.copy(alpha = 0.14f), shape)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onChange(!checked) },
     ) {
-        Box(Modifier.padding(start = x, top = 2.dp).size(28.dp).shadow(4.dp, CircleShape).clip(CircleShape).background(if (checked) MusicInk else MusicBrand))
+        Box(Modifier.padding(start = x, top = 2.dp).size(28.dp).shadow(4.dp, CircleShape).clip(CircleShape).background(Color.White))
     }
 }
 
-/** Track with the site's ice → teal gradient and an ice knob glowing teal; drag or tap anywhere. Snaps to [step]. */
+/** Track in the teal → cyan → blue gradient with a glass knob glowing cyan; drag or tap anywhere. Snaps to [step]. */
 @Composable
 fun GlassSlider(value: Float, range: ClosedFloatingPointRange<Float>, step: Float, onChange: (Float) -> Unit) {
     val span = range.endInclusive - range.start
@@ -264,23 +293,23 @@ fun GlassSlider(value: Float, range: ClosedFloatingPointRange<Float>, step: Floa
     ) {
         val shape = RoundedCornerShape(50)
         Box(Modifier.fillMaxWidth().height(8.dp).clip(shape).background(Color.Black.copy(alpha = 0.25f)).border(1.dp, Color.White.copy(alpha = 0.14f), shape)) {
-            Box(Modifier.fillMaxWidth(f).height(8.dp).clip(shape).background(Brush.horizontalGradient(listOf(MusicBrand, MusicBrand2))))
+            Box(Modifier.fillMaxWidth(f).height(8.dp).clip(shape).background(MusicFill))
         }
-        val knob = 24.dp
+        val knob = 28.dp
         Box(
             Modifier.offset(x = (maxWidth - knob) * f).size(knob)
-                .shadow(12.dp, CircleShape, ambientColor = MusicBrand2, spotColor = MusicBrand2).clip(CircleShape)
-                .background(MusicBrand),
+                .shadow(12.dp, CircleShape, ambientColor = MusicBrand, spotColor = MusicBrand)
+                .glassSurface(CircleShape, fill = Color.White.copy(alpha = 0.35f)),
         )
     }
 }
 
-/** A thin progress capsule in the ice → teal gradient; null = size unknown yet (a light sweeps across). */
+/** A thin progress capsule in the teal → cyan → blue gradient; null = size unknown yet (a light sweeps across). */
 @Composable
 fun GlassProgress(fraction: Float?, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(50)
     BoxWithConstraints(modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color.White.copy(alpha = 0.08f))) {
-        val fill = Brush.horizontalGradient(listOf(MusicBrand, MusicBrand2))
+        val fill = MusicFill
         if (fraction != null) {
             val shown by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(400), label = "progress")
             Box(Modifier.fillMaxWidth(shown).height(6.dp).clip(shape).background(fill))
