@@ -161,6 +161,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
             else -> when {
                 open.target.startsWith("card:") -> { stack.clear(); tab = "cards"; push(open.target) }
                 open.target.startsWith("receipt:") -> { stack.clear(); tab = "receipts"; push(open.target) }
+                open.target.startsWith("company:") -> { stack.clear(); tab = "receipts"; push(open.target) }
             }
         }
     }
@@ -186,6 +187,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
             route.startsWith("receipt:") -> route.removePrefix("receipt:").let { id -> ReceiptScreen(vm, d, id, id in loading, ::pop) }
             route == "noqr" -> NoQrScreen(vm, onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
             route == "fuel" -> FuelScreen(vm, d, onReceipt = { push("receipt:$it") }, onBack = ::pop)
+            route.startsWith("company:") -> CompanyReportScreen(d, route.removePrefix("company:"), onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route == "prices" -> PricesScreen(d, onProduct = { push("product:$it") }, onBack = ::pop)
             route.startsWith("product:") -> ProductScreen(vm, d, route.removePrefix("product:"), onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route.startsWith("card:") -> CardScreen(vm, d, route.removePrefix("card:"), onEdit = { push("edit:" + route.removePrefix("card:")) }, onBack = ::pop)
@@ -235,7 +237,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         },
     ) { padding ->
         if (tab == "cards") CardsTab(d, padding, onCard = { push("card:$it") }, onAdd = { push("new-card") })
-        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onNoQr = { push("noqr") }, onFuel = { push("fuel") }, onPrices = { push("prices") }, onDelete = ::deleteReceipt, onReceipt = { push("receipt:$it") })
+        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onNoQr = { push("noqr") }, onFuel = { push("fuel") }, onPrices = { push("prices") }, onCompany = { push("company:$it") }, onDelete = ::deleteReceipt, onReceipt = { push("receipt:$it") })
         if (batchOpen && batch.isNotEmpty()) BatchReport(batch, d, loading, onOpen = { batchOpen = false; tab = "receipts"; push("receipt:$it") }, onDone = { batchOpen = false })
     }
 }

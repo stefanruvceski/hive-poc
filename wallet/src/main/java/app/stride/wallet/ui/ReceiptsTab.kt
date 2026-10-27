@@ -92,6 +92,7 @@ fun ReceiptsTab(
     onFuel: () -> Unit,
     onPrices: () -> Unit = {},
     onDelete: (Receipt) -> Unit = {},
+    onCompany: (String) -> Unit = {},
     onReceipt: (String) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -135,6 +136,18 @@ fun ReceiptsTab(
                     companies.forEach { pib -> GlassPill(Owners.name(pib, d.companies), owner == pib) { owner = pib } }
                 }
                 GlassPill("★ Saved", saved, StrideColors.Amber) { saved = !saved }
+            }
+        }
+        // A company picked: its report for the accountant (month totals, VAT per rate, PDF / CSV).
+        if (owner in companies) item {
+            GlassRow({ onCompany(owner) }, tint = WalletAccent) {
+                Icon(Icons.Filled.BusinessCenter, null, tint = WalletAccent, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.size(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Report for ${Owners.name(owner, d.companies)}", color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Totals and VAT per month, as PDF or CSV for the accountant", color = StrideColors.Dim, fontSize = 12.sp)
+                }
+                Text("›", color = WalletAccent, fontSize = 20.sp)
             }
         }
         // Wallet keeps the papers; the numbers (spending, budgets, reports) are Money's.
