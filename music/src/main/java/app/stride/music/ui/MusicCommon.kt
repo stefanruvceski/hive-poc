@@ -1,3 +1,5 @@
+@file:OptIn(dev.chrisbanes.haze.ExperimentalHazeApi::class)
+
 package app.stride.music.ui
 
 import androidx.compose.foundation.background
@@ -67,6 +69,7 @@ import coil.compose.AsyncImage
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -118,7 +121,8 @@ val LocalHaze = staticCompositionLocalOf<HazeState?> { null }
 
 /** Frosted, not milky: a strong blur of the lights behind with only a whisper of white. */
 // Haze needs an opaque backgroundColor under the blur (it throws without one on Android 12+).
-private val Frost = HazeStyle(backgroundColor = MusicBg, tint = HazeTint(Color.White.copy(alpha = 0.03f)), blurRadius = 28.dp, noiseFactor = 0.06f)
+// No noise: the grain shader costs a pass per frame for little gain on a dark backdrop.
+private val Frost = HazeStyle(backgroundColor = MusicBg, tint = HazeTint(Color.White.copy(alpha = 0.03f)), blurRadius = 24.dp, noiseFactor = 0f)
 
 /**
  * The screen's backdrop and the source of the frost: [musicGlow] plus a few floating rounded tiles (and the cover
@@ -147,7 +151,8 @@ fun MusicBackdrop(state: HazeState, artwork: String?) {
  * bright line along the top.
  */
 fun Modifier.glassSurface(shape: Shape, tint: Color? = null, fill: Color? = null, haze: HazeState? = null): Modifier = clip(shape)
-    .then(if (haze != null) Modifier.hazeChild(haze, Frost) else Modifier)
+    // Blur at half resolution (a quarter of the pixels): at this radius it looks the same and scrolls smoothly.
+    .then(if (haze != null) Modifier.hazeChild(haze, Frost) { inputScale = HazeInputScale.Fixed(0.5f) } else Modifier)
     .then(if (fill != null) Modifier.background(fill) else Modifier)
     .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.11f), Color.White.copy(alpha = 0.02f)), start = Offset.Zero, end = Offset.Infinite))
     .then(if (tint != null) Modifier.background(Brush.linearGradient(listOf(tint.copy(alpha = 0.16f), Color.Transparent), start = Offset.Zero, end = Offset.Infinite)) else Modifier)
@@ -176,12 +181,11 @@ fun Glass(modifier: Modifier = Modifier, tint: Color? = null, onClick: (() -> Un
 @Composable
 fun GlassPill(text: String, selected: Boolean, tint: Color = MusicBrand, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)
-    val haze = LocalHaze.current
     Box(
         modifier
             .then(
-                if (selected) Modifier.glassSurface(shape, fill = tint.copy(alpha = 0.22f), haze = haze)
-                else Modifier.glassSurface(shape, haze = haze),
+                if (selected) Modifier.glassSurface(shape, fill = tint.copy(alpha = 0.22f))
+                else Modifier.glassSurface(shape),
             )
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -279,7 +283,7 @@ fun GlassButton(title: String, modifier: Modifier = Modifier, subtitle: String? 
                         .background(Brush.horizontalGradient(listOf(tint, if (tint == MusicBrand) MusicDeep else tint.copy(alpha = 0.7f))))
                         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.Transparent), endY = 70f))
                         .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.7f), Color.White.copy(alpha = 0.05f))), shape)
-                    else Modifier.glassSurface(shape, fill = tint.copy(alpha = 0.13f), haze = LocalHaze.current),
+                    else Modifier.glassSurface(shape, fill = tint.copy(alpha = 0.13f)),
                 )
                 .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center,
@@ -298,7 +302,7 @@ fun GlassButton(title: String, modifier: Modifier = Modifier, subtitle: String? 
 @Composable
 fun GlassIconButton(icon: ImageVector, description: String, size: Dp = 40.dp, onClick: () -> Unit) {
     Box(
-        Modifier.size(size).glassSurface(CircleShape, haze = LocalHaze.current).clickable(onClick = onClick),
+        Modifier.size(size).glassSurface(CircleShape).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, tint = MusicText, modifier = Modifier.size(size * 0.5f)) }
 }
@@ -341,7 +345,7 @@ fun GlassSlider(value: Float, range: ClosedFloatingPointRange<Float>, step: Floa
         Box(
             Modifier.offset(x = (maxWidth - knob) * f).size(knob)
                 .shadow(12.dp, CircleShape, ambientColor = MusicBrand, spotColor = MusicBrand)
-                .glassSurface(CircleShape, fill = Color.White.copy(alpha = 0.35f), haze = LocalHaze.current),
+                .glassSurface(CircleShape, fill = Color.White.copy(alpha = 0.35f)),
         )
     }
 }

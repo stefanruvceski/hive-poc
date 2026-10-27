@@ -122,8 +122,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   white 11% → 2%, bright top line, chromatic sweep rim cyan → blue), `MusicBrand` cyan (main actions, = `MusicAccent`),
   `MusicBrand2` teal, `MusicDeep` blue, `MusicFill` gradient for slider / progress; the Download button stays tinted
   glass with a hint when there's no link yet. Frost: Haze 1.1.1 (last on Kotlin 2.0 / Compose 1.7; don't bump without
-  upgrading those): `MusicBackdrop` (glow + floating tiles + the playing cover) is the `haze` source, every
-  `glassSurface(haze = LocalHaze.current)` is a `hazeChild`; glass must never sit inside the backdrop, and `HazeStyle` needs an opaque `backgroundColor` (Haze throws otherwise). Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
+  upgrading those): `MusicBackdrop` (glow + floating tiles + the playing cover) is the `haze` source, only the big surfaces (`Glass` cards, mini player) pass
+  `haze = LocalHaze.current` and become `hazeChild`ren (blur at `inputScale` 0.5, no noise; pills / buttons / knob stay unblurred: blurring them all made scrolling stutter); glass must never sit inside the backdrop, and `HazeStyle` needs an opaque `backgroundColor` (Haze throws otherwise). Share → "Hive Music" (`ui/ShareReceiverActivity`, no screen) queues
   with the active preset, or opens "music/add:<url>" when "Ask on Share" is on; "music/player" opens the player.
   The app packs only arm64-v8a and `useLegacyPackaging` (the library runs binaries from the lib folder).
 - `:health` is everything Stride does (all packages below), exposed as `HealthModule`. A new app = a new library module
