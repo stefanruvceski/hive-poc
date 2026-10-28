@@ -57,6 +57,7 @@ import app.stride.ui.StrideNavBar
 import app.stride.ui.theme.StrideColors
 import app.stride.wallet.domain.BatchImport
 import app.stride.wallet.domain.FiscalParse
+import app.stride.wallet.data.NoQrPhotos
 import app.stride.wallet.model.LoyaltyCard
 import app.stride.wallet.model.Receipt
 import kotlinx.coroutines.launch
@@ -100,14 +101,24 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
     var batch by remember { mutableStateOf<List<BatchItem>>(emptyList()) }
     var batchOpen by remember { mutableStateOf(false) }
 
-    /** One photo opens its receipt; several are read one by one and reported together (what was saved, what failed). */
+    /** A photo whose QR couldn't be read: straight on to its printed fields (it waits on "Without QR" meanwhile). */
+    fun printedFields(id: String?) {
+        if (id == null) { toast("No receipt QR code in that picture, and it couldn't be kept."); return }
+        toast("No QR code read: reading the printed fields instead.")
+        stack.clear()
+        tab = "receipts"
+        push("noqr:$id")
+    }
+
+    /** One photo opens its receipt (or its printed fields); several are read one by one and reported together. */
     fun readPhotos(uris: List<Uri>) {
         if (uris.isEmpty()) return
         if (uris.size == 1) {
+            val noQr = { scope.launch { printedFields(vm.keepNoQr(uris[0])) } }
             Scanner.fromImage(context, uris[0], qrOnly = true, onResult = { found ->
                 val link = found.firstOrNull { FiscalParse.verificationUrl(it.value) != null }
-                if (link == null) toast("No receipt QR code in that picture.") else receipt(link.value)
-            }, onError = ::toast)
+                if (link == null) noQr() else receipt(link.value)
+            }, onError = { noQr() })
             return
         }
         tab = "receipts"
@@ -120,7 +131,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                     onSuccess = { codes ->
                         val links = BatchImport.links(codes.map { it.value })
                         // No QR read: the photo goes on the "Without QR" list, to check by its printed fields.
-                        if (links.isEmpty()) listOf(BatchItem(uri, fixed = BatchImport.State.NO_QR, kept = vm.keepNoQr(uri)))
+                        if (links.isEmpty()) listOf(BatchItem(uri, fixed = BatchImport.State.NO_QR, kept = vm.keepNoQr(uri) != null))
                         else links.map { l ->
                             vm.addReceipt(l)?.let { (id, isNew) -> BatchItem(uri, id, isNew, fixed = null) } ?: BatchItem(uri, fixed = BatchImport.State.NO_QR)
                         }
@@ -183,6 +194,11 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                     // Back from Chrome with the receipt: the photo it came from is done.
                     vm.pendingNoQr?.let { vm.removeNoQr(it) }
                     receipt(Uri.decode(open.target.removePrefix("link:")))
+                }
+                // Shared picture without a readable QR, already copied by ReceiptShareActivity: read its printed fields.
+                open.target.startsWith("noqr-file:") -> {
+                    val file = Uri.decode(open.target.removePrefix("noqr-file:"))
+                    printedFields(file.takeIf { NoQrPhotos.file(context, it).exists() }?.let { vm.adoptNoQr(it) })
                 }
             }
         }
