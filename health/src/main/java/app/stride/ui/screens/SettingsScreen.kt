@@ -159,6 +159,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData, onBack: () -> Unit, onLayout
             item { SectionLabel("Data", Modifier.padding(start = 4.dp, top = 8.dp)) }
             item { HealthConnectCard(vm, data) }
             item { GarminCard(vm) }
+            item { GarminPersonalCard(vm) }
             item { BackupCard(vm, data) }
             item { SectionLabel("intervals.icu", Modifier.padding(start = 4.dp, top = 8.dp)) }
             item {

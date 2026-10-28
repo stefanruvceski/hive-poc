@@ -10,6 +10,7 @@ import app.stride.data.Backup
 import app.stride.data.HealthSync
 import app.stride.coach.CoachClient
 import app.stride.garmin.GarminClient
+import app.stride.garmin.GarminPersonal
 import app.stride.garmin.GarminWorkout
 import app.stride.coach.CoachPrompt
 import app.stride.data.Sync
@@ -361,6 +362,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 _autoMoves.value = "Couldn't read detected moves: ${e.message}"
             }
+        }
+    }
+
+    // ---------------------------------------------------------------- Garmin Personal API (official, read-only)
+
+    private val personal by lazy { GarminPersonal(getApplication()) }
+    private val _personal = MutableStateFlow<List<String>>(emptyList())
+    /** The last "Test" run's lines, or its error. */
+    val personalProbe: StateFlow<List<String>> = _personal.asStateFlow()
+    fun hasPersonalKey() = personal.hasKey
+
+    fun setPersonalKey(key: String?) {
+        personal.setKey(key)
+        _personal.value = emptyList()
+        toast(if (key.isNullOrBlank()) "Personal API key removed" else "Personal API key saved on this phone")
+    }
+
+    fun testPersonal() {
+        _personal.value = listOf("Asking Garmin…")
+        viewModelScope.launch {
+            _personal.value = try { personal.probe() } catch (e: Exception) { listOf("Failed: ${e.message}") }
         }
     }
 

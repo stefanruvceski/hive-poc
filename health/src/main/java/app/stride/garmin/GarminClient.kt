@@ -58,8 +58,9 @@ class GarminClient(private val context: Context) {
     val connected: Boolean get() = prefs.getString(KEY_TOKEN, null) != null
     val account: String? get() = prefs.getString(KEY_ACCOUNT, null)
 
+    /** Signs out of the Garmin login; the official Personal API key (prefs "personal_…") stays. */
     fun disconnect() {
-        prefs.edit().clear().apply()
+        prefs.edit().apply { prefs.all.keys.filterNot { it.startsWith("personal_") }.forEach { remove(it) } }.apply()
     }
 
     // ---------------------------------------------------------------- sign-in
