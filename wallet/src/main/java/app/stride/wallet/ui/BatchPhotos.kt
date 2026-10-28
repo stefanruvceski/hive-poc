@@ -38,7 +38,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /** One receipt found in a picked photo (or the photo itself when nothing was found). [isNew] false = already saved. */
-data class BatchItem(val photo: Uri, val receiptId: String? = null, val isNew: Boolean = true, val fixed: BatchImport.State? = BatchImport.State.READING)
+data class BatchItem(val photo: Uri, val receiptId: String? = null, val isNew: Boolean = true, val fixed: BatchImport.State? = BatchImport.State.READING, val kept: Boolean = false)
 
 /** The codes in a photo, waiting for ML Kit. */
 suspend fun Scanner.read(context: Context, uri: Uri): List<Scanned> = suspendCancellableCoroutine { c ->
@@ -51,7 +51,10 @@ fun BatchItem.state(d: WalletData, loading: Set<String>): BatchImport.State =
 
 /** The report for several photos: each one's thumbnail and what became of it, live; tap a saved one to open it. */
 @Composable
-fun BatchReport(items: List<BatchItem>, d: WalletData, loading: Set<String>, onOpen: (String) -> Unit, onDone: () -> Unit) {
+fun BatchReport(
+    items: List<BatchItem>, d: WalletData, loading: Set<String>, onOpen: (String) -> Unit, onDone: () -> Unit,
+    onTrash: (List<Uri>) -> Unit, onNoQr: () -> Unit,
+) {
     val states = items.map { it.state(d, loading) }
     val busy = states.any { it.busy }
     AlertDialog(
@@ -60,6 +63,12 @@ fun BatchReport(items: List<BatchItem>, d: WalletData, loading: Set<String>, onO
         text = {
             Column {
                 Text(BatchImport.summary(states), color = StrideColors.Dim, fontSize = 13.sp)
+                val kept = items.count { it.kept }
+                if (kept > 0) Text(
+                    "$kept without a readable QR are kept in Hive, on the Receipts tab › Without QR. Check them there one by one, no need to find them in the gallery.",
+                    color = WalletAccent, fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 6.dp).clickable { onNoQr() },
+                )
                 LazyColumn(Modifier.heightIn(max = 440.dp).padding(top = 8.dp)) {
                     itemsIndexed(items) { i, it ->
                         val s = states[i]
@@ -77,7 +86,7 @@ fun BatchReport(items: List<BatchItem>, d: WalletData, loading: Set<String>, onO
                                     } ?: "Photo ${items.indexOfFirst { x -> x.photo == it.photo } + 1}",
                                     color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
-                                Text(s.label, color = if (s.ok) StrideColors.Dim else StrideColors.Danger, fontSize = 12.sp)
+                                Text(s.label + if (it.kept) " · kept in Without QR" else "", color = if (s.ok) StrideColors.Dim else StrideColors.Danger, fontSize = 12.sp)
                             }
                             if (s.busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = WalletAccent)
                         }
@@ -86,5 +95,13 @@ fun BatchReport(items: List<BatchItem>, d: WalletData, loading: Set<String>, onO
             }
         },
         confirmButton = { TextButton(onClick = onDone) { Text(if (busy) "Hide" else "Done", color = WalletAccent) } },
+        dismissButton = {
+            if (!busy) {
+                val done = BatchImport.done(items.mapIndexed { i, it -> it.photo.toString() to states[i] })
+                if (done.isNotEmpty()) TextButton(onClick = { onTrash(done.map { Uri.parse(it) }) }) {
+                    Text("Delete ${done.size} saved from gallery", color = StrideColors.Danger)
+                }
+            }
+        },
     )
 }

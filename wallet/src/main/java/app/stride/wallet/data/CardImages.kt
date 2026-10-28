@@ -17,23 +17,26 @@ object CardImages {
     fun file(context: Context, name: String) = File(File(context.filesDir, DIR), name)
 
     /** Blocking: call off the main thread. */
-    fun save(context: Context, uri: Uri): String? = runCatching {
+    fun save(context: Context, uri: Uri): String? = saveScaled(context, uri, DIR, MAX, "card")
+
+    /** [uri] as a JPEG of at most [max] px in filesDir/[dir]; returns its file name. Blocking. */
+    fun saveScaled(context: Context, uri: Uri, dir: String, max: Int, prefix: String): String? = runCatching {
         val src = if (Build.VERSION.SDK_INT >= 28) {
             ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { d, info, _ ->
                 val s = info.size
-                val scale = (MAX.toFloat() / maxOf(s.width, s.height)).coerceAtMost(1f)
+                val scale = (max.toFloat() / maxOf(s.width, s.height)).coerceAtMost(1f)
                 d.setTargetSize((s.width * scale).toInt().coerceAtLeast(1), (s.height * scale).toInt().coerceAtLeast(1))
                 d.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             }
         } else {
             @Suppress("DEPRECATION")
             MediaStore.Images.Media.getBitmap(context.contentResolver, uri).let { b ->
-                val scale = (MAX.toFloat() / maxOf(b.width, b.height)).coerceAtMost(1f)
+                val scale = (max.toFloat() / maxOf(b.width, b.height)).coerceAtMost(1f)
                 Bitmap.createScaledBitmap(b, (b.width * scale).toInt().coerceAtLeast(1), (b.height * scale).toInt().coerceAtLeast(1), true)
             }
         }
-        val name = "card_${UUID.randomUUID().toString().take(12)}.jpg"
-        val f = file(context, name)
+        val name = "${prefix}_${UUID.randomUUID().toString().take(12)}.jpg"
+        val f = File(File(context.filesDir, dir), name)
         f.parentFile?.mkdirs()
         f.outputStream().use { src.compress(Bitmap.CompressFormat.JPEG, 88, it) }
         name

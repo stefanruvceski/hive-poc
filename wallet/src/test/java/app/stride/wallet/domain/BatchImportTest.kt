@@ -26,4 +26,17 @@ class BatchImportTest {
         )
         assertEquals("1 saved, 1 in progress", BatchImport.summary(listOf(State.SAVED, State.FETCHING)))
     }
+
+    @Test fun donePhotosAndTheirIds() {
+        val items = listOf(
+            "a" to State.SAVED, "b" to State.DUPLICATE, "c" to State.NO_QR,
+            "d" to State.SAVED, "d" to State.FAILED, // two receipts, one failed: keep it
+            "e" to State.WAITING, "f" to State.FETCHING,
+        )
+        assertEquals(listOf("a", "b", "e"), BatchImport.done(items))
+        assertEquals(1000000034L, BatchImport.mediaStoreId("content://media/picker/0/com.android.providers.media.photopicker/media/1000000034"))
+        assertEquals(34L, BatchImport.mediaStoreId("content://media/picker_get_content/0/com.android.providers.media.photopicker/media/34"))
+        assertEquals(34L, BatchImport.mediaStoreId("content://media/external/images/media/34"))
+        assertEquals(null, BatchImport.mediaStoreId("content://media/picker/0/com.google.android.apps.photos.cloudpicker/media/abc"))
+    }
 }

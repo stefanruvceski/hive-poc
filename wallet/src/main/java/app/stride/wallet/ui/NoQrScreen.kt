@@ -78,8 +78,11 @@ private const val VERIFY_URL = "https://suf.purs.gov.rs/verify"
  * receipt. The page is shown, so a field Hive filled wrong can be fixed right there.
  */
 @Composable
-fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Unit) {
+fun NoQrScreen(vm: WalletViewModel, photoId: String?, onFound: (String) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
+    // A photo from the "Without QR" list: read it straight away; it leaves the list once its receipt is saved.
+    val kept = remember(photoId) { photoId?.let { id -> vm.data.value.noQr.firstOrNull { it.id == id } } }
+    val found: (String) -> Unit = { id -> photoId?.let { vm.removeNoQr(it) }; onFound(id) }
     var total by rememberSaveable { mutableStateOf("") }
     var time by rememberSaveable { mutableStateOf("") }
     var number by rememberSaveable { mutableStateOf("") }
@@ -120,7 +123,7 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
             val link = found.firstOrNull { app.stride.wallet.domain.FiscalParse.verificationUrl(it.value) != null }
             val added = link?.let { vm.addReceipt(it.value) }
             if (added == null) Toast.makeText(context, "No receipt QR code in that screenshot. Scroll the tax office's page to the QR code and try again.", Toast.LENGTH_LONG).show()
-            else { runCatching { photoFile.delete() }; onFound(added.first) }
+            else { runCatching { photoFile.delete() }; found(added.first) }
         }, onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() })
     }
     val scope = rememberCoroutineScope()
@@ -150,12 +153,17 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
             .onFailure { Toast.makeText(context, "No browser to open the tax office's page", Toast.LENGTH_SHORT).show() }
     }
 
+    LaunchedEffect(kept?.id) {
+        vm.pendingNoQr = kept?.id
+        kept?.let { read(Uri.fromFile(app.stride.wallet.data.NoQrPhotos.file(context, it.file))) }
+    }
+
     if (web) {
         VerifyWebScreen(fields, onBack = { web = false }) { url, html ->
             val id = vm.addFromVerifyPage(url, html)
             if (id != null) {
                 runCatching { photoFile.delete() }
-                onFound(id)
+                found(id)
                 true
             } else false
         }
