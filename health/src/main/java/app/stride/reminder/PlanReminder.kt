@@ -50,7 +50,6 @@ object PlanReminder {
     private const val WORK = "plan-reminder"
     private const val PREFS = "plan_reminder"
     private const val KEY_SENT = "sent"
-    private const val KEY_MOVES = "last_auto_moves"
     private const val KEY_INTENSITY = "last_intensity"
     private const val KEY_UPDATE_CHECK = "last_update_check"
     private const val KEY_LATEST_BUILD = "latest_build"
@@ -92,19 +91,6 @@ object PlanReminder {
                     DataEvents.notifyChanged()
                     Widgets.refresh(context)
                 }
-            }
-        }
-
-        // Walks the watch detected by itself (Garmin Move IQ), every ~2 h: they count as training time.
-        val garmin = app.stride.garmin.GarminClient(context)
-        if (garmin.connected && now.hour >= 6 && System.currentTimeMillis() - prefs.getLong(KEY_MOVES, 0) >= 2 * 3_600_000L) {
-            runCatching {
-                val today = now.toLocalDate()
-                val days = garmin.autoMoves(listOf(today, today.minusDays(1)))
-                prefs.edit().putLong(KEY_MOVES, System.currentTimeMillis()).apply()
-                data = store.update { it.copy(autoMoves = app.stride.domain.AutoMoves.merge(it.autoMoves, days, today)) }
-                DataEvents.notifyChanged()
-                Widgets.refresh(context)
             }
         }
 

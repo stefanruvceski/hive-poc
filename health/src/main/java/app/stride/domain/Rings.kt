@@ -38,7 +38,7 @@ object Rings {
                 RingKind.STEPS -> well?.steps ?: 0.0
                 RingKind.MINUTES -> acts.sumOf { it.movingTime ?: 0.0 } / 60 +
                     // Garmin's intensity minutes outside workouts when known (official API), else detected moves.
-                    (Intensity.forDay(data, date)?.let { Intensity.outside(it).toDouble() } ?: AutoMoves.forDay(data, date).sumOf { it.second })
+                    (Intensity.forDay(data, date)?.let { Intensity.outside(it).toDouble() } ?: 0.0)
                 RingKind.CALORIES -> acts.sumOf { it.calories ?: 0.0 }
                 RingKind.PLAN -> if (Analyzer.day(date, today, data).status == DayStatus.DONE) 1.0 else 0.0
                 RingKind.ZONE2 -> acts.sumOf { it.hrZoneTimes?.getOrNull(1) ?: 0.0 } / 60

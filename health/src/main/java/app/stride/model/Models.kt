@@ -497,8 +497,6 @@ data class AppData(
     val hcExported: List<String> = emptyList(),
     /** Nights with sleep stages (from Health Connect), keyed by the date you wake up; 120 days. */
     val sleep: List<SleepNight> = emptyList(),
-    /** Moves the watch detected by itself (Garmin Move IQ), via the Garmin sign-in; 120 days. */
-    val autoMoves: List<AutoMove> = emptyList(),
     /** Garmin's intensity minutes per day (official Personal API), 120 days. */
     val intensity: List<IntensityDay> = emptyList(),
 )
@@ -509,10 +507,6 @@ data class AppData(
  */
 @Serializable
 data class IntensityDay(val date: String, val moderate: Int, val vigorous: Int, val inWorkouts: Int)
-
-/** A walk (or other move) the watch noticed without it being started: [start] local ISO time, [type] Garmin's key. */
-@Serializable
-data class AutoMove(val date: String, val start: String, val minutes: Double, val type: String = "walking")
 
 @Serializable
 enum class SleepStageKind { AWAKE, LIGHT, DEEP, REM, ASLEEP }

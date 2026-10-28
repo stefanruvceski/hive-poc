@@ -397,7 +397,7 @@ fun GarminCard(vm: AppViewModel) {
     var password by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     FCard {
-        Text("Garmin Connect (gym workouts, detected walks)", style = MaterialTheme.typography.titleMedium)
+        Text("Garmin Connect (gym workouts)", style = MaterialTheme.typography.titleMedium)
         Text(
             if (ui.connected) "Connected as ${ui.account ?: "your account"}. In a workout, tap the watch icon to send it to Garmin; " +
                 "after the watch syncs it's under Workouts and on today's calendar."
@@ -406,24 +406,6 @@ fun GarminCard(vm: AppViewModel) {
             style = MaterialTheme.typography.bodySmall,
             color = StrideColors.Dim,
         )
-        if (ui.connected) {
-            val moves by vm.autoMovesStatus.collectAsStateWithLifecycle()
-            val context = androidx.compose.ui.platform.LocalContext.current
-            LaunchedEffect(Unit) { vm.syncAutoMoves() }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Walks the watch detects by itself (Move IQ) count as training time. " + (moves ?: "Checking today…"),
-                style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim,
-            )
-            TextButton(onClick = {
-                val f = java.io.File(context.cacheDir, app.stride.garmin.GarminClient.EVENTS_FILE)
-                val text = if (f.exists()) f.readText().take(90_000) else "Nothing fetched yet."
-                context.startActivity(android.content.Intent.createChooser(
-                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text),
-                    "Garmin's answer",
-                ))
-            }) { Text("Share Garmin's answer (if a walk is missing)") }
-        }
         Spacer(Modifier.height(10.dp))
         if (ui.connected) {
             OutlinedButton(onClick = { vm.garminDisconnect() }) { Text("Disconnect") }

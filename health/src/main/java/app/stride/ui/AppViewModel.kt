@@ -66,9 +66,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // Declared before init: init runs sync(), which reaches these (properties below init are still null then).
     private val garmin by lazy { GarminClient(getApplication()) }
     private val personal by lazy { GarminPersonal(getApplication()) }
-    private val _autoMoves = MutableStateFlow<String?>(null)
-    /** How the last fetch of auto-detected moves went (Settings → Garmin), null before the first. */
-    val autoMovesStatus: StateFlow<String?> = _autoMoves.asStateFlow()
 
     init {
         // Notification actions (tick off a set from the lock screen) write the store directly.
@@ -104,7 +101,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sync(silent: Boolean = false) {
         syncHealth(silent)
-        syncAutoMoves()
+        syncIntensity()
         val api = api()
         if (api == null) {
             if (!silent && !_data.value.settings.healthConnect) toast("Add your intervals.icu API key in Settings first.")
@@ -349,24 +346,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refreshGarmin()
     }
 
-    /** Walks the watch detected by itself (Move IQ), today and the two days before; they count as training time. */
-    fun syncAutoMoves() {
-        syncIntensity()
-        if (!garmin.connected) return
-        viewModelScope.launch {
-            val today = LocalDate.now()
-            try {
-                val days = garmin.autoMoves((0L..2L).map { today.minusDays(it) })
-                update { d -> d.copy(autoMoves = app.stride.domain.AutoMoves.merge(d.autoMoves, days, today)) }
-                val t = days[today].orEmpty()
-                _autoMoves.value = if (t.isEmpty()) "No moves detected today yet." else
-                    "Today: ${t.size} detected (${t.sumOf { it.minutes }.toInt()} min) · ${t.joinToString { app.stride.domain.AutoMoves.label(it.type) }}"
-            } catch (e: Exception) {
-                _autoMoves.value = "Couldn't read detected moves: ${e.message}"
-            }
-        }
-    }
-
     // ---------------------------------------------------------------- Garmin Personal API (official, read-only)
     /** Garmin intensity minutes for today and the two days before (official API key), for the training-time ring. */
     fun syncIntensity() {
@@ -444,7 +423,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _garmin.value = _garmin.value.copy(busy = true)
             try {
-                val m = garmin.copySets(session)
+                // The watch's activity is found through the official API when there's a key; the sets still go up unofficially.
+                val found = if (personal.hasKey) runCatching { personal.activities(session.date) }.getOrNull() else null
+                val m = garmin.copySets(session, found)
                 if (m != null) _data.value.strength.firstOrNull { it.id == session.id }?.let { cur ->
                     saveStrength(cur.copy(garminSyncedAt = java.time.Instant.now().toString(), workSec = m.workSec.takeIf { m.watch > 0 }, restSec = m.restSec.takeIf { m.watch > 0 }, rests = m.rests.takeIf { m.watch > 0 }))
                 }

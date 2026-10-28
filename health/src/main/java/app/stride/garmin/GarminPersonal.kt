@@ -87,6 +87,12 @@ class GarminPersonal(private val context: Context) {
         return null
     }
 
+    /** One day's activity search (the same answer the unofficial sign-in gives); null unless Garmin says 200. */
+    suspend fun activities(date: String): kotlinx.serialization.json.JsonArray? = withContext(Dispatchers.IO) {
+        val (code, body) = get("/activitylist-service/activities/search/activities?startDate=$date&endDate=$date&limit=20")
+        if (code == 200) StrideJson.parseToJsonElement(body) as? kotlinx.serialization.json.JsonArray else null
+    }
+
     /**
      * Intensity minutes for [days]: each day's summary plus one activity search over the range for the workouts'
      * share (`domain/Intensity`). Days without a summary (404, not synced yet) are left out.

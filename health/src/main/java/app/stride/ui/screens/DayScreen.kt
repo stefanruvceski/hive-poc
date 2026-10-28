@@ -14,7 +14,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import app.stride.domain.AutoMoves
 import app.stride.domain.Intensity
 import app.stride.domain.DayResult
 import app.stride.share.ShareContent
@@ -236,25 +235,6 @@ fun DayScreen(
                     }
                 }
             }
-            val moves = AutoMoves.forDay(data, date)
-            if (moves.isNotEmpty()) item(key = "moves") {
-                GlassCard(Modifier.fillMaxWidth(), tint = StrideColors.Accent) {
-                    Text("Detected by the watch", style = MaterialTheme.typography.titleSmall)
-                    moves.forEach { (m, counted) ->
-                        val min = m.minutes.roundToInt()
-                        Text(
-                            "${AutoMoves.label(m.type)} · ${m.start.substringAfter('T').take(5)} · $min min" +
-                                if (counted.roundToInt() < min) " (${counted.roundToInt()} outside workouts)" else "",
-                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                    Text(
-                        "Counted as training time, no need to start them on the watch.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-            }
-
             if (result.matched.isEmpty() && result.extra.isEmpty() && plan?.kind?.isStrength != true && !date.isAfter(today) && !result.manualOnly) {
                 item {
                     Text(
