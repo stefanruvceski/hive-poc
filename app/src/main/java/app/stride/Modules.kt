@@ -3,6 +3,7 @@ package app.stride
 import app.stride.habits.HabitsModule
 import app.stride.money.MoneyModule
 import app.stride.books.BooksModule
+import app.stride.invest.InvestModule
 import app.stride.draw.DrawModule
 import app.stride.host.AppModule
 import app.stride.music.MusicModule
@@ -10,5 +11,5 @@ import app.stride.wallet.WalletModule
 
 /** The modules in this app, in home-screen order. Add a new one here (and as a Gradle module in settings.gradle.kts). */
 object Modules {
-    val all: List<AppModule> = listOf(HealthModule, HabitsModule, MoneyModule, BooksModule, DrawModule, WalletModule, MusicModule)
+    val all: List<AppModule> = listOf(HealthModule, HabitsModule, MoneyModule, BooksModule, DrawModule, WalletModule, InvestModule, MusicModule)
 }

@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-28-invest",
+    "title": "New in Hive: Invest",
+    "items": [
+      {
+        "icon": "chart",
+        "text": "Your Interactive Brokers account, read-only: value and its last 12 months, positions with gains, deposits and dividends. Connect it once with a Flex token and Query ID (Invest › gear); Hive reads a fresh report every day."
+      },
+      {
+        "icon": "bell",
+        "text": "An investing plan, e.g. 3,000 EUR every quarter: progress on the overview and home screen, a reminder when a period starts and another two weeks before it ends if you're short. Deposits count by themselves."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-qr-repair",
     "title": "Crumpled receipts, read anyway",
     "items": [
