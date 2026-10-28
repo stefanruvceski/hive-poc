@@ -1,5 +1,8 @@
 package app.stride.wallet.domain
 
+import app.stride.wallet.model.Receipt
+import kotlin.math.abs
+
 /**
  * The four printed fields the tax office's "verify without QR" form asks for. Values are kept as the receipt prints
  * them: total "3.001,50", time "19.10.2026. 08:56:24", number "FA73YEEA-FA73YEEA-102736", counter "102736/103225ПП".
@@ -105,4 +108,32 @@ object ReceiptOcr {
      * thousands separator and drops it, so "3000.61" became 300.061,00 and the receipt wasn't found.
      */
     fun formAmount(printed: String): String? = amount(printed)?.let { String.format(java.util.Locale.ROOT, "%.2f", it).replace('.', ',') }
+
+    private val MINUTE = Regex("""(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})\.?\s+(\d{1,2}):(\d{2})""")
+
+    /** "28.04.2026. 17:27:38" or "28.4.2026. 17:27" → "2026-04-28T17:27", the minute a saved receipt's time starts with. */
+    fun minute(printed: String): String? = MINUTE.find(printed)?.let { m ->
+        val (d, mo, y, h, mi) = m.destructured
+        "%s-%02d-%02dT%02d:%s".format(y, mo.toInt(), d.toInt(), h.toInt(), mi)
+    }
+
+    /**
+     * The receipt already in Hive with these printed fields, so nobody types them on the tax office's page for
+     * nothing: the same PFR number, else the same minute and either the same total or the same counter serial (the
+     * number after the slash, also the PFR number's last part, safe from O/0-type OCR mix-ups).
+     */
+    fun saved(f: VerifyFields, receipts: List<Receipt>): Receipt? {
+        fun key(s: String?) = s?.uppercase()?.filter { it.isLetterOrDigit() }.orEmpty()
+        val number = key(f.number)
+        if (number.length >= 12) receipts.firstOrNull { key(it.invoiceNumber) == number }?.let { return it }
+        val minute = minute(f.time) ?: return null
+        val total = amount(f.total)
+        val serial = Regex("""/\s*(\d+)""").find(f.counter)?.groupValues?.get(1)
+        return receipts.firstOrNull { r ->
+            r.time?.take(16) == minute && (
+                (total != null && r.total != null && abs(r.total - total) < 0.005) ||
+                    (serial != null && r.invoiceNumber?.substringAfterLast('-') == serial)
+                )
+        }
+    }
 }

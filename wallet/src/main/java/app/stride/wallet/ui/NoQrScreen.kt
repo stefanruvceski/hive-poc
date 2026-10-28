@@ -1,5 +1,6 @@
 package app.stride.wallet.ui
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.view.KeyCharacterMap
@@ -92,6 +93,9 @@ fun NoQrScreen(vm: WalletViewModel, photoId: String?, onFound: (String) -> Unit,
     // Opened in Chrome: waiting for a screenshot of the QR code the tax office's page shows.
     var chrome by rememberSaveable { mutableStateOf(false) }
     val fields = VerifyFields(total.trim(), time.trim(), number.trim().uppercase(), counter.trim())
+    val d by vm.data.collectAsStateWithLifecycle()
+    // Checked before anything is typed on the tax office's page: the receipt may be in Hive already.
+    val already = remember(fields, d.receipts) { ReceiptOcr.saved(fields, d.receipts) }
 
     fun read(uri: Uri) {
         reading = true
@@ -106,7 +110,8 @@ fun NoQrScreen(vm: WalletViewModel, photoId: String?, onFound: (String) -> Unit,
                 if (f.number.isNotBlank()) number = f.number
                 if (f.counter.isNotBlank()) counter = f.counter
                 val found = listOf(f.total, f.time, f.number, f.counter).count { it.isNotBlank() }
-                Toast.makeText(context, if (found == 4) "Read all four fields. Check them, then look it up." else "Read $found of 4 fields; type the rest from the receipt.", Toast.LENGTH_LONG).show()
+                if (ReceiptOcr.saved(f, vm.data.value.receipts) != null) Toast.makeText(context, "This receipt is already in Hive.", Toast.LENGTH_LONG).show()
+                else Toast.makeText(context, if (found == 4) "Read all four fields. Check them, then look it up." else "Read $found of 4 fields; type the rest from the receipt.", Toast.LENGTH_LONG).show()
             }
             .addOnFailureListener { Toast.makeText(context, it.message ?: "Couldn't read the picture", Toast.LENGTH_LONG).show() }
             .addOnCompleteListener { reading = false; recognizer.close() }
@@ -192,6 +197,23 @@ fun NoQrScreen(vm: WalletViewModel, photoId: String?, onFound: (String) -> Unit,
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = WalletAccent)
                     Spacer(Modifier.size(8.dp))
                     Text("Reading the receipt…", color = StrideColors.Dim, fontSize = 13.sp)
+                }
+            }
+        }
+        already?.let { r ->
+            item {
+                Glass(tint = StrideColors.Accent) {
+                    Text("Already in Hive", color = StrideColors.Text, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        listOfNotNull(r.shop ?: r.company, r.time?.let { app.stride.format.Dates.full(it) + " " + it.drop(11).take(5) }, r.total?.let { ReceiptOcr.printed(it) + " RSD" }).joinToString(" · "),
+                        color = StrideColors.Dim, fontSize = 13.sp,
+                    )
+                    Text("No need to look it up on the tax office's page.", color = StrideColors.Dim, fontSize = 13.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Button(onClick = { found(r.id) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = StrideColors.Accent)) {
+                        Text("Open it")
+                    }
                 }
             }
         }
