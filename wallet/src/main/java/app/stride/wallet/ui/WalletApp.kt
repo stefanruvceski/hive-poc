@@ -104,7 +104,8 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
     /** A photo whose QR couldn't be read: straight on to its printed fields (it waits on "Without QR" meanwhile). */
     fun printedFields(id: String?) {
         if (id == null) { toast("No receipt QR code in that picture, and it couldn't be kept."); return }
-        toast("No QR code read: reading the printed fields instead.")
+        vm.repairNoQr(id)
+        toast(if (vm.canRepair()) "No QR code read: Hive's server is repairing it. The printed fields work meanwhile." else "No QR code read: reading the printed fields instead.")
         stack.clear()
         tab = "receipts"
         push("noqr:$id")
@@ -131,7 +132,7 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                     onSuccess = { codes ->
                         val links = BatchImport.links(codes.map { it.value })
                         // No QR read: the photo goes on the "Without QR" list, to check by its printed fields.
-                        if (links.isEmpty()) listOf(BatchItem(uri, fixed = BatchImport.State.NO_QR, kept = vm.keepNoQr(uri) != null))
+                        if (links.isEmpty()) listOf(BatchItem(uri, fixed = BatchImport.State.NO_QR, kept = vm.keepNoQr(uri)?.also { vm.repairNoQr(it) } != null))
                         else links.map { l ->
                             vm.addReceipt(l)?.let { (id, isNew) -> BatchItem(uri, id, isNew, fixed = null) } ?: BatchItem(uri, fixed = BatchImport.State.NO_QR)
                         }
