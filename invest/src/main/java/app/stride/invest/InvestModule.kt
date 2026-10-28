@@ -51,9 +51,11 @@ object InvestModule : AppModule {
                 style = MaterialTheme.typography.bodyMedium, color = StrideColors.Text, maxLines = 1,
             )
             if (d.plan.amount > 0) {
-                val p = Portfolio.current(d, LocalDate.now())
+                val l = Portfolio.ledger(d, LocalDate.now())
+                val p = l.current
                 Text(
-                    "${Portfolio.periodLabel(p.start, d.plan.every)}: ${money(p.invested, 0)} of ${money(p.target, 0)} ${d.plan.currency}",
+                    if (l.behind.isNotEmpty()) "${money(l.owed, 0)} ${d.plan.currency} to go for ${Portfolio.openLabel(l.open, d.plan.every)}"
+                    else "${Portfolio.periodLabel(p.start, d.plan.every)}: ${money(p.invested, 0)} of ${money(p.target, 0)} ${d.plan.currency}",
                     style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim,
                 )
                 ThinBar(p.progress, accent)

@@ -58,11 +58,16 @@ internal fun LazyListScope.planTab(host: SectionHost, d: InvestData, onPlan: (Pl
     val today = LocalDate.now()
     with(host) {
         sections {
-            section("editor") { item(key = "editor") { PlanEditor(d.plan, onPlan) } }
+            section("editor") { item(key = "editor") { PlanEditor(d.plan, Portfolio.planStart(d, today), today, onPlan) } }
             section("progress") {
                 if (d.plan.amount > 0) {
                     item(key = "now") { PlanCard(d, today) }
-                    item(key = "earlier") { Label("Earlier") }
+                    item(key = "earlier") {
+                        Column {
+                            Label("Earlier")
+                            Text("Deposits fill the oldest open period first, so a double deposit pays a missed one.", color = StrideColors.Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    }
                     items(Portfolio.history(d, today).drop(1), key = { "p-" + it.start }) { p ->
                         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(Portfolio.periodLabel(p.start, d.plan.every), fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -89,13 +94,18 @@ internal fun LazyListScope.planTab(host: SectionHost, d: InvestData, onPlan: (Pl
 }
 
 @Composable
-private fun PlanEditor(plan: Plan, onPlan: (Plan) -> Unit) {
+private fun PlanEditor(plan: Plan, start: LocalDate, today: LocalDate, onPlan: (Plan) -> Unit) {
     var amount by remember(plan) { mutableStateOf(if (plan.amount > 0) money(plan.amount, 0).replace(".", "") else "") }
     var currency by remember(plan) { mutableStateOf(plan.currency) }
     var every by remember(plan) { mutableStateOf(plan.every) }
     var reminders by remember(plan) { mutableStateOf(plan.reminders) }
+    var from by remember(plan, start) { mutableStateOf(start) }
     val parsed = amount.replace(".", "").replace(',', '.').toDoubleOrNull()
-    val changed = parsed != plan.amount || currency.trim().uppercase() != plan.currency || every != plan.every || reminders != plan.reminders
+    // The periods the plan can start in: the last eight, oldest first (the saved start stays even when older).
+    val choices = ((0 until 8).map { Portfolio.period(today.minusMonths(it.toLong() * every.months), every).first } + Portfolio.period(from, every).first)
+        .distinct().sorted()
+    val fromStart = Portfolio.period(from, every).first
+    val changed = parsed != plan.amount || currency.trim().uppercase() != plan.currency || every != plan.every || reminders != plan.reminders || fromStart != start
     GlassCard(Modifier.fillMaxWidth(), tint = InvestAccent) {
         Text("Your investing plan", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text("How much goes in, and how often. Deposits into Interactive Brokers count toward it.", color = StrideColors.Dim, fontSize = 13.sp)
@@ -106,6 +116,11 @@ private fun PlanEditor(plan: Plan, onPlan: (Plan) -> Unit) {
         Row(Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Cadence.entries.forEach { c -> Chip(c.label, every == c, InvestAccent) { every = c } }
         }
+        Text("Plan started", fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+        Text("Deposits fill periods from here on, oldest open one first.", color = StrideColors.Dim, fontSize = 12.sp)
+        Row(Modifier.padding(top = 6.dp).horizontalScroll(rememberScrollState(Int.MAX_VALUE)), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            choices.forEach { c -> Chip(Portfolio.periodLabel(c, every), c == fromStart, InvestAccent) { from = c } }
+        }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Reminders", fontSize = 14.sp)
@@ -114,7 +129,7 @@ private fun PlanEditor(plan: Plan, onPlan: (Plan) -> Unit) {
             Switch(reminders, { reminders = it })
         }
         Button(
-            onClick = { onPlan(Plan(parsed ?: 0.0, currency.trim().uppercase().ifBlank { "EUR" }, every, reminders)) },
+            onClick = { onPlan(plan.copy(amount = parsed ?: 0.0, currency = currency.trim().uppercase().ifBlank { "EUR" }, every = every, reminders = reminders, start = fromStart.toString())) },
             enabled = changed && (parsed != null || amount.isBlank()), modifier = Modifier.padding(top = 8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = InvestAccent),
         ) { Text("Save plan", color = StrideColors.Bg) }
