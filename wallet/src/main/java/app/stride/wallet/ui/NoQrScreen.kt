@@ -46,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -122,6 +123,25 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
             else { runCatching { photoFile.delete() }; onFound(added.first) }
         }, onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() })
     }
+    val scope = rememberCoroutineScope()
+    var copying by remember { mutableStateOf(false) }
+    /**
+     * The four values into the clipboard one after another, so the keyboard's clipboard history (Gboard) holds them
+     * all: in Chrome, tap a box, then the value. Last field first, so the list reads top to bottom like the form.
+     */
+    fun copyAll(values: List<String>) {
+        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        copying = true
+        scope.launch {
+            values.reversed().forEach { v ->
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("Receipt field", v))
+                delay(900)
+            }
+            copying = false
+            Toast.makeText(context, "Copied. In Chrome, tap a box, then pick the value from the keyboard's clipboard.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     fun openChrome() {
         val view = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(VERIFY_URL))
         runCatching { context.startActivity(android.content.Intent(view).setPackage("com.android.chrome")) }
@@ -180,16 +200,20 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
         if (fields.complete) item {
             Glass(tint = WalletAccent) {
                 Caps("Type these on the tax office's page")
-                listOf(
+                val values = listOf(
                     "ПФР број рачуна" to fields.number,
                     "Бројач рачуна" to ReceiptOcr.formCounter(fields.counter),
                     "Укупан износ" to (ReceiptOcr.formAmount(fields.total) ?: fields.total),
                     "ПФР време" to (ReceiptOcr.formTime(fields.time) ?: fields.time),
-                ).forEach { (label, value) ->
+                )
+                values.forEach { (label, value) ->
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(label, color = StrideColors.Dim, fontSize = 13.sp, modifier = Modifier.weight(1f))
                         Text(value, color = StrideColors.Text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
+                }
+                TextButton(onClick = { copyAll(values.map { it.second }) }, enabled = !copying, contentPadding = PaddingValues(0.dp)) {
+                    Text(if (copying) "Copying…" else "Copy all four (for the keyboard's clipboard)", color = WalletAccent)
                 }
             }
         }
@@ -206,7 +230,7 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
                 Text("Back from Chrome?", color = StrideColors.Text, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Fill the form there and tap Пошаљи. When it says Рачун је проверен, scroll to the receipt's QR code, take a screenshot, come back and pick it.",
+                    "Fill the form there and tap Пошаљи. When it says Рачун је проверен, scroll to the receipt's QR code, long-press it → Share image → Hive Receipt: it's saved. Or take a screenshot, come back and pick it.",
                     color = StrideColors.Dim, fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(10.dp))

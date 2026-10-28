@@ -111,6 +111,9 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   Main path now: "Open the tax office in Chrome" (real Chrome, where reCAPTCHA and the masks work) with the four values
   shown as the form takes them; back in Hive, "Pick the screenshot" reads the result page's QR (`Scanner.fromImage`)
   → `addReceipt`. The in-Hive WebView stays as "Or try it inside Hive".
+  Shorter: Share → "Hive Receipt" (`ui/ReceiptShareActivity`, no screen; image/* → QR via `Scanner.fromImage`, or
+  text/plain with a receipt link) opens "wallet/link:<url>" (saved like a scan); "Copy all four" puts the values in the
+  clipboard one by one (last first) for Gboard's clipboard history.
   Chains, not branches: everything per shop keys on `Chains.key` (the chain / company), e.g. every NIS pump is "NIS";
   the branch is only a detail (`Fill.location`). Prices `ui/PricesScreen` (route "prices", product "product:<key>") from
   `domain/PriceBook` (tested): receipt items → normalized name (Latin, no diacritics, codes, unit suffix or VAT mark) →
