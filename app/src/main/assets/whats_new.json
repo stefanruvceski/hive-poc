@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-already-saved",
+    "title": "Already saved? Hive tells you first",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "When Hive reads a receipt's printed fields, it first checks whether that receipt is already in Wallet (same PFR number, or same minute and total) and offers to open it, so you don't fill the tax office's form for nothing."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-photo-fallback",
     "title": "One way in for receipt photos",
     "items": [

@@ -97,7 +97,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   light/dark, QR/barcode; `ui/CardFace` draws them (no third-party artwork in the repo: the repo is public; a user's own
   card photo replaces the face). `CardForm` suggests programs while typing.
   No QR: `ui/NoQrScreen` (route "noqr"): camera/photo → ML Kit text recognition (Latin only, so `domain/ReceiptOcr`,
-  tested, finds the four fields by the shape of their values) → editable fields → the tax office's verify page
+  tested, finds the four fields by the shape of their values) → editable fields (`ReceiptOcr.saved`, tested: already in Hive
+  by PFR number, else same minute + total or counter serial → "Already in Hive" card with Open it) → the tax office's verify page
   (`https://suf.purs.gov.rs/verify`) in a visible WebView; `FILL_JS` fills inputs by label (the user presses Пошаљи), and
   every page load / 1.5 s the HTML is checked (`WalletViewModel.addFromVerifyPage`: QR link → normal fetch, else
   `FiscalParse.parseHtml`). The form's real markup was never seen when this was written; the user can fix it by hand.
