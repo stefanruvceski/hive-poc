@@ -98,13 +98,19 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   card photo replaces the face). `CardForm` suggests programs while typing.
   No QR: `ui/NoQrScreen` (route "noqr"): camera/photo → ML Kit text recognition (Latin only, so `domain/ReceiptOcr`,
   tested, finds the four fields by the shape of their values) → editable fields → the tax office's verify page
-  (`https://suf.purs.gov.rs/verify`) in a visible WebView; `FILL_JS` fills inputs by label and presses Провери, and
+  (`https://suf.purs.gov.rs/verify`) in a visible WebView; `FILL_JS` fills inputs by label (the user presses Пошаљи), and
   every page load / 1.5 s the HTML is checked (`WalletViewModel.addFromVerifyPage`: QR link → normal fetch, else
   `FiscalParse.parseHtml`). The form's real markup was never seen when this was written; the user can fix it by hand.
   Seen since: the amount box treats "." as a thousands separator, so the total goes in as `ReceiptOcr.formAmount`
   ("3000,61"); fuel receipts print "3000.61", which `ReceiptOcr.amount` reads as well as "3.000,61".
   The counter box takes "255797/257650" only (`ReceiptOcr.formCounter`); the form sets the type (ПП) in a box of its
   own. The time box shows "15.5.2026. 09:20" (minutes). The button says Пошаљи. reCAPTCHA is on the page.
+  The amount and time boxes are masked: a value set from JS shows, then vanishes when the form is sent, so
+  `VerifyWebScreen` types them with real key events (`KeyCharacterMap` → `WebView.dispatchKeyEvent`, boxes tagged
+  `data-hive` by `FILL_JS`; time as `ReceiptOcr.formTime`). Hive doesn't press Пошаљи; the user does.
+  Main path now: "Open the tax office in Chrome" (real Chrome, where reCAPTCHA and the masks work) with the four values
+  shown as the form takes them; back in Hive, "Pick the screenshot" reads the result page's QR (`Scanner.fromImage`)
+  → `addReceipt`. The in-Hive WebView stays as "Or try it inside Hive".
   Chains, not branches: everything per shop keys on `Chains.key` (the chain / company), e.g. every NIS pump is "NIS";
   the branch is only a detail (`Fill.location`). Prices `ui/PricesScreen` (route "prices", product "product:<key>") from
   `domain/PriceBook` (tested): receipt items → normalized name (Latin, no diacritics, codes, unit suffix or VAT mark) →

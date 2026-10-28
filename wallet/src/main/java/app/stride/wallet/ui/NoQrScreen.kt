@@ -2,6 +2,8 @@ package app.stride.wallet.ui
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -32,6 +34,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -39,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +59,9 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -78,6 +85,8 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
     var counter by rememberSaveable { mutableStateOf("") }
     var reading by remember { mutableStateOf(false) }
     var web by rememberSaveable { mutableStateOf(false) }
+    // Opened in Chrome: waiting for a screenshot of the QR code the tax office's page shows.
+    var chrome by rememberSaveable { mutableStateOf(false) }
     val fields = VerifyFields(total.trim(), time.trim(), number.trim().uppercase(), counter.trim())
 
     fun read(uri: Uri) {
@@ -103,6 +112,23 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
     val photoUri = remember { FileProvider.getUriForFile(context, "${context.packageName}.updates", photoFile) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) read(photoUri) }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) read(uri) }
+
+    /** A screenshot of the result page in Chrome: its QR code is the receipt's link, saved like a scan. */
+    val screenshot = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) Scanner.fromImage(context, uri, qrOnly = true, onResult = { found ->
+            val link = found.firstOrNull { app.stride.wallet.domain.FiscalParse.verificationUrl(it.value) != null }
+            val added = link?.let { vm.addReceipt(it.value) }
+            if (added == null) Toast.makeText(context, "No receipt QR code in that screenshot. Scroll the tax office's page to the QR code and try again.", Toast.LENGTH_LONG).show()
+            else { runCatching { photoFile.delete() }; onFound(added.first) }
+        }, onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() })
+    }
+    fun openChrome() {
+        val view = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(VERIFY_URL))
+        runCatching { context.startActivity(android.content.Intent(view).setPackage("com.android.chrome")) }
+            .recoverCatching { context.startActivity(view) }
+            .onSuccess { chrome = true }
+            .onFailure { Toast.makeText(context, "No browser to open the tax office's page", Toast.LENGTH_SHORT).show() }
+    }
 
     if (web) {
         VerifyWebScreen(fields, onBack = { web = false }) { url, html ->
@@ -150,18 +176,56 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
                 Text("Watch for O and 0, G and 6, B and 8: the PFR number mixes letters and digits.", color = StrideColors.Faint, fontSize = 12.sp)
             }
         }
+        // What to type on the tax office's form, the way its boxes take it (the type ПП sets itself).
+        if (fields.complete) item {
+            Glass(tint = WalletAccent) {
+                Caps("Type these on the tax office's page")
+                listOf(
+                    "ПФР број рачуна" to fields.number,
+                    "Бројач рачуна" to ReceiptOcr.formCounter(fields.counter),
+                    "Укупан износ" to (ReceiptOcr.formAmount(fields.total) ?: fields.total),
+                    "ПФР време" to (ReceiptOcr.formTime(fields.time) ?: fields.time),
+                ).forEach { (label, value) ->
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, color = StrideColors.Dim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(value, color = StrideColors.Text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                }
+            }
+        }
         item {
-            Button(onClick = { web = true }, enabled = fields.complete, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WalletAccent)) {
-                Text("Look it up at the tax office")
+            Button(onClick = ::openChrome, enabled = fields.complete, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WalletAccent)) {
+                Text("Open the tax office in Chrome")
+            }
+            TextButton(onClick = { web = true }, enabled = fields.complete, modifier = Modifier.fillMaxWidth()) {
+                Text("Or try it inside Hive", color = StrideColors.Dim)
+            }
+        }
+        if (chrome) item {
+            Glass(tint = StrideColors.Accent) {
+                Text("Back from Chrome?", color = StrideColors.Text, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Fill the form there and tap Пошаљи. When it says Рачун је проверен, scroll to the receipt's QR code, take a screenshot, come back and pick it.",
+                    color = StrideColors.Dim, fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { screenshot.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = StrideColors.Accent),
+                ) {
+                    Icon(Icons.Filled.Image, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.size(6.dp)); Text("Pick the screenshot")
+                }
             }
         }
     }
 }
 
 /**
- * The tax office's verify page in a WebView: Hive fills the four fields (matched by their labels, so a changed
- * page still mostly works) and presses "Провери"; when the page shows a receipt (or its QR link), [onPage] saves it
- * and returns true. Until then the user sees the page and can fix or submit it by hand.
+ * The tax office's verify page in a WebView. The PFR number and the counter are set directly; the amount and the
+ * time boxes are masked (a value set from code shows, then vanishes when the form is sent), so Hive types them with
+ * real key presses, like a person would. The user checks the form and taps Пошаљи; when the page shows a receipt
+ * (or its QR link), [onPage] saves it and returns true.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -169,19 +233,49 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
 private fun VerifyWebScreen(fields: VerifyFields, onBack: () -> Unit, onPage: (url: String, html: String) -> Boolean) {
     var view by remember { mutableStateOf<WebView?>(null) }
     var done by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Hive fills the form…") }
+    val scope = rememberCoroutineScope()
     val payload = remember(fields) {
         buildJsonObject {
-            put("total", ReceiptOcr.formAmount(fields.total) ?: fields.total)
-            put("plain", ReceiptOcr.plainAmount(fields.total) ?: fields.total)
-            put("time", fields.time)
-            put("iso", ReceiptOcr.isoTime(fields.time) ?: fields.time)
             put("number", fields.number)
             put("counter", ReceiptOcr.formCounter(fields.counter))
         }.toString()
     }
+    val amount = remember(fields) { ReceiptOcr.formAmount(fields.total) ?: fields.total }
+    val time = remember(fields) { ReceiptOcr.formTime(fields.time) ?: fields.time }
+
+    /** Focuses the box Hive tagged as [tag], clears it and types [text] key by key. False when there's no such box. */
+    suspend fun type(v: WebView, tag: String, text: String): Boolean {
+        val ok = v.js("(function(){var e=document.querySelector('[data-hive=$tag]');if(!e)return 'no';e.scrollIntoView({block:'center'});e.focus();return 'ok'})()")
+        if (!ok.contains("ok")) return false
+        v.requestFocus()
+        delay(150)
+        fun key(code: Int) {
+            v.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+            v.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+        }
+        key(KeyEvent.KEYCODE_MOVE_END)
+        repeat(40) { key(KeyEvent.KEYCODE_DEL) }
+        repeat(40) { key(KeyEvent.KEYCODE_FORWARD_DEL) }
+        val keys = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
+        for (c in text) {
+            keys.getEvents(charArrayOf(c))?.forEach { v.dispatchKeyEvent(it) }
+            delay(25)
+        }
+        delay(150)
+        return true
+    }
+
     fun check(v: WebView) {
         if (done) return
-        v.evaluateJavascript(FILL_JS.replace("__FIELDS__", payload), null)
+        v.evaluateJavascript(FILL_JS.replace("__FIELDS__", payload)) { n ->
+            // "4": the form was just found and filled; type the two masked boxes once.
+            if (n?.trim('"') == "4") scope.launch {
+                val typed = type(v, "amount", amount) and type(v, "time", time)
+                v.js("(function(){if(document.activeElement)document.activeElement.blur();return 1})()")
+                status = if (typed) "Check the four fields, then tap Пошаљи" else "Type the amount and time, then tap Пошаљи"
+            }
+        }
         v.evaluateJavascript("(function(){return document.documentElement.outerHTML})()") { result ->
             val html = runCatching { Json.parseToJsonElement(result).jsonPrimitive.content }.getOrDefault("")
             if (!done && html.isNotEmpty() && onPage(v.url.orEmpty(), html)) done = true
@@ -196,7 +290,7 @@ private fun VerifyWebScreen(fields: VerifyFields, onBack: () -> Unit, onPage: (u
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Column { Text("Tax office"); Text("Hive fills the form; fix a field here if needed", fontSize = 12.sp, color = StrideColors.Dim) } },
+                title = { Column { Text("Tax office"); Text(status, fontSize = 12.sp, color = StrideColors.Dim) } },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
@@ -221,9 +315,9 @@ private fun VerifyWebScreen(fields: VerifyFields, onBack: () -> Unit, onPage: (u
 }
 
 /**
- * Fills the verify form: each input is matched by its name, id, placeholder, aria-label or label text (the counter
- * first, since "Бројач" starts like "Број"), React-style setters and input/change events so the page notices, then
- * the check button is pressed once all four are in.
+ * Finds the verify form's four boxes by name, id, placeholder, aria-label or label text (the counter first, since
+ * "Бројач" starts like "Број"), sets the PFR number and the counter, and tags the amount and time boxes
+ * (data-hive) for typing. Returns 4 the first time it finds all four, 0 after that.
  */
 private const val FILL_JS = """
 (function(f){
@@ -252,15 +346,15 @@ private const val FILL_JS = """
   }
   var n=0;
   var c=pick(/бројач|brojač|brojac|counter/); if (c){ set(c,f.counter); n++; }
-  var t=pick(/време|vreme|time|datum|date/); if (t){ set(t, t.type=='datetime-local' ? f.iso : f.time); n++; }
-  var a=pick(/износ|iznos|amount|total|укупн|ukupn/); if (a){ set(a, a.type=='number' ? f.plain : f.total); n++; }
+  var t=pick(/време|vreme|time|datum|date/); if (t){ t.setAttribute('data-hive','time'); n++; }
+  var a=pick(/износ|iznos|amount|total|укупн|ukupn/); if (a){ a.setAttribute('data-hive','amount'); n++; }
   var b=pick(/број|broj|number|invoice|пфр|pfr/); if (b){ set(b,f.number); n++; }
-  if (n==4){
-    window.__hiveFilled=true;
-    var btn=[].slice.call(document.querySelectorAll('button,input[type=submit]')).filter(function(x){ return /пошаљ|posalj|pošalj|провер|prover|verif|потврд|potvrd|send|submit/i.test(x.textContent||x.value||''); })[0]
-      || document.querySelector('button[type=submit],input[type=submit]');
-    if (btn) setTimeout(function(){ btn.click(); }, 300);
-  }
+  if (n==4) window.__hiveFilled=true;
   return n;
 })(__FIELDS__)
 """
+
+/** Runs [script] and waits for its result (as JSON text). */
+private suspend fun WebView.js(script: String): String = suspendCancellableCoroutine { c ->
+    evaluateJavascript(script) { if (c.isActive) c.resume(it.orEmpty()) }
+}

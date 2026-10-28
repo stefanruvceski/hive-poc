@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-noqr-chrome",
+    "title": "Receipts without QR, through Chrome",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "Wallet → Receipt without QR: Hive reads the four fields and shows them the way the tax office's form takes them (3000,61 · 255797/257650). Open the form in Chrome, send it, screenshot the QR code it shows, come back and pick the screenshot: the receipt is saved like a scan."
+      }
+    ]
+  },
+  {
     "id": "2026-10-27-company-report",
     "title": "Company report for the accountant",
     "items": [

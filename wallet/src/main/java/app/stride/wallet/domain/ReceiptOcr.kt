@@ -86,6 +86,14 @@ object ReceiptOcr {
     fun formCounter(counter: String): String =
         Regex("""(\d+)\s*/\s*(\d+)""").find(counter)?.let { "${it.groupValues[1]}/${it.groupValues[2]}" } ?: counter.trim()
 
+    /** What goes into the form's time box, the way it shows it: "15.05.2026. 09:20:36" → "15.5.2026. 09:20". */
+    fun formTime(printed: String): String? = FiscalParse.printedTime(printed)?.let { iso ->
+        runCatching {
+            val t = java.time.LocalDateTime.parse(iso)
+            "${t.dayOfMonth}.${t.monthValue}.${t.year}. %02d:%02d".format(t.hour, t.minute)
+        }.getOrNull()
+    }
+
     /** The form's time as an ISO local date-time ("2026-10-19T08:56:24"), for inputs of type datetime-local. */
     fun isoTime(printed: String): String? = FiscalParse.printedTime(printed)
 
