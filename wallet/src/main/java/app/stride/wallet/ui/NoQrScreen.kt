@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -84,6 +85,8 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
     var counter by rememberSaveable { mutableStateOf("") }
     var reading by remember { mutableStateOf(false) }
     var web by rememberSaveable { mutableStateOf(false) }
+    // Opened in Chrome: waiting for a screenshot of the QR code the tax office's page shows.
+    var chrome by rememberSaveable { mutableStateOf(false) }
     val fields = VerifyFields(total.trim(), time.trim(), number.trim().uppercase(), counter.trim())
 
     fun read(uri: Uri) {
@@ -109,6 +112,23 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
     val photoUri = remember { FileProvider.getUriForFile(context, "${context.packageName}.updates", photoFile) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) read(photoUri) }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) read(uri) }
+
+    /** A screenshot of the result page in Chrome: its QR code is the receipt's link, saved like a scan. */
+    val screenshot = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) Scanner.fromImage(context, uri, qrOnly = true, onResult = { found ->
+            val link = found.firstOrNull { app.stride.wallet.domain.FiscalParse.verificationUrl(it.value) != null }
+            val added = link?.let { vm.addReceipt(it.value) }
+            if (added == null) Toast.makeText(context, "No receipt QR code in that screenshot. Scroll the tax office's page to the QR code and try again.", Toast.LENGTH_LONG).show()
+            else { runCatching { photoFile.delete() }; onFound(added.first) }
+        }, onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() })
+    }
+    fun openChrome() {
+        val view = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(VERIFY_URL))
+        runCatching { context.startActivity(android.content.Intent(view).setPackage("com.android.chrome")) }
+            .recoverCatching { context.startActivity(view) }
+            .onSuccess { chrome = true }
+            .onFailure { Toast.makeText(context, "No browser to open the tax office's page", Toast.LENGTH_SHORT).show() }
+    }
 
     if (web) {
         VerifyWebScreen(fields, onBack = { web = false }) { url, html ->
@@ -156,9 +176,46 @@ fun NoQrScreen(vm: WalletViewModel, onFound: (String) -> Unit, onBack: () -> Uni
                 Text("Watch for O and 0, G and 6, B and 8: the PFR number mixes letters and digits.", color = StrideColors.Faint, fontSize = 12.sp)
             }
         }
+        // What to type on the tax office's form, the way its boxes take it (the type ПП sets itself).
+        if (fields.complete) item {
+            Glass(tint = WalletAccent) {
+                Caps("Type these on the tax office's page")
+                listOf(
+                    "ПФР број рачуна" to fields.number,
+                    "Бројач рачуна" to ReceiptOcr.formCounter(fields.counter),
+                    "Укупан износ" to (ReceiptOcr.formAmount(fields.total) ?: fields.total),
+                    "ПФР време" to (ReceiptOcr.formTime(fields.time) ?: fields.time),
+                ).forEach { (label, value) ->
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, color = StrideColors.Dim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(value, color = StrideColors.Text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                }
+            }
+        }
         item {
-            Button(onClick = { web = true }, enabled = fields.complete, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WalletAccent)) {
-                Text("Look it up at the tax office")
+            Button(onClick = ::openChrome, enabled = fields.complete, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WalletAccent)) {
+                Text("Open the tax office in Chrome")
+            }
+            TextButton(onClick = { web = true }, enabled = fields.complete, modifier = Modifier.fillMaxWidth()) {
+                Text("Or try it inside Hive", color = StrideColors.Dim)
+            }
+        }
+        if (chrome) item {
+            Glass(tint = StrideColors.Accent) {
+                Text("Back from Chrome?", color = StrideColors.Text, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Fill the form there and tap Пошаљи. When it says Рачун је проверен, scroll to the receipt's QR code, take a screenshot, come back and pick it.",
+                    color = StrideColors.Dim, fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { screenshot.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = StrideColors.Accent),
+                ) {
+                    Icon(Icons.Filled.Image, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.size(6.dp)); Text("Pick the screenshot")
+                }
             }
         }
     }

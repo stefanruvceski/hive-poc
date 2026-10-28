@@ -108,6 +108,9 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   The amount and time boxes are masked: a value set from JS shows, then vanishes when the form is sent, so
   `VerifyWebScreen` types them with real key events (`KeyCharacterMap` → `WebView.dispatchKeyEvent`, boxes tagged
   `data-hive` by `FILL_JS`; time as `ReceiptOcr.formTime`). Hive doesn't press Пошаљи; the user does.
+  Main path now: "Open the tax office in Chrome" (real Chrome, where reCAPTCHA and the masks work) with the four values
+  shown as the form takes them; back in Hive, "Pick the screenshot" reads the result page's QR (`Scanner.fromImage`)
+  → `addReceipt`. The in-Hive WebView stays as "Or try it inside Hive".
   Chains, not branches: everything per shop keys on `Chains.key` (the chain / company), e.g. every NIS pump is "NIS";
   the branch is only a detail (`Fill.location`). Prices `ui/PricesScreen` (route "prices", product "product:<key>") from
   `domain/PriceBook` (tested): receipt items → normalized name (Latin, no diacritics, codes, unit suffix or VAT mark) →
