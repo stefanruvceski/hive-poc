@@ -56,16 +56,19 @@ object QrRepairClient {
     fun repair(context: Context, photo: File): Answer {
         val key = key(context) ?: return Answer.Failed("No key for the repair server.")
         val bytes = jpeg(photo) ?: return Answer.Failed("Couldn't open the photo.")
+        var error: Throwable? = null
         for (url in listOf(url(context), FALLBACK_URL).distinct()) {
             val req = Request.Builder().url(url).header("Authorization", "Bearer $key")
                 .post(bytes.toRequestBody("image/jpeg".toMediaType())).build()
-            post(req)?.let { return it }
+            post(req).onSuccess { return it }.onFailure { error = it }
         }
-        return Answer.Failed("Couldn't reach the repair server.")
+        // Why it failed, so a timeout, a DNS problem or a refused connection can be told apart.
+        val why = error?.let { e -> (e::class.simpleName ?: "Error") + (e.message?.let { ": $it" } ?: "") }
+        return Answer.Failed("Couldn't reach the repair server (${why ?: "no answer"}, ${bytes.size / 1024} KB sent).")
     }
 
-    /** The server's answer; null when it couldn't be reached at all (the next address is tried). */
-    private fun post(req: Request): Answer? =
+    /** The server's answer; a failure when it couldn't be reached at all (the next address is tried). */
+    private fun post(req: Request): Result<Answer> =
         runCatching {
             http.newCall(req).execute().use { r ->
                 val body = r.body?.string().orEmpty()
@@ -78,7 +81,7 @@ object QrRepairClient {
                     }
                 }
             }
-        }.getOrNull()
+        }
 
     /** The photo as a JPEG of at most 2000 px and 4 MB (the QR's modules stay several pixels wide). */
     private fun jpeg(file: File): ByteArray? {
