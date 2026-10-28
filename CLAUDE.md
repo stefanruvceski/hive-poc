@@ -276,8 +276,17 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   Seen (2026-10-28): 200 for `/hrv-service/hrv/{date}` (summary + 5-min readings), `/wellness-service/wellness/bodyBattery/
   reports/daily` (charged/drained, levels, SLEEP/ACTIVITY/RECOVERY events) and the activity search (per activity
   `moderateIntensityMinutes` / `vigorousIntensityMinutes`); 404 for usersummary daily/{name}, dailySummaryChart/{name},
-  daily/im, stats/im/daily, dailyEvents, dailyMovement, sleep-service dailySleepData, dailyStress. The probe now tries
-  their other spellings. Nothing uses its data yet: build on the real answers. Writes (workouts, sets) stay on the unofficial login.
+  daily/im, stats/im/daily, dailyEvents, dailyMovement, sleep-service dailySleepData, dailyStress: those are Connect
+  web paths. Garmin's Swagger (developer.garmin.com/gc-developer-program/personal/swagger-docs, not reachable from the
+  build sandbox) documents: activity/{id}, activity/{id}/workouts, activitylist search, download-service files,
+  `/wellnessactivity-service/activity/summary/range/{from}/{until}` (wellness activities: `wellnessActivityType`, start/
+  end, HR, zones; likely the auto-detected walks), `/usersummary-service/usersummary/daily?calendarDate=` (steps,
+  active/highlyActive seconds, moderate/vigorous intensity minutes, stress, Body Battery), `/usersummary-service/v2/
+  dailysummaries?startDate&endDate` (≤1 year), stats steps|stress|hydration daily/{s}/{e} (≤28–31 days),
+  `/sleep-service/sleep/dailySleep?date=` + dailySleepSummariesByDate, `/wellness-service/wellness/dailyHeartRate?date=`,
+  hrv/{date} + hrv/daily/{from}/{to}, bodyBattery/reports/daily, spo2acclimation, weight all|range, biometric HR zones,
+  fitness age, weight goals, nutrition logs, menstrual cycle, userprofile settings. The probe asks the useful ones.
+  Nothing uses its data yet: build on the real answers. Writes (workouts, sets) stay on the unofficial login.
 - Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last
   session of the same kind, records, kg/min, work/rest from the watch (`StrengthSession.workSec/restSec/rests`, saved with
   `garminSyncedAt` when sets are copied). Strength days put the sets card right under the verdict; `ActivityDetails(compact)`

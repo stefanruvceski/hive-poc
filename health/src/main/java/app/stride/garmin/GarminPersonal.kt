@@ -95,28 +95,21 @@ class GarminPersonal(private val context: Context) {
     suspend fun probe(day: LocalDate = LocalDate.now().minusDays(1)): List<String> = withContext(Dispatchers.IO) {
         token()
         val name = displayName()?.let { URLEncoder.encode(it, "UTF-8") }
-        // First probe (2026-10-28): HRV, Body Battery and the activity list answered; the summary, 15-minute chart,
-        // intensity minutes, events, sleep and stress paths gave 404, so this round tries their other spellings.
-        val paths = listOfNotNull(
+        // The documented Personal API paths (Garmin's Swagger, 2026-10-28). Several differ from the Connect web
+        // app's (no display name in the path, other names), which is why the first probe got 404s.
+        val week = day.minusDays(6)
+        val paths = listOf(
+            // Walks and other moves the watch detected by itself (wellness activities), and intensity minutes.
+            "/wellnessactivity-service/activity/summary/range/$week/$day",
             "/usersummary-service/usersummary/daily?calendarDate=$day",
-            name?.let { "/usersummary-service/usersummary/daily/$it?calendarDate=$day" },
+            "/usersummary-service/v2/dailysummaries?startDate=$day&endDate=$day",
             "/usersummary-service/stats/steps/daily/$day/$day",
-            "/usersummary-service/stats/im/daily/$day/$day",
             "/usersummary-service/stats/stress/daily/$day/$day",
-            "/wellness-service/wellness/dailySummaryChart?date=$day",
-            name?.let { "/wellness-service/wellness/dailySummaryChart/$it?date=$day" },
+            "/sleep-service/sleep/dailySleep?date=$day",
             "/wellness-service/wellness/dailyHeartRate?date=$day",
-            "/wellness-service/stats/hourly/im/$day/1",
-            "/wellness-service/wellness/daily/im/$day",
-            "/wellness-service/wellness/dailyStress/$day",
-            "/wellness-service/wellness/dailyEvents?calendarDate=$day",
-            name?.let { "/wellness-service/wellness/dailyEvents/$it?calendarDate=$day" },
-            "/wellness-service/wellness/bodyBattery/events/$day",
-            "/sleep-service/sleep/dailySleepData?date=$day&nonSleepBufferMinutes=60",
-            name?.let { "/wellness-service/wellness/dailySleepData/$it?date=$day&nonSleepBufferMinutes=60" },
-            "/metrics-service/metrics/trainingreadiness/$day",
-            "/hrv-service/hrv/$day",
+            "/hrv-service/hrv/daily/$week/$day",
             "/wellness-service/wellness/bodyBattery/reports/daily?startDate=$day&endDate=$day",
+            "/weight-service/weight/range/$week/$day",
             "/activitylist-service/activities/search/activities?startDate=$day&endDate=$day&limit=20",
         )
         val answers = linkedMapOf<String, JsonElement>()
