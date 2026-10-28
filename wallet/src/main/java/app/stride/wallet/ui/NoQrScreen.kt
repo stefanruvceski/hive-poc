@@ -171,12 +171,12 @@ private fun VerifyWebScreen(fields: VerifyFields, onBack: () -> Unit, onPage: (u
     var done by remember { mutableStateOf(false) }
     val payload = remember(fields) {
         buildJsonObject {
-            put("total", fields.total)
+            put("total", ReceiptOcr.formAmount(fields.total) ?: fields.total)
             put("plain", ReceiptOcr.plainAmount(fields.total) ?: fields.total)
             put("time", fields.time)
             put("iso", ReceiptOcr.isoTime(fields.time) ?: fields.time)
             put("number", fields.number)
-            put("counter", fields.counter)
+            put("counter", ReceiptOcr.formCounter(fields.counter))
         }.toString()
     }
     fun check(v: WebView) {
@@ -257,7 +257,7 @@ private const val FILL_JS = """
   var b=pick(/број|broj|number|invoice|пфр|pfr/); if (b){ set(b,f.number); n++; }
   if (n==4){
     window.__hiveFilled=true;
-    var btn=[].slice.call(document.querySelectorAll('button,input[type=submit]')).filter(function(x){ return /провер|prover|verif|потврд|potvrd/i.test(x.textContent||x.value||''); })[0]
+    var btn=[].slice.call(document.querySelectorAll('button,input[type=submit]')).filter(function(x){ return /пошаљ|posalj|pošalj|провер|prover|verif|потврд|potvrd|send|submit/i.test(x.textContent||x.value||''); })[0]
       || document.querySelector('button[type=submit],input[type=submit]');
     if (btn) setTimeout(function(){ btn.click(); }, 300);
   }
