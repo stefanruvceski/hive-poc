@@ -1,6 +1,6 @@
 # Hive backend (Vercel, Hobby plan)
 
-Heavier work Hive's phone shouldn't do, as Vercel Python functions. Deployed from this folder (Vercel project
+Heavier work Hive's phone shouldn't do, as one Vercel Python function (`app.py`, a WSGI app). Deployed from this folder (Vercel project
 root directory `backend`). No data is stored; secrets only in Vercel's environment variables.
 
 - `POST /api/qr`: repair reader for receipt QR codes the phone can't read (crumpled paper, faded print, printer
