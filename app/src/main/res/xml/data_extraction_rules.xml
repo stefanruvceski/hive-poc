@@ -5,10 +5,12 @@
         <exclude domain="sharedpref" path="garmin.xml" />
         <exclude domain="sharedpref" path="secrets.xml" />
         <exclude domain="sharedpref" path="wallet_secrets.xml" />
+        <exclude domain="sharedpref" path="invest_secrets.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="garmin.xml" />
         <exclude domain="sharedpref" path="secrets.xml" />
         <exclude domain="sharedpref" path="wallet_secrets.xml" />
+        <exclude domain="sharedpref" path="invest_secrets.xml" />
     </device-transfer>
 </data-extraction-rules>

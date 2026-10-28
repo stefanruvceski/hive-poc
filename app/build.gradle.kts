@@ -76,5 +76,6 @@ dependencies {
     implementation(project(":draw"))
     implementation(project(":wallet"))
     implementation(project(":music"))
+    implementation(project(":invest"))
     implementation(project(":core"))
 }
