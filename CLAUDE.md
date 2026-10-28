@@ -291,7 +291,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   Seen via curl (2026-10-28): wellness activities `[]` (the watch records no auto-detected walks); usersummary daily
   gives moderate/vigorous intensity minutes; each activity in the search carries its own. Used: `domain/Intensity`
   (tested on those answers): `AppData.intensity` (`IntensityDay`: day moderate + vigorous, `inWorkouts` = the
-  activities' share, or their moving minutes when they carry none) → `outside()` adds to the MINUTES ring (instead of
+  activities' share, or their moving minutes when they carry none) → `outside()` (leftovers under `MIN_OUTSIDE` = 10 min are a workout's tail, ignored) adds to the MINUTES ring (instead of
   `autoMoves` for that day); `GarminPersonal.intensity` fetched on sync (`syncIntensity`, 3 days) and by the worker every
   ~2 h; Day screen card "Garmin intensity minutes". Test new endpoints with curl on the user's computer first. Writes (workouts, sets) stay on the unofficial login.
 - Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last

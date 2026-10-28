@@ -40,8 +40,14 @@ object Intensity {
         }.groupBy({ it.first }, { it.second }).mapValues { (_, ms) -> ms.sum().roundToInt() }
     }
 
-    /** Minutes outside workouts: what the day has beyond its workouts' share. */
-    fun outside(d: IntensityDay): Int = (d.moderate + d.vigorous - d.inWorkouts).coerceAtLeast(0)
+    /** Fewer leftover minutes than this are the tail of a workout (the watch still running after it), not a walk. */
+    const val MIN_OUTSIDE = 10
+
+    /** What the day has beyond its workouts' share, before [MIN_OUTSIDE] is applied. */
+    fun leftover(d: IntensityDay): Int = (d.moderate + d.vigorous - d.inWorkouts).coerceAtLeast(0)
+
+    /** Minutes outside workouts that count as training time: the leftover, when it's at least [MIN_OUTSIDE]. */
+    fun outside(d: IntensityDay): Int = leftover(d).takeIf { it >= MIN_OUTSIDE } ?: 0
 
     fun forDay(data: AppData, date: LocalDate): IntensityDay? = data.intensity.firstOrNull { it.date == date.toString() }
 

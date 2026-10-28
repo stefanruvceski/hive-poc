@@ -224,9 +224,13 @@ fun DayScreen(
                             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp),
                         )
                         val out = Intensity.outside(im)
+                        val rest = Intensity.leftover(im)
                         Text(
-                            if (out > 0) "$out min of brisk walking and moving outside workouts count as training time."
-                            else "Nothing brisk outside workouts yet: a brisk walk adds its minutes here.",
+                            when {
+                                out > 0 -> "$out min of brisk walking and moving outside workouts count as training time."
+                                rest > 0 -> "$rest min outside workouts, under ${Intensity.MIN_OUTSIDE}, so not counted: likely the end of a workout."
+                                else -> "Nothing brisk outside workouts yet: a brisk walk adds its minutes here."
+                            },
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp),
                         )
                     }
