@@ -499,7 +499,16 @@ data class AppData(
     val sleep: List<SleepNight> = emptyList(),
     /** Moves the watch detected by itself (Garmin Move IQ), via the Garmin sign-in; 120 days. */
     val autoMoves: List<AutoMove> = emptyList(),
+    /** Garmin's intensity minutes per day (official Personal API), 120 days. */
+    val intensity: List<IntensityDay> = emptyList(),
 )
+
+/**
+ * One day of Garmin intensity minutes: the whole day's [moderate] and [vigorous] minutes, and [inWorkouts], the
+ * part recorded workouts account for. What's left is brisk walking and moving outside workouts.
+ */
+@Serializable
+data class IntensityDay(val date: String, val moderate: Int, val vigorous: Int, val inWorkouts: Int)
 
 /** A walk (or other move) the watch noticed without it being started: [start] local ISO time, [type] Garmin's key. */
 @Serializable

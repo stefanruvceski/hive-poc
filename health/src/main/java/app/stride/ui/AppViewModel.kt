@@ -65,6 +65,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // Declared before init: init runs sync(), which reaches these (properties below init are still null then).
     private val garmin by lazy { GarminClient(getApplication()) }
+    private val personal by lazy { GarminPersonal(getApplication()) }
     private val _autoMoves = MutableStateFlow<String?>(null)
     /** How the last fetch of auto-detected moves went (Settings → Garmin), null before the first. */
     val autoMovesStatus: StateFlow<String?> = _autoMoves.asStateFlow()
@@ -350,6 +351,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Walks the watch detected by itself (Move IQ), today and the two days before; they count as training time. */
     fun syncAutoMoves() {
+        syncIntensity()
         if (!garmin.connected) return
         viewModelScope.launch {
             val today = LocalDate.now()
@@ -366,8 +368,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------------------------------------------------------------- Garmin Personal API (official, read-only)
+    /** Garmin intensity minutes for today and the two days before (official API key), for the training-time ring. */
+    fun syncIntensity() {
+        if (!personal.hasKey) return
+        viewModelScope.launch {
+            runCatching {
+                val today = LocalDate.now()
+                val days = personal.intensity((0L..2L).map { today.minusDays(it) })
+                if (days.isNotEmpty()) update { d -> d.copy(intensity = app.stride.domain.Intensity.merge(d.intensity, days, today)) }
+            }
+        }
+    }
 
-    private val personal by lazy { GarminPersonal(getApplication()) }
+
     private val _personal = MutableStateFlow<List<String>>(emptyList())
     /** The last "Test" run's lines, or its error. */
     val personalProbe: StateFlow<List<String>> = _personal.asStateFlow()

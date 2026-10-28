@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import app.stride.domain.AutoMoves
+import app.stride.domain.Intensity
 import app.stride.domain.DayResult
 import app.stride.share.ShareContent
 import kotlinx.coroutines.launch
@@ -214,6 +215,23 @@ fun DayScreen(
                 item(key = "x-" + a.id) { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { ActivityDetails(a) } }
             }
 
+            Intensity.forDay(data, date)?.let { im ->
+                item(key = "intensity") {
+                    GlassCard(Modifier.fillMaxWidth(), tint = StrideColors.Accent) {
+                        Text("Garmin intensity minutes", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "${im.moderate + im.vigorous} today (${im.moderate} moderate, ${im.vigorous} vigorous) · ${im.inWorkouts} in workouts",
+                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp),
+                        )
+                        val out = Intensity.outside(im)
+                        Text(
+                            if (out > 0) "$out min of brisk walking and moving outside workouts count as training time."
+                            else "Nothing brisk outside workouts yet: a brisk walk adds its minutes here.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+                }
+            }
             val moves = AutoMoves.forDay(data, date)
             if (moves.isNotEmpty()) item(key = "moves") {
                 GlassCard(Modifier.fillMaxWidth(), tint = StrideColors.Accent) {

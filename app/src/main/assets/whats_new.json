@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-intensity-minutes",
+    "title": "Brisk walks count, from Garmin itself",
+    "items": [
+      {
+        "icon": "watch",
+        "text": "With a Garmin Personal API key (Health → Settings), Training time adds Garmin's intensity minutes from outside your workouts: a brisk walk you didn't start on the watch now helps close the ring. The day screen shows the day's intensity minutes and how many came from workouts."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-garmin-personal",
     "title": "Garmin's official Personal API",
     "items": [

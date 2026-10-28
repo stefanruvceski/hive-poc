@@ -225,6 +225,8 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
 ## Coach, live workout, Health Connect, backup, extras
+- `AppViewModel`: anything `init` reaches through `sync()` (`garmin`, `personal`, `_autoMoves`) must be declared above
+  `init`; a property below it is still null there and crashed Hive on launch once.
 - AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (official Anthropic Java SDK, `claude-opus-5-5`,
   server-side refusal fallback). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
   Reviews in `AppData.coach[monday]`; Week tab section "coach"; Sunday 19:00 the worker writes one and notifies.
@@ -286,7 +288,12 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   `/sleep-service/sleep/dailySleep?date=` + dailySleepSummariesByDate, `/wellness-service/wellness/dailyHeartRate?date=`,
   hrv/{date} + hrv/daily/{from}/{to}, bodyBattery/reports/daily, spo2acclimation, weight all|range, biometric HR zones,
   fitness age, weight goals, nutrition logs, menstrual cycle, userprofile settings. The probe asks the useful ones.
-  Nothing uses its data yet: build on the real answers. Writes (workouts, sets) stay on the unofficial login.
+  Seen via curl (2026-10-28): wellness activities `[]` (the watch records no auto-detected walks); usersummary daily
+  gives moderate/vigorous intensity minutes; each activity in the search carries its own. Used: `domain/Intensity`
+  (tested on those answers): `AppData.intensity` (`IntensityDay`: day moderate + vigorous, `inWorkouts` = the
+  activities' share, or their moving minutes when they carry none) → `outside()` adds to the MINUTES ring (instead of
+  `autoMoves` for that day); `GarminPersonal.intensity` fetched on sync (`syncIntensity`, 3 days) and by the worker every
+  ~2 h; Day screen card "Garmin intensity minutes". Test new endpoints with curl on the user's computer first. Writes (workouts, sets) stay on the unofficial login.
 - Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last
   session of the same kind, records, kg/min, work/rest from the watch (`StrengthSession.workSec/restSec/rests`, saved with
   `garminSyncedAt` when sets are copied). Strength days put the sets card right under the verdict; `ActivityDetails(compact)`

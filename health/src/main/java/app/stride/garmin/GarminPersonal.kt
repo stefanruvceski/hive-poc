@@ -88,6 +88,22 @@ class GarminPersonal(private val context: Context) {
     }
 
     /**
+     * Intensity minutes for [days]: each day's summary plus one activity search over the range for the workouts'
+     * share (`domain/Intensity`). Days without a summary (404, not synced yet) are left out.
+     */
+    suspend fun intensity(days: List<LocalDate>): List<app.stride.model.IntensityDay> = withContext(Dispatchers.IO) {
+        val from = days.min(); val to = days.max()
+        val (aCode, aBody) = get("/activitylist-service/activities/search/activities?startDate=$from&endDate=$to&limit=100")
+        val share = if (aCode == 200) app.stride.domain.Intensity.inWorkouts(StrideJson.parseToJsonElement(aBody)) else emptyMap()
+        days.mapNotNull { d ->
+            val (code, body) = get("/usersummary-service/usersummary/daily?calendarDate=$d")
+            if (code != 200) return@mapNotNull null
+            val (m, v) = runCatching { app.stride.domain.Intensity.daily(StrideJson.parseToJsonElement(body)) }.getOrNull() ?: return@mapNotNull null
+            app.stride.model.IntensityDay(d.toString(), m, v, share[d.toString()] ?: 0)
+        }
+    }
+
+    /**
      * Asks the gateway for one day of what Hive could use (daily summary, 15-minute steps, intensity minutes,
      * detected moves, sleep, HRV, Body Battery, stress, activities) and writes every answer to
      * cache/garmin_personal_probe.json (never the key or token), so it can be shared. Returns "path → result" lines.
