@@ -7,6 +7,7 @@ import app.stride.wallet.data.FiscalClient
 import app.stride.wallet.data.WalletStore
 import app.stride.wallet.data.CardImages
 import app.stride.wallet.data.NoQrPhotos
+import app.stride.wallet.data.QrRepairClient
 import app.stride.wallet.model.NoQrPhoto
 import app.stride.wallet.domain.Aliases
 import app.stride.wallet.domain.Brands
@@ -261,6 +262,44 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The photo being checked right now (through Chrome, it comes back as a shared link); done when a receipt arrives. */
     var pendingNoQr: String? = null
+
+    /** Where a photo's trip to the QR repair server stands. */
+    sealed interface Repair {
+        data object Running : Repair
+        data class Found(val receiptId: String) : Repair
+        data object NotFound : Repair
+        data class Failed(val message: String) : Repair
+    }
+
+    private val _repairs = MutableStateFlow<Map<String, Repair>>(emptyMap())
+    /** Per "Without QR" photo id; absent = never sent (no key, or not tried yet). */
+    val repairs: StateFlow<Map<String, Repair>> = _repairs.asStateFlow()
+
+    fun canRepair(): Boolean = QrRepairClient.key(getApplication()) != null
+
+    /**
+     * Sends a "Without QR" photo to the repair server (when the user has set its key). A link that comes back is
+     * saved like a scan and the photo leaves the list. Each photo goes once unless [again].
+     */
+    fun repairNoQr(id: String, again: Boolean = false) {
+        val p = _data.value.noQr.firstOrNull { it.id == id } ?: return
+        val now = _repairs.value[id]
+        if (!canRepair() || now == Repair.Running || (now != null && !again)) return
+        _repairs.value = _repairs.value + (id to Repair.Running)
+        viewModelScope.launch {
+            val answer = withContext(Dispatchers.IO) { QrRepairClient.repair(getApplication(), NoQrPhotos.file(getApplication(), p.file)) }
+            val state = when (answer) {
+                is QrRepairClient.Answer.Link -> addReceipt(answer.url)?.let { (receiptId, _) ->
+                    removeNoQr(id)
+                    android.widget.Toast.makeText(getApplication(), "QR code repaired: receipt saved.", android.widget.Toast.LENGTH_SHORT).show()
+                    Repair.Found(receiptId)
+                } ?: Repair.NotFound
+                QrRepairClient.Answer.NotFound -> Repair.NotFound
+                is QrRepairClient.Answer.Failed -> Repair.Failed(answer.message)
+            }
+            _repairs.value = _repairs.value + (id to state)
+        }
+    }
 
     // ---------------------------------------------------------------- loyalty cards
 

@@ -146,6 +146,14 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   chip is picked): `domain/CompanyReport` (tested) builds a month (or all) of a PIB's OK receipts with total and VAT per
   rate, from the journal's tax table ("Ознака Име Стопа Порез") else item labels (Ђ 20, Е 10, Г/А 0; Mani imports have
   none); `csv` (semicolons, decimal commas, BOM added when shared) and `lines` (monospace) → `ReceiptPdf.writeLines`.
+  QR repair server (`backend/`, the user's Vercel Hobby project "hive", https://hive-backend.ruvceski.com, also
+  https://hive-chi-rosy.vercel.app as the fallback): `app.py` (WSGI,
+  `POST /api/qr`, image bytes ≤ 4.5 MB, `Authorization: Bearer $QR_KEY` from Vercel env) → `crops()` (OpenCV detectors
+  find the code's corners on a whole-receipt photo) → `qrfix/` (another session's reference reader: finders, alignment +
+  timing → thin-plate spline, thresholds, Reed-Solomon with erasures and the known prefix/header/padding, every block
+  validated; the payload's trailing MD5 of the rest must match, `whole()`) within `QR_BUDGET` 240 s → `{"link"|null}`. Hive: `data/QrRepairClient` (key in prefs `wallet_secrets`, out of
+  backups; ≤ 2000 px JPEG), `WalletViewModel.repairNoQr` (state `repairs`; a link → `addReceipt` + `removeNoQr`), started
+  when a kept photo has no QR (single pick, share, batch) and when `NoQrScreen` opens one; key card on `NoQrList`.
   **Later (asked for, not built yet):** a "submitted / refunded" mark per receipt.
 - `:music` (`MusicModule`, package `app.stride.music`, neon cyan `MusicAccent`): Tempo (the user's yt-dlp app, its repo is
   gone; rebuilt from the session that wrote it). youtubedl-android 0.17.3 (yt-dlp + ffmpeg + aria2c, `engine/Engine`:

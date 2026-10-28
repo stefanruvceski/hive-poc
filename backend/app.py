@@ -6,7 +6,10 @@ POST /api/qr: a photo of a Serbian fiscal receipt whose QR code the phone couldn
   {"link": null}. A link is only returned when it passed every check of the repair reader; never a guess.
 GET /api/qr: a liveness check.
 """
-import hmac, json, os, re, tempfile, time
+import base64, hashlib, hmac, json, os, re, tempfile, time, urllib.parse
+
+import cv2
+import numpy as np
 
 from qrfix import qr_geometry as G
 from qrfix import qr_repair as R
@@ -14,6 +17,66 @@ from qrfix import qr_repair as R
 LINK = re.compile(r'^https://suf\.purs\.gov\.rs/v/\?vl=[A-Za-z0-9%]+$')
 BUDGET = int(os.environ.get('QR_BUDGET', 240))  # seconds of work; the function itself may run 300
 MAX_BODY = 4_400_000  # Vercel's request body limit is 4.5 MB
+
+
+def crops(path):
+    """The QR code's region of a whole-receipt photo (the reader expects the code to fill most of the picture): OpenCV's
+    detectors usually still find the code's corners when they can't decode it. The crop keeps a margin of a third of
+    the code; the whole picture comes last."""
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        return [path]
+    H, W = img.shape
+    out = []
+    for det in (cv2.QRCodeDetectorAruco(), cv2.QRCodeDetector()):
+        try:
+            ok, pts = det.detect(img)
+        except Exception:
+            ok, pts = False, None
+        if not ok or pts is None:
+            continue
+        pts = np.asarray(pts).reshape(-1, 2)
+        x0, y0 = pts.min(0); x1, y1 = pts.max(0)
+        m = max(x1 - x0, y1 - y0) / 3
+        x0, y0 = int(max(0, x0 - m)), int(max(0, y0 - m)); x1, y1 = int(min(W, x1 + m)), int(min(H, y1 + m))
+        if (x1 - x0) * (y1 - y0) > 0.6 * W * H or x1 - x0 < 60:
+            continue  # the code already fills the picture, or the find is a speck
+        f = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        cv2.imwrite(f.name, img[y0:y1, x0:x1])
+        out.append(f.name)
+        break
+    return out + [path]
+
+
+def repair_any(path, budget=BUDGET):
+    """[repair] on the code's crop first, then on the whole picture, within one time budget."""
+    start = time.time()
+    paths = crops(path)
+    try:
+        for p in paths:
+            left = budget - (time.time() - start)
+            if left <= 5:
+                return None, 'timeout'
+            link, how = repair(p, left)
+            if link:
+                return link, ('crop ' if p != path else '') + how
+            if how == 'timeout':
+                return None, how
+        return None, 'not found'
+    finally:
+        for p in paths:
+            if p != path:
+                os.unlink(p)
+
+
+def whole(link):
+    """The verification payload ends with the MD5 of everything before it: a last check that every byte of the
+    repaired link is right."""
+    try:
+        b = base64.b64decode(urllib.parse.unquote(link.split('vl=', 1)[1]), validate=True)
+        return len(b) > 16 and hashlib.md5(b[:-16]).digest() == b[-16:]
+    except Exception:
+        return False
 
 
 def repair(path, budget=BUDGET):
@@ -28,7 +91,7 @@ def repair(path, budget=BUDGET):
             return None, 'timeout'
         except Exception:  # one attempt failing (odd image) must not stop the others
             t = None
-        if t and LINK.match(t):
+        if t and LINK.match(t) and whole(t):
             return t, f'erode={erode} scale={scale}'
     return None, 'not found'
 
@@ -55,5 +118,5 @@ def app(environ, start_response):
     with tempfile.NamedTemporaryFile(suffix='.img') as f:  # deleted right after: nothing is kept
         f.write(body)
         f.flush()
-        link, how = repair(f.name)
+        link, how = repair_any(f.name)
     return send('200 OK', {'link': link, 'how': how, 'ms': int((time.time() - start) * 1000)})

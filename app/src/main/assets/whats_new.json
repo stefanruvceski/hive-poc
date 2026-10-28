@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-qr-repair",
+    "title": "Crumpled receipts, read anyway",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "When the phone can't read a receipt's QR code (crumpled, faded, striped by the printer), Hive sends the photo to its own repair server, which straightens the code and corrects what's missing. The receipt saves itself when it's found; the printed fields still work meanwhile. Set the server's key once on Wallet › Without QR."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-already-saved",
     "title": "Already saved? Hive tells you first",
     "items": [

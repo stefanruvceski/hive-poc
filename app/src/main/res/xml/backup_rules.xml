@@ -3,4 +3,5 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="garmin.xml" />
     <exclude domain="sharedpref" path="secrets.xml" />
+        <exclude domain="sharedpref" path="wallet_secrets.xml" />
 </full-backup-content>

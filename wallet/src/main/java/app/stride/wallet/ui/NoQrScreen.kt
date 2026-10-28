@@ -96,6 +96,11 @@ fun NoQrScreen(vm: WalletViewModel, photoId: String?, onFound: (String) -> Unit,
     val d by vm.data.collectAsStateWithLifecycle()
     // Checked before anything is typed on the tax office's page: the receipt may be in Hive already.
     val already = remember(fields, d.receipts) { ReceiptOcr.saved(fields, d.receipts) }
+    // The photo's trip to Hive's QR repair server: when it finds the link, the saved receipt opens by itself.
+    val repairs by vm.repairs.collectAsStateWithLifecycle()
+    val repair = photoId?.let { repairs[it] }
+    LaunchedEffect(repair) { (repair as? WalletViewModel.Repair.Found)?.let { onFound(it.receiptId) } }
+    LaunchedEffect(photoId) { photoId?.let { vm.repairNoQr(it) } }
 
     fun read(uri: Uri) {
         reading = true
@@ -197,6 +202,26 @@ fun NoQrScreen(vm: WalletViewModel, photoId: String?, onFound: (String) -> Unit,
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = WalletAccent)
                     Spacer(Modifier.size(8.dp))
                     Text("Reading the receipt…", color = StrideColors.Dim, fontSize = 13.sp)
+                }
+            }
+        }
+        if (repair != null && repair !is WalletViewModel.Repair.Found) item {
+            Glass(tint = WalletAccent) {
+                when (repair) {
+                    WalletViewModel.Repair.Running -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = WalletAccent)
+                        Spacer(Modifier.size(10.dp))
+                        Column {
+                            Text("Repairing the QR code…", color = StrideColors.Text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            Text("Hive's server straightens the code and corrects what's missing; it can take a few minutes. The receipt opens by itself when it's found. The printed fields below work meanwhile.", color = StrideColors.Dim, fontSize = 13.sp)
+                        }
+                    }
+                    WalletViewModel.Repair.NotFound -> Text("The repair server couldn't read this QR code either. Use the printed fields below.", color = StrideColors.Dim, fontSize = 13.sp)
+                    is WalletViewModel.Repair.Failed -> Column {
+                        Text(repair.message, color = StrideColors.Dim, fontSize = 13.sp)
+                        TextButton(onClick = { photoId?.let { vm.repairNoQr(it, again = true) } }, contentPadding = PaddingValues(0.dp)) { Text("Try the repair again", color = WalletAccent) }
+                    }
+                    else -> Unit
                 }
             }
         }
