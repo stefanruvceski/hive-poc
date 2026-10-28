@@ -51,6 +51,7 @@ object PlanReminder {
     private const val PREFS = "plan_reminder"
     private const val KEY_SENT = "sent"
     private const val KEY_MOVES = "last_auto_moves"
+    private const val KEY_INTENSITY = "last_intensity"
     private const val KEY_UPDATE_CHECK = "last_update_check"
     private const val KEY_LATEST_BUILD = "latest_build"
 
@@ -76,6 +77,21 @@ object PlanReminder {
                 // The first sync ever would report the whole history; only report when there was data before.
                 if (before.isNotEmpty()) fresh = data.activities.filter { it.id !in before }
                 Widgets.refresh(context)
+            }
+        }
+
+        // Garmin intensity minutes (official Personal API key), every ~2 h: brisk walks outside workouts count.
+        val personal = app.stride.garmin.GarminPersonal(context)
+        if (personal.hasKey && now.hour >= 6 && System.currentTimeMillis() - prefs.getLong(KEY_INTENSITY, 0) >= 2 * 3_600_000L) {
+            runCatching {
+                val today = now.toLocalDate()
+                val days = personal.intensity(listOf(today, today.minusDays(1)))
+                prefs.edit().putLong(KEY_INTENSITY, System.currentTimeMillis()).apply()
+                if (days.isNotEmpty()) {
+                    data = store.update { it.copy(intensity = app.stride.domain.Intensity.merge(it.intensity, days, today)) }
+                    DataEvents.notifyChanged()
+                    Widgets.refresh(context)
+                }
             }
         }
 

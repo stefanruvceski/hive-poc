@@ -88,6 +88,22 @@ class GarminPersonal(private val context: Context) {
     }
 
     /**
+     * Intensity minutes for [days]: each day's summary plus one activity search over the range for the workouts'
+     * share (`domain/Intensity`). Days without a summary (404, not synced yet) are left out.
+     */
+    suspend fun intensity(days: List<LocalDate>): List<app.stride.model.IntensityDay> = withContext(Dispatchers.IO) {
+        val from = days.min(); val to = days.max()
+        val (aCode, aBody) = get("/activitylist-service/activities/search/activities?startDate=$from&endDate=$to&limit=100")
+        val share = if (aCode == 200) app.stride.domain.Intensity.inWorkouts(StrideJson.parseToJsonElement(aBody)) else emptyMap()
+        days.mapNotNull { d ->
+            val (code, body) = get("/usersummary-service/usersummary/daily?calendarDate=$d")
+            if (code != 200) return@mapNotNull null
+            val (m, v) = runCatching { app.stride.domain.Intensity.daily(StrideJson.parseToJsonElement(body)) }.getOrNull() ?: return@mapNotNull null
+            app.stride.model.IntensityDay(d.toString(), m, v, share[d.toString()] ?: 0)
+        }
+    }
+
+    /**
      * Asks the gateway for one day of what Hive could use (daily summary, 15-minute steps, intensity minutes,
      * detected moves, sleep, HRV, Body Battery, stress, activities) and writes every answer to
      * cache/garmin_personal_probe.json (never the key or token), so it can be shared. Returns "path → result" lines.
@@ -95,24 +111,29 @@ class GarminPersonal(private val context: Context) {
     suspend fun probe(day: LocalDate = LocalDate.now().minusDays(1)): List<String> = withContext(Dispatchers.IO) {
         token()
         val name = displayName()?.let { URLEncoder.encode(it, "UTF-8") }
-        val paths = listOfNotNull(
-            name?.let { "/usersummary-service/usersummary/daily/$it?calendarDate=$day" },
-            "/wellness-service/wellness/dailySummaryChart${name?.let { "/$it" }.orEmpty()}?date=$day",
-            "/wellness-service/wellness/daily/im/$day",
-            "/usersummary-service/stats/im/daily/$day/$day",
-            "/wellness-service/wellness/dailyEvents?calendarDate=$day",
-            "/wellness-service/wellness/dailyMovement?calendarDate=$day",
-            "/sleep-service/sleep/dailySleepData?date=$day",
-            "/hrv-service/hrv/$day",
+        // The documented Personal API paths (Garmin's Swagger, 2026-10-28). Several differ from the Connect web
+        // app's (no display name in the path, other names), which is why the first probe got 404s.
+        val week = day.minusDays(6)
+        val paths = listOf(
+            // Walks and other moves the watch detected by itself (wellness activities), and intensity minutes.
+            "/wellnessactivity-service/activity/summary/range/$week/$day",
+            "/usersummary-service/usersummary/daily?calendarDate=$day",
+            "/usersummary-service/v2/dailysummaries?startDate=$day&endDate=$day",
+            "/usersummary-service/stats/steps/daily/$day/$day",
+            "/usersummary-service/stats/stress/daily/$day/$day",
+            "/sleep-service/sleep/dailySleep?date=$day",
+            "/wellness-service/wellness/dailyHeartRate?date=$day",
+            "/hrv-service/hrv/daily/$week/$day",
             "/wellness-service/wellness/bodyBattery/reports/daily?startDate=$day&endDate=$day",
-            "/wellness-service/wellness/dailyStress/$day",
+            "/weight-service/weight/range/$week/$day",
             "/activitylist-service/activities/search/activities?startDate=$day&endDate=$day&limit=20",
         )
         val answers = linkedMapOf<String, JsonElement>()
         val lines = mutableListOf("Display name: ${if (name != null) "found" else "not found"} · day $day")
         for (p in paths) {
             val (code, body) = runCatching { get(p) }.getOrElse { 0 to "error: ${it.message}" }
-            val json = runCatching { StrideJson.parseToJsonElement(body) }.getOrElse { JsonPrimitive(body.take(2000)) }
+            val json = if (body.length > 30_000) JsonPrimitive(body.take(30_000) + "…(cut)")
+                else runCatching { StrideJson.parseToJsonElement(body) }.getOrElse { JsonPrimitive(body.take(2000)) }
             answers[p] = buildJsonObject { put("http", code); put("body", json) }
             lines += "${p.substringBefore('?').replace(name ?: "\u0000", "{name}")} → HTTP $code, ${body.length} chars"
         }

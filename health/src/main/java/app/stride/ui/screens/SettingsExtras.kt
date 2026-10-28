@@ -4,6 +4,7 @@ import app.stride.host.Brand
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -542,8 +543,15 @@ fun GarminPersonalCard(vm: AppViewModel) {
             Spacer(Modifier.height(8.dp))
             Button(onClick = { vm.setPersonalKey(key); key = ""; has = true }, enabled = key.length >= 16) { Text("Save key") }
         } else {
+            var daysAgo by remember { mutableStateOf(1L) }
+            Text("Day to test (pick one with a walk you didn't start on the watch):", style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim)
+            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(0L to "Today", 1L to "Yesterday", 2L to "2 days ago", 3L to "3 days ago").forEach { (d, label) ->
+                    if (d == daysAgo) Button(onClick = {}) { Text(label) } else OutlinedButton(onClick = { daysAgo = d }) { Text(label) }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.testPersonal() }) { Text("Test") }
+                Button(onClick = { vm.testPersonal(daysAgo) }) { Text("Test") }
                 OutlinedButton(onClick = { vm.setPersonalKey(null); has = false }) { Text("Remove key") }
             }
             if (lines.isNotEmpty()) {
