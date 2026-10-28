@@ -162,6 +162,8 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                 open.target.startsWith("card:") -> { stack.clear(); tab = "cards"; push(open.target) }
                 open.target.startsWith("receipt:") -> { stack.clear(); tab = "receipts"; push(open.target) }
                 open.target.startsWith("company:") -> { stack.clear(); tab = "receipts"; push(open.target) }
+                // Shared to "Hive Receipt" (ReceiptShareActivity): save it and open it, like a scan.
+                open.target.startsWith("link:") -> { stack.clear(); receipt(Uri.decode(open.target.removePrefix("link:"))) }
             }
         }
     }

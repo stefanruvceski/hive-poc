@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-28-receipt-share",
+    "title": "Fewer steps for receipts without QR",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "On the tax office's page in Chrome, long-press the receipt's QR code → Share image → Hive Receipt, and it's saved: no screenshot, no picking. A receipt link shared to Hive Receipt works too."
+      },
+      {
+        "icon": "apps",
+        "text": "Receipt without QR → \"Copy all four\" puts the four values in the keyboard's clipboard, so in Chrome you tap a box and pick the value instead of typing it."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-noqr-chrome",
     "title": "Receipts without QR, through Chrome",
     "items": [

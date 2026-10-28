@@ -11,6 +11,25 @@
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="barcode,barcode_ui,ocr" />
 
+        <!-- Share a receipt's QR code (a picture) or its link: it's saved like a scan. -->
+        <activity
+            android:name="app.stride.wallet.ui.ReceiptShareActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="Hive Receipt"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name="app.stride.wallet.widget.CardsWidgetReceiver"
             android:exported="true"
