@@ -1,0 +1,7 @@
+numpy
+opencv-python-headless
+scipy
+pillow
+zxing-cpp
+reedsolo
+segno
