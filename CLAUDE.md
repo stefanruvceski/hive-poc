@@ -103,6 +103,8 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `FiscalParse.parseHtml`). The form's real markup was never seen when this was written; the user can fix it by hand.
   Seen since: the amount box treats "." as a thousands separator, so the total goes in as `ReceiptOcr.formAmount`
   ("3000,61"); fuel receipts print "3000.61", which `ReceiptOcr.amount` reads as well as "3.000,61".
+  The counter box takes "255797/257650" only (`ReceiptOcr.formCounter`); the form sets the type (ПП) in a box of its
+  own. The time box shows "15.5.2026. 09:20" (minutes). The button says Пошаљи. reCAPTCHA is on the page.
   Chains, not branches: everything per shop keys on `Chains.key` (the chain / company), e.g. every NIS pump is "NIS";
   the branch is only a detail (`Fill.location`). Prices `ui/PricesScreen` (route "prices", product "product:<key>") from
   `domain/PriceBook` (tested): receipt items → normalized name (Latin, no diacritics, codes, unit suffix or VAT mark) →

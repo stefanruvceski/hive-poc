@@ -58,6 +58,9 @@ class OcrFuelCardsTest {
         assertEquals("3000,61", ReceiptOcr.formAmount("3000,61"))
         assertEquals("3000.61", ReceiptOcr.plainAmount("3000.61"))
         assertEquals(3000.0, ReceiptOcr.amount("3.000")!!, 0.0)
+        // The counter box takes the numbers only; the form sets the type (ПП) in its own box.
+        assertEquals("120001/123456", ReceiptOcr.formCounter(f.counter))
+        assertEquals("120001/123456", ReceiptOcr.formCounter("120001 / 123456"))
     }
 
     @Test fun suffixesAndTotal() {

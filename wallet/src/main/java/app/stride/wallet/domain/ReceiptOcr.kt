@@ -79,6 +79,13 @@ object ReceiptOcr {
     /** 3000.61 → "3.000,61". */
     fun printed(v: Double): String = String.format(java.util.Locale.GERMANY, "%,.2f", v)
 
+    /**
+     * What goes into the form's counter box: "255797/257650" without the receipt type. The form shows the type (ПП)
+     * in a box of its own and sets it itself; "…ПП" in the counter box made the receipt not found.
+     */
+    fun formCounter(counter: String): String =
+        Regex("""(\d+)\s*/\s*(\d+)""").find(counter)?.let { "${it.groupValues[1]}/${it.groupValues[2]}" } ?: counter.trim()
+
     /** The form's time as an ISO local date-time ("2026-10-19T08:56:24"), for inputs of type datetime-local. */
     fun isoTime(printed: String): String? = FiscalParse.printedTime(printed)
 
