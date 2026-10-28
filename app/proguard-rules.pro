@@ -6,13 +6,11 @@
 -keepclassmembers class app.stride.** { *** Companion; }
 -keepclasseswithmembers class app.stride.** { kotlinx.serialization.KSerializer serializer(...); }
 
-# Anthropic Java SDK (weekly coach): Jackson-based models are created by reflection.
--keep class com.anthropic.** { *; }
+# Jackson (used by the Music module's yt-dlp library) works by reflection.
 -keep class com.fasterxml.jackson.** { *; }
 -keepclassmembers class * { @com.fasterxml.jackson.annotation.* <fields>; @com.fasterxml.jackson.annotation.* <methods>; }
 -keepattributes Signature, EnclosingMethod, RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
 -keep class kotlin.Metadata { *; }
--dontwarn com.anthropic.**
 -dontwarn com.fasterxml.jackson.**
 -dontwarn java.beans.**
 -dontwarn org.slf4j.**

@@ -238,8 +238,8 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
 ## Coach, live workout, Health Connect, backup, extras
 - `AppViewModel`: anything `init` reaches through `sync()` (`garmin`, `personal`) must be declared above
   `init`; a property below it is still null there and crashed Hive on launch once.
-- AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (official Anthropic Java SDK, `claude-opus-5-5`,
-  server-side refusal fallback). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
+- AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (one plain OkHttp POST to `/v1/messages`, `claude-opus-5-5`,
+  server-side refusal fallback `fallbacks: "default"`; the Java SDK was dropped for app size). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
   Reviews in `AppData.coach[monday]`; Week tab section "coach"; Sunday 19:00 the worker writes one and notifies.
   Without a key (`coach/CoachShare`): "Ask Claude" copies `CoachHandoff.message` (system + week), opens the Claude app
   (`com.anthropic.claude`, in `<queries>`; else a chooser) and writes `coach-<monday>.json` (`prompt`, empty `response`)
@@ -252,7 +252,6 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   "day:<date>" route shared replies. Notification `NotifType.COACH_DAILY` 06:00-12:00 via `CoachShare.notify` (tap →
   "coach" = `CoachScreen` overlay with both cards; button "Ask Claude" → `CoachShare.AskActivity`, opens Claude directly).
   Week tab section "coach_daily". `LayoutOps.sections` puts sections added in an update after their default neighbour.
-  R8 keeps for the SDK (Jackson) are in `proguard-rules.pro`.
 - Live workout (`live/LiveWorkout.kt`): ongoing lock-screen notification while a stored, unfinished session is open:
   current set (`domain/LiveSet.kt`, tested), rest countdown, "Set done" / "+30 s" actions handled by
   `LiveWorkoutReceiver` (writes the store, `DataEvents.notifyChanged()` makes the app reload).
