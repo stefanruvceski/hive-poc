@@ -247,8 +247,9 @@ class GarminClient(private val context: Context) {
      * Null when Garmin has no strength activity that day yet (the watch hasn't synced). Retries without exact
      * exercise names when Garmin rejects them.
      */
-    suspend fun copySets(session: app.stride.model.StrengthSession): GarminSets.Merge? = withContext(Dispatchers.IO) {
-        val list = apiRaw("GET", "/activitylist-service/activities/search/activities?startDate=${session.date}&endDate=${session.date}&limit=20", null, "the activity search")
+    suspend fun copySets(session: app.stride.model.StrengthSession, activities: kotlinx.serialization.json.JsonArray? = null): GarminSets.Merge? = withContext(Dispatchers.IO) {
+        // [activities]: that day's activity search from the official API (GarminPersonal); else asked here.
+        val list = activities ?: apiRaw("GET", "/activitylist-service/activities/search/activities?startDate=${session.date}&endDate=${session.date}&limit=20", null, "the activity search")
         val id = (list as? kotlinx.serialization.json.JsonArray)?.let { GarminSets.strengthActivityId(it) } ?: return@withContext null
         val watch = apiRaw("GET", "/activity-service/activity/$id/exerciseSets", null, "the activity's sets") as? JsonObject
             ?: throw GarminException("Garmin didn't return the watch's sets.")
@@ -261,50 +262,6 @@ class GarminClient(private val context: Context) {
             if (e.message?.contains("HTTP 4") != true || e.message?.contains("HTTP 401") == true) throw e
             GarminSets.merge(withId, session, exactNames = false).also { apiRaw("PUT", "/activity-service/activity/$id/exerciseSets", it.body, "the sets") }
         }
-    }
-
-    /**
-     * Moves the watch detected by itself (Move IQ, or "pending" auto-detected activities on newer watches) on each of
-     * [days]. Garmin keeps them in several undocumented places, so all are asked and the results combined: the daily
-     * events (with and without the display name), the web timeline's GraphQL query and the pending activities. Every
-     * answer for the newest day is kept in the cache (garmin_events.json) so it can be shared when a walk is missing.
-     */
-    suspend fun autoMoves(days: List<java.time.LocalDate>): Map<java.time.LocalDate, List<app.stride.model.AutoMove>> = withContext(Dispatchers.IO) {
-        val name = runCatching { displayName() }.getOrNull()
-        val pending = tryRaw("POST", "/graphql-gateway/graphql", gql(PENDING_QUERY))
-        val newest = days.max()
-        days.associateWith { d ->
-            val answers = linkedMapOf(
-                "dailyEvents" to tryRaw("GET", "/wellness-service/wellness/dailyEvents?calendarDate=$d"),
-                "dailyEventsByName" to (name?.let { tryRaw("GET", "/wellness-service/wellness/dailyEvents/${URLEncoder.encode(it, "UTF-8")}?calendarDate=$d") }
-                    ?: kotlinx.serialization.json.JsonPrimitive("no display name")),
-                "timeline" to tryRaw("POST", "/graphql-gateway/graphql", gql("query{dailyEventsScalar(date:\"$d\")}")),
-                "pending" to pending,
-            )
-            if (d == newest) runCatching {
-                java.io.File(context.cacheDir, EVENTS_FILE).writeText(JsonObject(mapOf("date" to kotlinx.serialization.json.JsonPrimitive(d.toString())) + answers).toString())
-            }
-            app.stride.domain.AutoMoves.combine(answers.values.map { app.stride.domain.AutoMoves.parse(it, d) })
-        }
-    }
-
-    private fun gql(query: String) = JsonObject(mapOf("query" to kotlinx.serialization.json.JsonPrimitive(query)))
-
-    /** The answer, or the error as a string (one source failing must not stop the others). */
-    private fun tryRaw(method: String, path: String, json: JsonObject? = null): JsonElement = try {
-        apiRaw(method, path, json, "the day's events") ?: kotlinx.serialization.json.JsonNull
-    } catch (e: GarminException) {
-        if (e.message?.contains("expired") == true) throw e
-        kotlinx.serialization.json.JsonPrimitive("error: ${e.message}")
-    }
-
-    /** The account's display name (some wellness paths need it), asked once and kept with the tokens. */
-    private fun displayName(): String? {
-        prefs.getString(KEY_DISPLAY, null)?.let { return it }
-        val p = apiRaw("GET", "/userprofile-service/socialProfile", null, "the profile") as? JsonObject ?: return null
-        val n = (p["displayName"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.isNotBlank() } ?: return null
-        prefs.edit().putString(KEY_DISPLAY, n).apply()
-        return n
     }
 
     /**
@@ -328,9 +285,6 @@ class GarminClient(private val context: Context) {
     }
 
     companion object {
-        const val EVENTS_FILE = "garmin_events.json"
-        private const val KEY_DISPLAY = "display_name"
-        private const val PENDING_QUERY = "query { pendingActivities { pendingActivities { pendingActivityUUID calendarDate startTimeLocal endTimeLocal startTimeGMT endTimeGMT averageHR calories duration activityTypePredictionKeys } } }"
         private const val SSO = "https://sso.garmin.com/sso"
         private const val API = "https://connectapi.garmin.com"
         private const val CONSUMER_URL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json"

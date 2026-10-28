@@ -228,7 +228,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   compares with the 7-day average for a readiness call. Values sit on the date you wake up.
 
 ## Coach, live workout, Health Connect, backup, extras
-- `AppViewModel`: anything `init` reaches through `sync()` (`garmin`, `personal`, `_autoMoves`) must be declared above
+- `AppViewModel`: anything `init` reaches through `sync()` (`garmin`, `personal`) must be declared above
   `init`; a property below it is still null there and crashed Hive on launch once.
 - AI coach (`coach/`): `CoachPrompt` (pure, tested) + `CoachClient` (official Anthropic Java SDK, `claude-opus-5-5`,
   server-side refusal fallback). The key is the user's own (`Settings.anthropicKey`), never in the app or in backups.
@@ -267,11 +267,9 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   After a workout, `GarminSets` (tested) copies the phone's sets (reps, kg, exercise) into the watch's strength activity
   that day (activitylist search → `activity-service/activity/{id}/exerciseSets` GET/PUT; watch timing and rests kept,
   extra watch sets dropped, extra phone sets appended); automatic on Finish, or "Copy sets to Garmin" on the Day screen.
-  Auto-detected moves (Move IQ): `GarminClient.autoMoves` asks four undocumented sources and `AutoMoves.combine`s them
-  (dailyEvents with and without the display name, GraphQL `dailyEventsScalar` and `pendingActivities`;
-  `domain/AutoMoves.parse`, tested, matches field names loosely; every answer for the newest day is kept in
-  cache/garmin_events.json, shareable from Settings → Garmin). `AppData.autoMoves` (120 days), fetched on sync and by
-  the worker every ~2 h; minutes not covered by a recorded workout count toward the MINUTES ring; Day screen card.
+  Auto-detected moves (Move IQ, four undocumented sources) were dropped 2026-10-28: always empty for this watch; the
+  official intensity minutes replace them. Reads go official where they can: `copySets` takes the day's activity search
+  from `GarminPersonal.activities` when there's a key (else asks the unofficial login).
   Official Personal API (`garmin/GarminPersonal`, read-only, since 2026-10-21): the user's key (connect.garmin.com →
   Settings → Personal API Key, ≤1 year) → `POST personal.connectapi.garmin.com/personalapitoken-service/personal-api/
   personal-api-key/token` (`Authorization: ApiKey …`, body = 24 h JWT) → `Bearer` GETs on the same service paths as the
@@ -294,8 +292,7 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   Seen via curl (2026-10-28): wellness activities `[]` (the watch records no auto-detected walks); usersummary daily
   gives moderate/vigorous intensity minutes; each activity in the search carries its own. Used: `domain/Intensity`
   (tested on those answers): `AppData.intensity` (`IntensityDay`: day moderate + vigorous, `inWorkouts` = the
-  activities' share, or their moving minutes when they carry none) → `outside()` (leftovers under `MIN_OUTSIDE` = 10 min are a workout's tail, ignored) adds to the MINUTES ring (instead of
-  `autoMoves` for that day); `GarminPersonal.intensity` fetched on sync (`syncIntensity`, 3 days) and by the worker every
+  activities' share, or their moving minutes when they carry none) → `outside()` (leftovers under `MIN_OUTSIDE` = 10 min are a workout's tail, ignored) adds to the MINUTES ring; `GarminPersonal.intensity` fetched on sync (`syncIntensity`, 3 days) and by the worker every
   ~2 h; Day screen card "Garmin intensity minutes". Test new endpoints with curl on the user's computer first. Writes (workouts, sets) stay on the unofficial login.
 - Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last
   session of the same kind, records, kg/min, work/rest from the watch (`StrengthSession.workSec/restSec/rests`, saved with
