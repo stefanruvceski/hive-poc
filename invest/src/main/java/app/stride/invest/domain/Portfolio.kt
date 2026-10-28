@@ -15,6 +15,21 @@ data class PlanPeriod(val start: LocalDate, val end: LocalDate, val invested: Do
     val progress: Float get() = if (target <= 0) 0f else (invested / target).toFloat().coerceIn(0f, 1f)
 }
 
+/**
+ * The plan as a ledger: every period from the plan's start to today with what the deposits filled in it. Deposits fill
+ * periods in order (the oldest open one first), so 6,000 against 3,000 a quarter covers two quarters, whenever it came.
+ * [owed] = what's still missing up to and including the current period, [behind] = earlier periods not filled,
+ * [ahead] = money beyond the current period (it fills the next ones).
+ */
+data class PlanLedger(val periods: List<PlanPeriod>, val owed: Double, val ahead: Double) {
+    val current: PlanPeriod get() = periods.last()
+    val behind: List<PlanPeriod> get() = periods.dropLast(1).filter { !it.done }
+    /** The periods still open up to now, oldest first (behind + the current one when it isn't full). */
+    val open: List<PlanPeriod> get() = periods.filter { !it.done }
+    /** Whole periods paid in advance. */
+    fun aheadPeriods(target: Double): Int = if (target <= 0) 0 else ((ahead + 0.005) / target).toInt()
+}
+
 /** A plan reminder to post: [key] makes it once per period. */
 data class PlanNotice(val key: String, val title: String, val text: String)
 
@@ -51,17 +66,47 @@ object Portfolio {
             .filter { runCatching { LocalDate.parse(it.date) }.getOrNull()?.let { x -> !x.isBefore(from) && !x.isAfter(to) } == true }
             .sumOf { inPlanCurrency(it, d.plan, d.snapshot?.baseCurrency) ?: 0.0 }
 
-    fun current(d: InvestData, today: LocalDate): PlanPeriod {
-        val (s, e) = period(today, d.plan.every)
-        return PlanPeriod(s, e, invested(d, s, e), d.plan.amount)
+    /** The plan's first period: as set, else January 1 of the first deposit's year, never after today's period. */
+    fun planStart(d: InvestData, today: LocalDate): LocalDate {
+        val cur = period(today, d.plan.every).first
+        val set = d.plan.start?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() }
+        val first = d.cash.filter { it.kind == CashKind.DEPOSIT && it.amount > 0 }.minOfOrNull { it.date }
+            ?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() }?.withDayOfYear(1)
+        val s = period(set ?: first ?: cur, d.plan.every).first
+        return if (s.isAfter(cur)) cur else s
     }
 
-    /** The last [n] periods, newest first. */
-    fun history(d: InvestData, today: LocalDate, n: Int = 8): List<PlanPeriod> =
-        (0 until n).map { i ->
-            val (s, e) = period(today.minusMonths(i.toLong() * d.plan.every.months), d.plan.every)
-            PlanPeriod(s, e, invested(d, s, e), d.plan.amount)
+    /** Every period from the plan's start through today's, filled by the deposits in order. */
+    fun ledger(d: InvestData, today: LocalDate): PlanLedger {
+        val target = d.plan.amount
+        val start = planStart(d, today)
+        val cur = period(today, d.plan.every).first
+        val starts = generateSequence(start) { it.plusMonths(d.plan.every.months.toLong()) }.takeWhile { !it.isAfter(cur) }.toList()
+        var rest = invested(d, start, LocalDate.of(9999, 12, 31))
+        val periods = starts.map { s ->
+            val e = s.plusMonths(d.plan.every.months.toLong()).minusDays(1)
+            val f = if (target <= 0) rest.coerceAtLeast(0.0) else rest.coerceIn(0.0, target)
+            rest -= f
+            PlanPeriod(s, e, f, target)
         }
+        return PlanLedger(periods, periods.sumOf { it.left }, rest.coerceAtLeast(0.0))
+    }
+
+    /** This period's share of the ledger. */
+    fun current(d: InvestData, today: LocalDate): PlanPeriod = ledger(d, today).current
+
+    /** The ledger's periods, newest first (at most [n]). */
+    fun history(d: InvestData, today: LocalDate, n: Int = 12): List<PlanPeriod> = ledger(d, today).periods.reversed().take(n)
+
+    /** "Q3 + Q4 2026", "Q4 2025 + Q1 2026", "Q1–Q3 2026" for the periods still open. */
+    fun openLabel(open: List<PlanPeriod>, every: Cadence): String = when {
+        open.isEmpty() -> ""
+        open.size == 1 -> periodLabel(open[0].start, every)
+        open.size == 2 && open[0].start.year == open[1].start.year && every != Cadence.YEARLY ->
+            periodLabel(open[0].start, every).substringBefore(" ") + " + " + periodLabel(open[1].start, every)
+        open.size == 2 -> periodLabel(open[0].start, every) + " + " + periodLabel(open[1].start, every)
+        else -> periodLabel(open.first().start, every) + " – " + periodLabel(open.last().start, every)
+    }
 
     /** Everything ever put in, net, in the base currency (what the account's value is compared with). */
     fun contributed(d: InvestData): Double = d.cash.filter { it.kind == CashKind.DEPOSIT }.sumOf { it.amountBase ?: 0.0 }
@@ -88,16 +133,23 @@ object Portfolio {
      */
     fun notices(d: InvestData, today: LocalDate, fmt: (Double) -> String): List<PlanNotice> {
         if (!d.plan.reminders || d.plan.amount <= 0) return emptyList()
-        val p = current(d, today)
-        if (p.done) return emptyList()
+        val l = ledger(d, today)
+        val p = l.current
+        if (l.owed <= 0.005) return emptyList()
         val out = mutableListOf<PlanNotice>()
         val label = periodLabel(p.start, d.plan.every)
+        val what = openLabel(l.open, d.plan.every)
+        val cur = d.plan.currency
         if (ChronoUnit.DAYS.between(p.start, today) < 7) {
-            out += PlanNotice("start-${p.start}", "Time to invest for $label", "Your plan: ${fmt(p.target)} ${d.plan.currency}. Deposits into Interactive Brokers count toward it.")
+            out += PlanNotice(
+                "start-${p.start}", "Time to invest for $label",
+                if (l.behind.isEmpty()) "Your plan: ${fmt(p.target)} $cur. Deposits into Interactive Brokers count toward it."
+                else "${fmt(l.owed)} $cur to go for $what. Deposits fill the oldest open period first.",
+            )
         }
         val daysLeft = ChronoUnit.DAYS.between(today, p.end)
         if (daysLeft in 0..14) {
-            out += PlanNotice("end-${p.start}", "${fmt(p.left)} ${d.plan.currency} left for $label", "$daysLeft days to go: ${fmt(p.invested)} of ${fmt(p.target)} ${d.plan.currency} invested so far.")
+            out += PlanNotice("end-${p.start}", "${fmt(l.owed)} $cur left for $what", "$daysLeft days until $label ends.")
         }
         return out
     }

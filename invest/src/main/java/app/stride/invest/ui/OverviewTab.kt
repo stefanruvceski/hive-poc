@@ -130,19 +130,32 @@ private fun ChartCard(d: InvestData) {
 
 @Composable
 internal fun PlanCard(d: InvestData, today: LocalDate, onClick: (() -> Unit)? = null) {
-    val p = Portfolio.current(d, today)
+    val l = Portfolio.ledger(d, today)
+    val p = l.current
+    val cur = d.plan.currency
     val label = Portfolio.periodLabel(p.start, d.plan.every)
+    val ahead = l.aheadPeriods(d.plan.amount)
     GlassCard(Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProgressRing(p.progress, size = 64, stroke = 7, color = InvestAccent, label = "${(p.progress * 100).toInt()}%")
             Spacer(Modifier.width(14.dp))
             Column {
                 Text("Plan · $label", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text("${money(p.invested, 0)} of ${money(p.target, 0)} ${d.plan.currency}", fontSize = 14.sp)
-                Text(
-                    if (p.done) "Done for $label." else "${money(p.left, 0)} ${d.plan.currency} to go · ${java.time.temporal.ChronoUnit.DAYS.between(today, p.end)} days left",
-                    color = if (p.done) InvestAccent else StrideColors.Dim, fontSize = 12.sp,
-                )
+                Text("${money(p.invested, 0)} of ${money(p.target, 0)} $cur", fontSize = 14.sp)
+                when {
+                    l.owed <= 0.005 -> Text(
+                        "Done for $label." + if (ahead > 0) " Paid ahead: $ahead more ${if (ahead == 1) "period" else "periods"}." else "",
+                        color = InvestAccent, fontSize = 12.sp,
+                    )
+                    l.behind.isNotEmpty() -> Text(
+                        "${money(l.owed, 0)} $cur to go for ${Portfolio.openLabel(l.open, d.plan.every)} · by ${Dates.full(p.end)}",
+                        color = androidx.compose.ui.graphics.Color(0xFFFBBF24), fontSize = 12.sp,
+                    )
+                    else -> Text(
+                        "${money(p.left, 0)} $cur to go · ${java.time.temporal.ChronoUnit.DAYS.between(today, p.end)} days left",
+                        color = StrideColors.Dim, fontSize = 12.sp,
+                    )
+                }
             }
         }
     }

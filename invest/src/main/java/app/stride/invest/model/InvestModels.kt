@@ -117,11 +117,16 @@ enum class Cadence(val months: Int, val label: String) {
     MONTHLY(1, "Every month"), QUARTERLY(3, "Every quarter"), HALF_YEARLY(6, "Every half year"), YEARLY(12, "Every year")
 }
 
-/** "Put [amount] [currency] in every [every]"; deposits into the account count toward it. */
+/** "Put [amount] [currency] in every [every]"; deposits into the account count toward it, oldest open period first. */
 @Serializable
 data class Plan(
     val amount: Double = 0.0,
     val currency: String = "EUR",
     val every: Cadence = Cadence.QUARTERLY,
     val reminders: Boolean = true,
+    /**
+     * The first period the plan covers (yyyy-MM-dd, any day in it). Deposits fill periods in order from here, oldest
+     * open one first, so a double deposit catches up a missed period. Null = January 1 of the first deposit's year.
+     */
+    val start: String? = null,
 )

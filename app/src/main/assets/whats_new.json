@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-invest-plan-catchup",
+    "title": "Invest plan counts catch-up deposits",
+    "items": [
+      {
+        "icon": "chart",
+        "text": "Deposits now fill your plan's periods in order, oldest open one first: 6,000 against 3,000 a quarter pays two quarters, whenever it came. The plan shows what's still open (e.g. 6,000 EUR to go for Q3 + Q4) and anything paid ahead. Pick the quarter the plan started in on the Plan tab."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-invest-more",
     "title": "Invest explains your account",
     "items": [

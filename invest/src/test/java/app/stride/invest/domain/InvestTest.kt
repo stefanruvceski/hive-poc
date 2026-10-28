@@ -77,7 +77,8 @@ class InvestTest {
     }
 
     @Test fun planProgressAndMerge() {
-        var d = InvestData(plan = Plan(3000.0, "EUR", Cadence.QUARTERLY))
+        // The plan starts in Q4, so the October deposit is Q4's.
+        var d = InvestData(plan = Plan(3000.0, "EUR", Cadence.QUARTERLY, start = "2026-10-01"))
         d = Portfolio.merge(d, FlexParse.statement(report), "now")
         // Merging the same report again changes nothing.
         assertEquals(d.cash, Portfolio.merge(d, FlexParse.statement(report), "now").cash)
@@ -86,8 +87,7 @@ class InvestTest {
         assertEquals(LocalDate.parse("2026-12-31"), q4.end)
         assertTrue(q4.done)
         assertEquals("Q4 2026", Portfolio.periodLabel(q4.start, Cadence.QUARTERLY))
-        val q3 = Portfolio.history(d, LocalDate.parse("2026-11-20"))[1]
-        assertEquals(0.0, q3.invested, 0.0)
+        assertEquals(1, Portfolio.history(d, LocalDate.parse("2026-11-20")).size)
         assertEquals(3000.0, Portfolio.contributed(d), 0.001)
         val (div, tax) = Portfolio.dividends(d, 2026)
         assertEquals(9.0, div, 0.001); assertEquals(1.35, tax, 0.001)
@@ -104,5 +104,32 @@ class InvestTest {
         // Mid-quarter: quiet. Reminders off or no amount: quiet.
         assertTrue(Portfolio.notices(d, LocalDate.parse("2027-02-10"), fmt).isEmpty())
         assertTrue(Portfolio.notices(d.copy(plan = d.plan.copy(reminders = false)), LocalDate.parse("2027-01-02"), fmt).isEmpty())
+    }
+
+    private fun dep(id: String, date: String, amount: Double) = app.stride.invest.model.CashMove(id, date, CashKind.DEPOSIT, amount, "EUR", amount)
+
+    @Test fun doubleDepositsCatchUp() {
+        val fmt: (Double) -> String = { "%.0f".format(it) }
+        // 3,000 a quarter from Q1; 6,000 came in July and August (Q3): that pays Q1 and Q2.
+        val d = InvestData(plan = Plan(3000.0, "EUR", Cadence.QUARTERLY), cash = listOf(dep("1", "2026-07-10", 3000.0), dep("2", "2026-08-05", 3000.0)))
+        val l = Portfolio.ledger(d, LocalDate.parse("2026-11-20"))
+        assertEquals(listOf("2026-01-01", "2026-04-01", "2026-07-01", "2026-10-01"), l.periods.map { it.start.toString() })
+        assertEquals(listOf(true, true, false, false), l.periods.map { it.done })
+        assertEquals(6000.0, l.owed, 0.001)
+        assertEquals(listOf("2026-07-01"), l.behind.map { it.start.toString() })
+        assertEquals("Q3 + Q4 2026", Portfolio.openLabel(l.open, Cadence.QUARTERLY))
+        assertEquals("6000 EUR left for Q3 + Q4 2026", Portfolio.notices(d, LocalDate.parse("2026-12-20"), fmt).single().title)
+        // 6,000 at the end of the year closes both.
+        val paid = d.copy(cash = d.cash + dep("3", "2026-12-22", 6000.0))
+        val p = Portfolio.ledger(paid, LocalDate.parse("2026-12-28"))
+        assertTrue(p.periods.all { it.done }); assertEquals(0.0, p.owed, 0.001)
+        assertTrue(Portfolio.notices(paid, LocalDate.parse("2026-12-28"), fmt).isEmpty())
+        // Paying more than owed runs ahead into next year's Q1.
+        val more = paid.copy(cash = paid.cash + dep("4", "2026-12-23", 3000.0))
+        assertEquals(1, Portfolio.ledger(more, LocalDate.parse("2026-12-28")).aheadPeriods(3000.0))
+        assertTrue(Portfolio.current(more, LocalDate.parse("2027-01-05")).done)
+        // A plan that starts later ignores older deposits.
+        val late = d.copy(plan = d.plan.copy(start = "2026-07-01"))
+        assertEquals(listOf(true, true), Portfolio.ledger(late, LocalDate.parse("2026-11-20")).periods.map { it.done })
     }
 }
