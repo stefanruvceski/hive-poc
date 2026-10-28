@@ -30,6 +30,10 @@ class IntensityTest {
     @Test fun onlyMinutesOutsideWorkoutsAreAdded() {
         // 26 Oct: all 43 minutes came from the workout, so nothing extra.
         assertEquals(0, Intensity.outside(IntensityDay("2026-10-26", 39, 4, 43)))
+        // 27 Oct: a swim with 36 + 7, the day 36 + 11. The 4 left are the watch still running after the swim.
+        assertEquals(4, Intensity.leftover(IntensityDay("2026-10-27", 36, 11, 43)))
+        assertEquals(0, Intensity.outside(IntensityDay("2026-10-27", 36, 11, 43)))
+        assertEquals(10, Intensity.outside(IntensityDay("2026-10-27", 46, 7, 43)))
         // A brisk 25-minute walk on top of the same workout.
         val day = IntensityDay("2026-10-26", 64, 4, 43)
         assertEquals(25, Intensity.outside(day))

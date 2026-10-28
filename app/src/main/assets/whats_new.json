@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-intensity-tail",
+    "title": "Only real walks count",
+    "items": [
+      {
+        "icon": "watch",
+        "text": "Fewer than 10 intensity minutes outside workouts no longer count toward Training time: that's usually the watch still running after a workout, not a walk."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-intensity-minutes",
     "title": "Brisk walks count, from Garmin itself",
     "items": [
