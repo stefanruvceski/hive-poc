@@ -238,11 +238,17 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------------------------------------------------------------- photos without a readable QR
 
-    /** Keeps a picked photo whose QR couldn't be read (copied into app files) on the "Without QR" list. */
-    suspend fun keepNoQr(uri: android.net.Uri): Boolean {
-        val name = withContext(Dispatchers.IO) { NoQrPhotos.save(getApplication(), uri) } ?: return false
-        update { d -> d.copy(noQr = d.noQr + NoQrPhoto(id("nqr"), name, now())) }
-        return true
+    /** Keeps a picked photo whose QR couldn't be read (copied into app files) on the "Without QR" list; its id. */
+    suspend fun keepNoQr(uri: android.net.Uri): String? {
+        val name = withContext(Dispatchers.IO) { NoQrPhotos.save(getApplication(), uri) } ?: return null
+        return adoptNoQr(name)
+    }
+
+    /** A photo already copied into filesDir/wallet_noqr (by "Hive Receipt") onto the "Without QR" list; its id. */
+    fun adoptNoQr(file: String): String {
+        val id = id("nqr")
+        update { d -> d.copy(noQr = d.noQr + NoQrPhoto(id, file, now())) }
+        return id
     }
 
     /** Off the list, and its file deleted (the receipt was saved, or the user threw it away). */
