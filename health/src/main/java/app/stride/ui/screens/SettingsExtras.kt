@@ -512,3 +512,51 @@ fun CoachScreen(vm: AppViewModel, data: AppData, today: java.time.LocalDate, bus
         }
     }
 }
+
+/**
+ * Garmin's official Personal API (read-only): the user creates a key on Garmin Connect, pastes it here (kept on this
+ * phone only), and "Test" asks Garmin for yesterday's data Hive could use, with Share for the raw answers.
+ */
+@Composable
+fun GarminPersonalCard(vm: AppViewModel) {
+    val context = LocalContext.current
+    val lines by vm.personalProbe.collectAsStateWithLifecycle()
+    var has by remember { mutableStateOf(vm.hasPersonalKey()) }
+    var key by remember { mutableStateOf("") }
+    FCard {
+        Text("Garmin Personal API (official)", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Garmin's own read-only access to your data, with a key instead of your password. " +
+                "Create one on Garmin Connect (Settings › Personal API Key, 1 year), copy it, paste it here. It stays on this phone.",
+            style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (!has) {
+            TextButton(onClick = {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(app.stride.garmin.GarminPersonal.KEY_PAGE))) }
+            }) { Text("Create a key on Garmin Connect") }
+            OutlinedTextField(
+                value = key, onValueChange = { key = it.trim() }, label = { Text("Personal API key") }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { vm.setPersonalKey(key); key = ""; has = true }, enabled = key.length >= 16) { Text("Save key") }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.testPersonal() }) { Text("Test") }
+                OutlinedButton(onClick = { vm.setPersonalKey(null); has = false }) { Text("Remove key") }
+            }
+            if (lines.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                lines.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = StrideColors.Dim) }
+                TextButton(onClick = {
+                    val f = java.io.File(context.cacheDir, app.stride.garmin.GarminPersonal.PROBE_FILE)
+                    if (f.exists()) context.startActivity(Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, f.readText().take(95_000)),
+                        "Garmin's answers",
+                    ))
+                }) { Text("Share Garmin's answers") }
+            }
+        }
+    }
+}

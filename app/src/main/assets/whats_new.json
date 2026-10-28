@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-28-garmin-personal",
+    "title": "Garmin's official Personal API",
+    "items": [
+      {
+        "icon": "watch",
+        "text": "Health → Settings → Garmin Personal API: paste the key you create on Garmin Connect (it stays on this phone) and tap Test. Hive asks Garmin for yesterday's steps, intensity minutes, sleep, HRV and Body Battery; share the answers so walks and more can be counted from Garmin's own data."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-noqr-list",
     "title": "No more guessing which photos failed",
     "items": [

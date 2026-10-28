@@ -267,6 +267,13 @@ Don't rename `.github/workflows/build.yml`: `run_number` restarts at 1 for a new
   `domain/AutoMoves.parse`, tested, matches field names loosely; every answer for the newest day is kept in
   cache/garmin_events.json, shareable from Settings → Garmin). `AppData.autoMoves` (120 days), fetched on sync and by
   the worker every ~2 h; minutes not covered by a recorded workout count toward the MINUTES ring; Day screen card.
+  Official Personal API (`garmin/GarminPersonal`, read-only, since 2026-10-21): the user's key (connect.garmin.com →
+  Settings → Personal API Key, ≤1 year) → `POST personal.connectapi.garmin.com/personalapitoken-service/personal-api/
+  personal-api-key/token` (`Authorization: ApiKey …`, body = 24 h JWT) → `Bearer` GETs on the same service paths as the
+  Connect web app. Key/token in prefs `garmin` (`personal_*`, kept by `GarminClient.disconnect`). `GarminPersonalCard`
+  (Settings): save key, "Test" = `probe()` of one day's daily summary, 15-min steps, intensity minutes, events, sleep,
+  HRV, Body Battery, stress, activities → cache/garmin_personal_probe.json (Share). Nothing uses its data yet: build on
+  the real answers. Writes (workouts, sets) stay on the unofficial login.
 - Gym day review: `domain/StrengthReview` (tested): trend per exercise vs the last entry (↑ = ↓), volume change vs the last
   session of the same kind, records, kg/min, work/rest from the watch (`StrengthSession.workSec/restSec/rests`, saved with
   `garminSyncedAt` when sets are copied). Strength days put the sets card right under the verdict; `ActivityDetails(compact)`
