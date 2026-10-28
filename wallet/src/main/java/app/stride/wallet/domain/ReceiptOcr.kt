@@ -16,7 +16,8 @@ object ReceiptOcr {
     private val NUMBER = Regex("""\b([A-Z0-9]{8})\s*-\s*([A-Z0-9]{8})\s*-\s*(\d{1,10})\b""")
     private val TIME = Regex("""\b(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})\.?\s+(\d{1,2}):(\d{2}):(\d{2})\b""")
     private val COUNTER = Regex("""\b(\d{1,10})\s*/\s*(\d{1,10})\s*([A-Za-zА-Яа-яΠΡ]{2})""")
-    private val AMOUNT = Regex("""(?<![\d.,])(\d{1,3}(?:\.\d{3})*,\d{2})(?![\d,])""")
+    // "3.001,50" (Serbian) or "3000.61" (how NIS and other fuel receipts print it); never part of a date like 15.05.2026.
+    private val AMOUNT = Regex("""(?<![\d.,])(\d{1,3}(?:\.\d{3})*,\d{2}|\d+\.\d{2})(?![\d.,])""")
 
     fun read(text: String): VerifyFields {
         val t = text.replace(' ', ' ')
@@ -50,19 +51,43 @@ object ReceiptOcr {
 
     /**
      * The total: the amount printed most often (it repeats in the items, the total line and the payment line);
-     * on a tie the largest of them, which skips a cash amount handed over that only shows once.
+     * on a tie the largest of them, which skips a cash amount handed over that only shows once. Returned the
+     * Serbian way, "3.000,61", whichever way the receipt printed it.
      */
     fun total(text: String): String {
-        val all = AMOUNT.findAll(text).map { it.groupValues[1] }.toList()
+        val all = AMOUNT.findAll(text).mapNotNull { amount(it.groupValues[1]) }.toList()
         if (all.isEmpty()) return ""
         val counts = all.groupingBy { it }.eachCount()
         val top = counts.values.max()
-        return counts.filter { it.value == top }.keys.maxBy { FiscalParse.number(it) ?: 0.0 }
+        return printed(counts.filter { it.value == top }.keys.max())
     }
+
+    /**
+     * An amount as typed or printed: "3.000,61" or "3000,61" (Serbian), "3000.61" (dot decimals), "3.000" (thousands
+     * only); null when it isn't one.
+     */
+    fun amount(s: String): Double? {
+        val t = s.trim().replace(" ", "").replace("\u00A0", "")
+        return when {
+            t.isEmpty() -> null
+            ',' in t -> t.replace(".", "").replace(',', '.').toDoubleOrNull()
+            Regex("""\d{1,3}(\.\d{3})+""").matches(t) -> t.replace(".", "").toDoubleOrNull()
+            else -> t.toDoubleOrNull()
+        }
+    }
+
+    /** 3000.61 → "3.000,61". */
+    fun printed(v: Double): String = String.format(java.util.Locale.GERMANY, "%,.2f", v)
 
     /** The form's time as an ISO local date-time ("2026-10-19T08:56:24"), for inputs of type datetime-local. */
     fun isoTime(printed: String): String? = FiscalParse.printedTime(printed)
 
-    /** "3.001,50" → "3001.50", for inputs of type number. */
-    fun plainAmount(printed: String): String? = FiscalParse.number(printed)?.let { String.format(java.util.Locale.ROOT, "%.2f", it) }
+    /** "3.001,50" or "3001.50" → "3001.50", for inputs of type number. */
+    fun plainAmount(printed: String): String? = amount(printed)?.let { String.format(java.util.Locale.ROOT, "%.2f", it) }
+
+    /**
+     * What goes into the form's amount box: "3000,61", decimal comma and no thousands dots. The box treats a dot as a
+     * thousands separator and drops it, so "3000.61" became 300.061,00 and the receipt wasn't found.
+     */
+    fun formAmount(printed: String): String? = amount(printed)?.let { String.format(java.util.Locale.ROOT, "%.2f", it).replace('.', ',') }
 }

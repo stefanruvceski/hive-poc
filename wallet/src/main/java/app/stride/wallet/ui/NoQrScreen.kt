@@ -171,7 +171,7 @@ private fun VerifyWebScreen(fields: VerifyFields, onBack: () -> Unit, onPage: (u
     var done by remember { mutableStateOf(false) }
     val payload = remember(fields) {
         buildJsonObject {
-            put("total", fields.total)
+            put("total", ReceiptOcr.formAmount(fields.total) ?: fields.total)
             put("plain", ReceiptOcr.plainAmount(fields.total) ?: fields.total)
             put("time", fields.time)
             put("iso", ReceiptOcr.isoTime(fields.time) ?: fields.time)

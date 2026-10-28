@@ -33,6 +33,33 @@ class OcrFuelCardsTest {
         assertEquals("3001.50", ReceiptOcr.plainAmount(f.total))
     }
 
+    /** A NIS fuel receipt prints amounts with a dot ("3000.61"); OCR reads the Cyrillic labels as Latin garble. */
+    @Test fun dotDecimalFuelReceipt() {
+        val text = """
+            EVRO PREMIJUM BMB-95,2710124500 /LIT (B)
+            191.00 15.71 3000.61
+            3A YNNATY: 3000.61
+            Gotovina: 3000.61
+            Povracaj: 0.00
+            O-NDB 20.00 500.10
+            Nopes ykynho: 500.10
+            NOP Bpeme: 15.05.2026 09:20:36
+            NOP 6poj paryHa: AB12CD34-AB12CD34-123456
+            Bpojay payyHa: 120001/123456NN
+        """.trimIndent()
+        val f = ReceiptOcr.read(text)
+        assertEquals("3.000,61", f.total)
+        assertEquals("15.05.2026. 09:20:36", f.time)
+        assertEquals("AB12CD34-AB12CD34-123456", f.number)
+        assertEquals("120001/123456ПП", f.counter)
+        // Into the form: decimal comma, no thousands dots, whichever way it was typed.
+        assertEquals("3000,61", ReceiptOcr.formAmount(f.total))
+        assertEquals("3000,61", ReceiptOcr.formAmount("3000.61"))
+        assertEquals("3000,61", ReceiptOcr.formAmount("3000,61"))
+        assertEquals("3000.61", ReceiptOcr.plainAmount("3000.61"))
+        assertEquals(3000.0, ReceiptOcr.amount("3.000")!!, 0.0)
+    }
+
     @Test fun suffixesAndTotal() {
         assertEquals("ПР", ReceiptOcr.suffix("NP"))
         assertEquals("КП", ReceiptOcr.suffix("KN"))
