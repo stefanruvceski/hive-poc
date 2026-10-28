@@ -1,5 +1,23 @@
 [
   {
+    "id": "2026-10-28-invest-more",
+    "title": "Invest explains your account",
+    "items": [
+      {
+        "icon": "chart",
+        "text": "Overview: market gain and return for 1 month, this year, 1 year and all, with deposits taken out; the value chart shows the money you put in as a second line, so the gap is what the market added."
+      },
+      {
+        "icon": "apps",
+        "text": "Positions: the mix by asset class or currency, and a page per position with average price, cost, gain, share of the account, dividends and its history. New Activity tab: every deposit, trade, dividend and fee in plain words."
+      },
+      {
+        "icon": "bell",
+        "text": "Dividends per month, tax withheld and costs per year; coming dividends (add Open Dividend Accruals to your Flex Query); a nudge when a deposit still sits in cash after a week. Tap any \"?\" for what a term means."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-invest",
     "title": "New in Hive: Invest",
     "items": [

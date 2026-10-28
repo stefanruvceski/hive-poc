@@ -1,5 +1,6 @@
 package app.stride.invest.model
 
+import app.stride.model.LayoutPrefs
 import kotlinx.serialization.Serializable
 
 /**
@@ -17,6 +18,8 @@ data class InvestData(
     /** When the last report was read (ISO instant) and what went wrong last, if anything. */
     val lastSync: String? = null,
     val lastError: String? = null,
+    /** Hidden / reordered tabs and sections (ids in ui/InvestLayouts). */
+    val layout: LayoutPrefs = LayoutPrefs(),
 )
 
 @Serializable
@@ -28,6 +31,30 @@ data class Snapshot(
     val nav: Double? = null,
     val cash: Double? = null,
     val positions: List<Position> = emptyList(),
+    /** Cash per currency, each in its own currency. */
+    val cashByCurrency: List<CashBalance> = emptyList(),
+    /** Dividends announced but not paid yet (the optional Open Dividend Accruals section). */
+    val accruals: List<Accrual> = emptyList(),
+    /** Whether the report had that section at all (else Hive suggests adding it). */
+    val accrualsRead: Boolean = false,
+)
+
+@Serializable
+data class CashBalance(val currency: String, val amount: Double)
+
+/** A declared dividend: ex-date passed, paid on [payDate]. Amounts in [currency]. */
+@Serializable
+data class Accrual(
+    val symbol: String,
+    val exDate: String? = null,
+    val payDate: String? = null,
+    val quantity: Double = 0.0,
+    val perShare: Double? = null,
+    val gross: Double = 0.0,
+    val tax: Double = 0.0,
+    val net: Double = 0.0,
+    val currency: String = "",
+    val fxRateToBase: Double? = null,
 )
 
 @Serializable
@@ -44,13 +71,17 @@ data class Position(
     val unrealized: Double? = null,
     /** Value in the base currency (value × the report's FX rate). */
     val valueBase: Double? = null,
+    /** Average price paid per unit, in [currency]. */
+    val costPrice: Double? = null,
+    val fxRateToBase: Double? = null,
+    val isin: String? = null,
 )
 
 @Serializable
 data class NavPoint(val date: String, val value: Double)
 
 @Serializable
-enum class CashKind { DEPOSIT, DIVIDEND, WITHHOLDING, OTHER }
+enum class CashKind { DEPOSIT, DIVIDEND, WITHHOLDING, INTEREST, FEE, OTHER }
 
 /** One cash transaction: [amount] in [currency] (negative = out), [amountBase] in the account's base currency. */
 @Serializable
@@ -77,6 +108,8 @@ data class TradeRow(
     val proceeds: Double? = null,
     val commission: Double? = null,
     val realized: Double? = null,
+    val fxRateToBase: Double? = null,
+    val description: String = "",
 )
 
 @Serializable

@@ -78,4 +78,6 @@ class InvestViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setPlan(p: Plan) = update { it.copy(plan = p) }
+
+    fun setLayout(p: app.stride.model.LayoutPrefs) = update { it.copy(layout = p) }
 }

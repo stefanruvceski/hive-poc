@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import app.stride.data.DataEvents
 import app.stride.invest.data.FlexClient
 import app.stride.invest.data.InvestStore
+import app.stride.invest.domain.Insights
 import app.stride.invest.domain.Portfolio
 import app.stride.invest.ui.money
 import app.stride.notify.Notifier
@@ -19,7 +20,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Every few hours: once a day (from 08:00) the latest Interactive Brokers report is read, then the plan's reminders
- * are checked (a period starting, two weeks left while short), each posted once per period.
+ * are checked (a period starting, two weeks left while short, a deposit still sitting in cash after a week), each
+ * posted once.
  */
 object InvestReminder {
     fun schedule(context: Context) {
@@ -39,9 +41,10 @@ object InvestReminder {
             }
         }
         if (now.hour < 9) return
-        Portfolio.notices(d, now.toLocalDate()) { money(it) }.forEach { n ->
+        val idle = Insights.idleNotice(d, now.toLocalDate()) { money(it) }.takeIf { d.plan.reminders }
+        (Portfolio.notices(d, now.toLocalDate()) { money(it) } + listOfNotNull(idle)).forEach { n ->
             Notifier.postOnce(context, "invest_reminders", n.key) {
-                Notifier.post(context, "invest", "Invest", 700 + (n.key.hashCode() and 0xff), n.title, n.text, "invest/plan")
+                Notifier.post(context, "invest", "Invest", 700 + (n.key.hashCode() and 0xff), n.title, n.text, if (n.key.startsWith("idle-")) "invest/overview" else "invest/plan")
             }
         }
     }

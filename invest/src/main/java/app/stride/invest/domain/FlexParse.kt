@@ -1,5 +1,7 @@
 package app.stride.invest.domain
 
+import app.stride.invest.model.Accrual
+import app.stride.invest.model.CashBalance
 import app.stride.invest.model.CashKind
 import app.stride.invest.model.CashMove
 import app.stride.invest.model.NavPoint
@@ -62,6 +64,8 @@ object FlexParse {
         type.contains("Deposit", true) || type.contains("Withdraw", true) -> CashKind.DEPOSIT
         type.contains("Withholding", true) -> CashKind.WITHHOLDING
         type.contains("Dividend", true) || type.contains("Lieu", true) -> CashKind.DIVIDEND
+        type.contains("Interest", true) -> CashKind.INTEREST
+        type.contains("Fee", true) || type.contains("Commission", true) -> CashKind.FEE
         else -> CashKind.OTHER
     }
 
@@ -94,10 +98,34 @@ object FlexParse {
                 costBasis = num(a["costBasisMoney"]),
                 unrealized = num(a["fifoPnlUnrealized"]),
                 valueBase = num(a["fxRateToBase"])?.let { value * it } ?: value.takeIf { a["currency"] == base },
+                costPrice = num(a["costBasisPrice"]),
+                fxRateToBase = num(a["fxRateToBase"]),
+                isin = a["isin"]?.takeIf { it.isNotBlank() },
             )
         }.sortedByDescending { it.valueBase ?: it.value }
 
         val cashNow = all("CashReportCurrency").firstOrNull { it["currency"] == "BASE_SUMMARY" }?.let { num(it["endingCash"]) }
+        val cashByCurrency = all("CashReportCurrency").filter { it["currency"] != "BASE_SUMMARY" }.mapNotNull { a ->
+            val c = a["currency"]?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            num(a["endingCash"])?.takeIf { kotlin.math.abs(it) >= 0.005 }?.let { CashBalance(c, it) }
+        }.distinctBy { it.currency }
+
+        val accrualsRead = xml.contains("<OpenDividendAccruals")
+        val accruals = all("OpenDividendAccrual").mapNotNull { a ->
+            val symbol = a["symbol"]?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            Accrual(
+                symbol = symbol,
+                exDate = date(a["exDate"]),
+                payDate = date(a["payDate"]),
+                quantity = num(a["quantity"]) ?: 0.0,
+                perShare = num(a["grossRate"]),
+                gross = num(a["grossAmount"]) ?: 0.0,
+                tax = kotlin.math.abs(num(a["tax"]) ?: 0.0),
+                net = num(a["netAmount"]) ?: ((num(a["grossAmount"]) ?: 0.0) - kotlin.math.abs(num(a["tax"]) ?: 0.0)),
+                currency = a["currency"].orEmpty(),
+                fxRateToBase = num(a["fxRateToBase"]),
+            )
+        }.sortedBy { it.payDate ?: "9999" }
 
         val cash = all("CashTransaction").filter { (it["levelOfDetail"] ?: "DETAIL").equals("DETAIL", true) }.mapNotNull { a ->
             val d = date(a["dateTime"]) ?: date(a["settleDate"]) ?: date(a["reportDate"]) ?: return@mapNotNull null
@@ -131,10 +159,12 @@ object FlexParse {
                 proceeds = num(a["proceeds"]),
                 commission = num(a["ibCommission"]),
                 realized = num(a["fifoPnlRealized"]),
+                fxRateToBase = num(a["fxRateToBase"]),
+                description = a["description"].orEmpty(),
             )
         }
 
-        val snapshot = asOf?.let { Snapshot(it, base, stmt?.get("accountId"), navNow, cashNow, positions) }
+        val snapshot = asOf?.let { Snapshot(it, base, stmt?.get("accountId"), navNow, cashNow, positions, cashByCurrency, accruals, accrualsRead) }
         return FlexStatement(snapshot, nav, cash, trades)
     }
 }

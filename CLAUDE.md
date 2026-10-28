@@ -165,9 +165,17 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   `domain/Portfolio` (tested): merge by id/date, calendar periods (quarters Jan/Apr/Jul/Oct), deposits in the plan's
   currency, contributed vs NAV, dividends/withheld per year, plan notices (period start; ≤14 days left while short).
   `reminder/InvestReminder` (every 3 h): one report a day from 08:00, notices from 09:00 via `Notifier.postOnce`
-  ("invest/plan"). UI `ui/InvestApp`: Overview / Positions / Plan + Connect screen (gear). Open targets "invest/plan",
+  ("invest/plan"). UI `ui/InvestApp`: Overview / Positions / Activity / Plan + Connect screen (gear). Open targets "invest/plan",
   "invest/positions", "invest/connect". **Next (asked for):** Serbian tax reminders (dividends 15% within 30 days, PPDG-3R
   for capital gains per half year, NBS rates), not built yet; the rules must be checked before relying on them.
+  More from the same report (`domain/Insights`, tested): returns per period (1M / YTD / 1Y / All, deposits taken out,
+  Modified Dietz %), the put-in line under the value chart, holdings (share, avg price, gain %), mix by asset class /
+  currency (cash per currency from Cash Report), one activity feed (dividend + its withholding joined; kinds incl.
+  INTEREST / FEE / TAX), dividends per month, income and costs per year (commissions × trade fxRateToBase), coming
+  dividends from the optional Open Dividend Accruals section (`Snapshot.accruals`, `accrualsRead`), idle cash and the
+  "still in cash" notice (deposit 7–60 days old, nothing bought, ≥ half in cash; key "idle-<id>"). Tabs Overview /
+  Positions / Activity / Plan (`ui/InvestLayouts`, hold-to-edit sections, `InvestData.layout`), `PositionScreen`
+  (open target "position:<symbol>"), "?" explanations in `ui/Glossary`.
 - `:music` (`MusicModule`, package `app.stride.music`, neon cyan `MusicAccent`): Tempo (the user's yt-dlp app, its repo is
   gone; rebuilt from the session that wrote it). youtubedl-android 0.17.3 (yt-dlp + ffmpeg + aria2c, `engine/Engine`:
   init off the main thread in `onAppStart`, yt-dlp self-update once a day, prefs `music_engine`). `music.json`
