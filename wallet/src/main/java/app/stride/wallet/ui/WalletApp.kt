@@ -261,6 +261,8 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 DropdownMenuItem(text = { Text("Receipt without QR") }, leadingIcon = { Icon(Icons.Filled.CameraAlt, null) }, onClick = { menu = false; push("noqr") })
                                 DropdownMenuItem(text = { Text("Receipts from photos") }, leadingIcon = { Icon(Icons.Filled.Image, null) }, onClick = { menu = false; pickPhoto() })
+                                // The "Without QR" list also holds the repair server's key, so it's reachable even when the list is empty.
+                                DropdownMenuItem(text = { Text("Without QR · repair server") }, leadingIcon = { Icon(Icons.Filled.QrCodeScanner, null) }, onClick = { menu = false; push("noqr-list") })
                                 DropdownMenuItem(text = { Text("Paste a receipt link") }, leadingIcon = { Icon(Icons.Filled.Link, null) }, onClick = { menu = false; askLink = true })
                                 DropdownMenuItem(text = { Text("Import from Mani (CSV)") }, leadingIcon = { Icon(Icons.Filled.FileDownload, null) }, onClick = { menu = false; importMani() })
                             }
