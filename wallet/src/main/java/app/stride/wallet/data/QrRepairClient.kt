@@ -22,7 +22,9 @@ import java.util.concurrent.TimeUnit
  * receipt's link or nothing. The key is the user's, kept in prefs `wallet_secrets` (out of every backup).
  */
 object QrRepairClient {
-    const val DEFAULT_URL = "https://hive-chi-rosy.vercel.app/api/qr"
+    const val DEFAULT_URL = "https://hive-backend.ruvceski.com/api/qr"
+    /** The same Vercel project's own address, used when the custom domain can't be reached. */
+    const val FALLBACK_URL = "https://hive-chi-rosy.vercel.app/api/qr"
     private const val PREFS = "wallet_secrets"
     private const val KEY = "qr_key"
     private const val URL = "qr_url"
@@ -54,9 +56,17 @@ object QrRepairClient {
     fun repair(context: Context, photo: File): Answer {
         val key = key(context) ?: return Answer.Failed("No key for the repair server.")
         val bytes = jpeg(photo) ?: return Answer.Failed("Couldn't open the photo.")
-        val req = Request.Builder().url(url(context)).header("Authorization", "Bearer $key")
-            .post(bytes.toRequestBody("image/jpeg".toMediaType())).build()
-        return runCatching {
+        for (url in listOf(url(context), FALLBACK_URL).distinct()) {
+            val req = Request.Builder().url(url).header("Authorization", "Bearer $key")
+                .post(bytes.toRequestBody("image/jpeg".toMediaType())).build()
+            post(req)?.let { return it }
+        }
+        return Answer.Failed("Couldn't reach the repair server.")
+    }
+
+    /** The server's answer; null when it couldn't be reached at all (the next address is tried). */
+    private fun post(req: Request): Answer? =
+        runCatching {
             http.newCall(req).execute().use { r ->
                 val body = r.body?.string().orEmpty()
                 when {
@@ -68,8 +78,7 @@ object QrRepairClient {
                     }
                 }
             }
-        }.getOrElse { Answer.Failed("Couldn't reach the repair server.") }
-    }
+        }.getOrNull()
 
     /** The photo as a JPEG of at most 2000 px and 4 MB (the QR's modules stay several pixels wide). */
     private fun jpeg(file: File): ByteArray? {

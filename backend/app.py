@@ -6,7 +6,7 @@ POST /api/qr: a photo of a Serbian fiscal receipt whose QR code the phone couldn
   {"link": null}. A link is only returned when it passed every check of the repair reader; never a guess.
 GET /api/qr: a liveness check.
 """
-import hmac, json, os, re, tempfile, time
+import base64, hashlib, hmac, json, os, re, tempfile, time, urllib.parse
 
 import cv2
 import numpy as np
@@ -69,6 +69,16 @@ def repair_any(path, budget=BUDGET):
                 os.unlink(p)
 
 
+def whole(link):
+    """The verification payload ends with the MD5 of everything before it: a last check that every byte of the
+    repaired link is right."""
+    try:
+        b = base64.b64decode(urllib.parse.unquote(link.split('vl=', 1)[1]), validate=True)
+        return len(b) > 16 and hashlib.md5(b[:-16]).digest() == b[-16:]
+    except Exception:
+        return False
+
+
 def repair(path, budget=BUDGET):
     """The repair reader's attempts in turn (plain, then against the printer's white stripes, then upscaled for tiny
     codes) until one returns a checked link or the time is up."""
@@ -81,7 +91,7 @@ def repair(path, budget=BUDGET):
             return None, 'timeout'
         except Exception:  # one attempt failing (odd image) must not stop the others
             t = None
-        if t and LINK.match(t):
+        if t and LINK.match(t) and whole(t):
             return t, f'erode={erode} scale={scale}'
     return None, 'not found'
 
