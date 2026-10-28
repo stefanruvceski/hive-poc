@@ -95,24 +95,36 @@ class GarminPersonal(private val context: Context) {
     suspend fun probe(day: LocalDate = LocalDate.now().minusDays(1)): List<String> = withContext(Dispatchers.IO) {
         token()
         val name = displayName()?.let { URLEncoder.encode(it, "UTF-8") }
+        // First probe (2026-10-28): HRV, Body Battery and the activity list answered; the summary, 15-minute chart,
+        // intensity minutes, events, sleep and stress paths gave 404, so this round tries their other spellings.
         val paths = listOfNotNull(
+            "/usersummary-service/usersummary/daily?calendarDate=$day",
             name?.let { "/usersummary-service/usersummary/daily/$it?calendarDate=$day" },
-            "/wellness-service/wellness/dailySummaryChart${name?.let { "/$it" }.orEmpty()}?date=$day",
-            "/wellness-service/wellness/daily/im/$day",
+            "/usersummary-service/stats/steps/daily/$day/$day",
             "/usersummary-service/stats/im/daily/$day/$day",
+            "/usersummary-service/stats/stress/daily/$day/$day",
+            "/wellness-service/wellness/dailySummaryChart?date=$day",
+            name?.let { "/wellness-service/wellness/dailySummaryChart/$it?date=$day" },
+            "/wellness-service/wellness/dailyHeartRate?date=$day",
+            "/wellness-service/stats/hourly/im/$day/1",
+            "/wellness-service/wellness/daily/im/$day",
+            "/wellness-service/wellness/dailyStress/$day",
             "/wellness-service/wellness/dailyEvents?calendarDate=$day",
-            "/wellness-service/wellness/dailyMovement?calendarDate=$day",
-            "/sleep-service/sleep/dailySleepData?date=$day",
+            name?.let { "/wellness-service/wellness/dailyEvents/$it?calendarDate=$day" },
+            "/wellness-service/wellness/bodyBattery/events/$day",
+            "/sleep-service/sleep/dailySleepData?date=$day&nonSleepBufferMinutes=60",
+            name?.let { "/wellness-service/wellness/dailySleepData/$it?date=$day&nonSleepBufferMinutes=60" },
+            "/metrics-service/metrics/trainingreadiness/$day",
             "/hrv-service/hrv/$day",
             "/wellness-service/wellness/bodyBattery/reports/daily?startDate=$day&endDate=$day",
-            "/wellness-service/wellness/dailyStress/$day",
             "/activitylist-service/activities/search/activities?startDate=$day&endDate=$day&limit=20",
         )
         val answers = linkedMapOf<String, JsonElement>()
         val lines = mutableListOf("Display name: ${if (name != null) "found" else "not found"} · day $day")
         for (p in paths) {
             val (code, body) = runCatching { get(p) }.getOrElse { 0 to "error: ${it.message}" }
-            val json = runCatching { StrideJson.parseToJsonElement(body) }.getOrElse { JsonPrimitive(body.take(2000)) }
+            val json = if (body.length > 30_000) JsonPrimitive(body.take(30_000) + "…(cut)")
+                else runCatching { StrideJson.parseToJsonElement(body) }.getOrElse { JsonPrimitive(body.take(2000)) }
             answers[p] = buildJsonObject { put("http", code); put("body", json) }
             lines += "${p.substringBefore('?').replace(name ?: "\u0000", "{name}")} → HTTP $code, ${body.length} chars"
         }

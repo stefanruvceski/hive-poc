@@ -379,10 +379,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         toast(if (key.isNullOrBlank()) "Personal API key removed" else "Personal API key saved on this phone")
     }
 
-    fun testPersonal() {
+    /** [daysAgo]: which day to ask about (pick one with a walk that wasn't started on the watch). */
+    fun testPersonal(daysAgo: Long = 1) {
         _personal.value = listOf("Asking Garmin…")
         viewModelScope.launch {
-            _personal.value = try { personal.probe() } catch (e: Exception) { listOf("Failed: ${e.message}") }
+            _personal.value = try { personal.probe(LocalDate.now().minusDays(daysAgo)) } catch (e: Exception) { listOf("Failed: ${e.message}") }
         }
     }
 
