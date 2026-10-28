@@ -61,6 +61,8 @@ class OcrFuelCardsTest {
         // The counter box takes the numbers only; the form sets the type (ПП) in its own box.
         assertEquals("120001/123456", ReceiptOcr.formCounter(f.counter))
         assertEquals("120001/123456", ReceiptOcr.formCounter("120001 / 123456"))
+        // Typed into the time box the way the form shows it.
+        assertEquals("15.5.2026. 09:20", ReceiptOcr.formTime(f.time))
     }
 
     @Test fun suffixesAndTotal() {
