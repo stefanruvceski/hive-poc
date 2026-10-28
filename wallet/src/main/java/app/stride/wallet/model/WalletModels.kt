@@ -131,7 +131,13 @@ data class WalletData(
     val shopGroups: List<AliasGroup> = emptyList(),
     /** Product pairs ("keyA|keyB", sorted) the user said aren't the same: never suggested again. */
     val notSame: List<String> = emptyList(),
+    /** Photos from a multi-photo import whose QR code couldn't be read: to check by the printed fields. */
+    val noQr: List<NoQrPhoto> = emptyList(),
 )
+
+/** A receipt photo kept in app files ([file], in wallet_noqr) until it's saved through "Receipt without QR". */
+@Serializable
+data class NoQrPhoto(val id: String, val file: String, val addedAt: String)
 
 /** Several keys that are one thing; [keys] first is the one kept, [name] the user's chosen name (null = automatic). */
 @Serializable

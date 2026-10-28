@@ -34,7 +34,7 @@ object WalletModule : AppModule {
     override val subtitle = "Receipts, warranties and loyalty cards"
     override val icon: ImageVector = Icons.Filled.AccountBalanceWallet
     override val accent = WalletAccent
-    override val dataFiles = listOf("wallet.json", "wallet_cards")
+    override val dataFiles = listOf("wallet.json", "wallet_cards", "wallet_noqr")
 
     override fun onAppStart(context: android.content.Context) {
         // Money counts the receipts as spending.

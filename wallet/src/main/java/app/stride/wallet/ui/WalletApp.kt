@@ -119,7 +119,8 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                 done += runCatching { Scanner.read(context, uri) }.fold(
                     onSuccess = { codes ->
                         val links = BatchImport.links(codes.map { it.value })
-                        if (links.isEmpty()) listOf(BatchItem(uri, fixed = BatchImport.State.NO_QR))
+                        // No QR read: the photo goes on the "Without QR" list, to check by its printed fields.
+                        if (links.isEmpty()) listOf(BatchItem(uri, fixed = BatchImport.State.NO_QR, kept = vm.keepNoQr(uri)))
                         else links.map { l ->
                             vm.addReceipt(l)?.let { (id, isNew) -> BatchItem(uri, id, isNew, fixed = null) } ?: BatchItem(uri, fixed = BatchImport.State.NO_QR)
                         }
@@ -132,6 +133,20 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         }
     }
     val photo = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(50)) { uris -> readPhotos(uris) }
+
+    /** Photos whose receipts are all in Hive, to the gallery's trash (Android asks first and shows them; 30 days to undo). */
+    val trash = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        toast(if (r.resultCode == android.app.Activity.RESULT_OK) "Moved to the trash. Google Photos keeps them there for 30 days." else "Left in the gallery.")
+    }
+    fun trashPhotos(photos: List<Uri>) {
+        if (android.os.Build.VERSION.SDK_INT < 30) { toast("Needs Android 11 or newer."); return }
+        val ids = photos.mapNotNull { BatchImport.mediaStoreId(it.toString()) }
+        if (ids.isEmpty()) { toast("These photos can't be reached from here (cloud photos?). Delete them in the gallery."); return }
+        val uris = ids.map { android.content.ContentUris.withAppendedId(android.provider.MediaStore.Images.Media.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL), it) }
+        runCatching { android.provider.MediaStore.createTrashRequest(context.contentResolver, uris, true) }
+            .onSuccess { trash.launch(androidx.activity.result.IntentSenderRequest.Builder(it.intentSender).build()) }
+            .onFailure { toast("Couldn't move them: ${it.message}") }
+    }
 
     /** Deleted at once; the snackbar's Undo puts it back. */
     fun deleteReceipt(r: Receipt) {
@@ -163,7 +178,12 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
                 open.target.startsWith("receipt:") -> { stack.clear(); tab = "receipts"; push(open.target) }
                 open.target.startsWith("company:") -> { stack.clear(); tab = "receipts"; push(open.target) }
                 // Shared to "Hive Receipt" (ReceiptShareActivity): save it and open it, like a scan.
-                open.target.startsWith("link:") -> { stack.clear(); receipt(Uri.decode(open.target.removePrefix("link:"))) }
+                open.target.startsWith("link:") -> {
+                    stack.clear()
+                    // Back from Chrome with the receipt: the photo it came from is done.
+                    vm.pendingNoQr?.let { vm.removeNoQr(it) }
+                    receipt(Uri.decode(open.target.removePrefix("link:")))
+                }
             }
         }
     }
@@ -187,7 +207,9 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         BackHandler { pop() }
         when {
             route.startsWith("receipt:") -> route.removePrefix("receipt:").let { id -> ReceiptScreen(vm, d, id, id in loading, ::pop) }
-            route == "noqr" -> NoQrScreen(vm, onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
+            route == "noqr" -> NoQrScreen(vm, null, onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
+            route == "noqr-list" -> NoQrListScreen(vm, d, onPhoto = { push("noqr:$it") }, onBack = ::pop)
+            route.startsWith("noqr:") -> NoQrScreen(vm, route.removePrefix("noqr:"), onFound = { id -> pop(); tab = "receipts"; push("receipt:$id") }, onBack = ::pop)
             route == "fuel" -> FuelScreen(vm, d, onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route.startsWith("company:") -> CompanyReportScreen(d, route.removePrefix("company:"), onReceipt = { push("receipt:$it") }, onBack = ::pop)
             route == "prices" -> PricesScreen(d, onProduct = { push("product:$it") }, onBack = ::pop)
@@ -239,7 +261,10 @@ fun WalletApp(open: OpenRequest, onHome: (() -> Unit)?) {
         },
     ) { padding ->
         if (tab == "cards") CardsTab(d, padding, onCard = { push("card:$it") }, onAdd = { push("new-card") })
-        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onNoQr = { push("noqr") }, onFuel = { push("fuel") }, onPrices = { push("prices") }, onCompany = { push("company:$it") }, onDelete = ::deleteReceipt, onReceipt = { push("receipt:$it") })
-        if (batchOpen && batch.isNotEmpty()) BatchReport(batch, d, loading, onOpen = { batchOpen = false; tab = "receipts"; push("receipt:$it") }, onDone = { batchOpen = false })
+        else ReceiptsTab(d, loading, padding, onScan = ::scanReceipt, onPhoto = ::pickPhoto, onLink = { askLink = true }, onImport = ::importMani, onNoQr = { push("noqr") }, onFuel = { push("fuel") }, onPrices = { push("prices") }, onCompany = { push("company:$it") }, onNoQrList = { push("noqr-list") }, onDelete = ::deleteReceipt, onReceipt = { push("receipt:$it") })
+        if (batchOpen && batch.isNotEmpty()) BatchReport(
+            batch, d, loading, onOpen = { batchOpen = false; tab = "receipts"; push("receipt:$it") }, onDone = { batchOpen = false },
+            onTrash = { trashPhotos(it) }, onNoQr = { batchOpen = false; push("noqr-list") },
+        )
     }
 }

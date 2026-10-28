@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-10-28-noqr-list",
+    "title": "No more guessing which photos failed",
+    "items": [
+      {
+        "icon": "apps",
+        "text": "After a many-photo import, photos whose QR couldn't be read are kept in Hive: Receipts tab › Without QR. Tap one and its printed fields are read for the tax office's check; it leaves the list once the receipt is saved."
+      },
+      {
+        "icon": "apps",
+        "text": "The import report can delete the saved photos from the gallery (Android shows them and asks first; they stay in the trash for 30 days), so only the ones still to do are left."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-receipt-share",
     "title": "Fewer steps for receipts without QR",
     "items": [

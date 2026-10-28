@@ -45,4 +45,25 @@ object BatchImport {
             "$busy in progress".takeIf { busy > 0 },
         ).joinToString(", ")
     }
+
+    /** States after which the photo is no longer needed: its receipt is in Hive. */
+    private val DONE = setOf(State.SAVED, State.WAITING, State.DUPLICATE)
+
+    /**
+     * The photos (by key) that can go from the gallery: every receipt read from them is in Hive. A photo with two
+     * receipts stays until both are; a failed one always stays.
+     */
+    fun done(items: List<Pair<String, State>>): List<String> =
+        items.groupBy({ it.first }, { it.second }).filter { (_, ss) -> ss.all { it in DONE } }.keys.toList()
+
+    /**
+     * The MediaStore id behind a picked photo's uri, so it can be moved to the trash: the photo picker's
+     * "content://media/picker/0/com.android.providers.media.photopicker/media/1000000034" (local photos only, a cloud
+     * photo has no MediaStore row) or a plain "content://media/external/images/media/34".
+     */
+    fun mediaStoreId(uri: String): Long? {
+        val local = Regex("""^content://media/picker(?:_get_content)?/\d+/com\.android\.providers\.media\.photopicker/media/(\d+)$""")
+        val plain = Regex("""^content://media/[^/]+/images/media/(\d+)$""")
+        return (local.matchEntire(uri) ?: plain.matchEntire(uri))?.groupValues?.get(1)?.toLongOrNull()
+    }
 }

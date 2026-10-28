@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import app.stride.wallet.data.FiscalClient
 import app.stride.wallet.data.WalletStore
 import app.stride.wallet.data.CardImages
+import app.stride.wallet.data.NoQrPhotos
+import app.stride.wallet.model.NoQrPhoto
 import app.stride.wallet.domain.Aliases
 import app.stride.wallet.domain.Brands
 import app.stride.wallet.domain.FiscalParse
@@ -233,6 +235,26 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun renameShop(key: String, name: String?) = update { d -> d.copy(shopGroups = Aliases.rename(d.shopGroups, key, name)) }
 
     fun unmergeShop(key: String) = update { d -> d.copy(shopGroups = Aliases.unmerge(d.shopGroups, key)) }
+
+    // ---------------------------------------------------------------- photos without a readable QR
+
+    /** Keeps a picked photo whose QR couldn't be read (copied into app files) on the "Without QR" list. */
+    suspend fun keepNoQr(uri: android.net.Uri): Boolean {
+        val name = withContext(Dispatchers.IO) { NoQrPhotos.save(getApplication(), uri) } ?: return false
+        update { d -> d.copy(noQr = d.noQr + NoQrPhoto(id("nqr"), name, now())) }
+        return true
+    }
+
+    /** Off the list, and its file deleted (the receipt was saved, or the user threw it away). */
+    fun removeNoQr(id: String) {
+        val p = _data.value.noQr.firstOrNull { it.id == id } ?: return
+        NoQrPhotos.delete(getApplication(), p.file)
+        update { d -> d.copy(noQr = d.noQr.filter { it.id != id }) }
+        if (pendingNoQr == id) pendingNoQr = null
+    }
+
+    /** The photo being checked right now (through Chrome, it comes back as a shared link); done when a receipt arrives. */
+    var pendingNoQr: String? = null
 
     // ---------------------------------------------------------------- loyalty cards
 

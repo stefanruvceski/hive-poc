@@ -133,7 +133,12 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   Receipt rows: `ui/SwipeToDelete` (swipe left: past half deletes, with Undo snackbar + `restoreReceipt`; less stays
   open on a tappable red bin). Photos: `PickMultipleVisualMedia(50)`; one photo opens its receipt, several go through
   `Scanner.read` one by one (`domain/BatchImport`, tested: links per photo, live state, summary) and `ui/BatchPhotos`'
-  `BatchReport` dialog lists each photo with its outcome.
+  `BatchReport` dialog lists each photo with its outcome. A photo with no readable QR is copied to filesDir/wallet_noqr
+  (`data/NoQrPhotos`, 2400 px; in `dataFiles`) as `WalletData.noQr` (`NoQrPhoto`): Receipts tab card "Without QR" →
+  `ui/NoQrList` (route "noqr-list") → "noqr:<id>" opens `NoQrScreen` with the photo read; saving its receipt (or a
+  "Hive Receipt" share while it's `vm.pendingNoQr`) removes it. The report's "Delete N saved from gallery" moves photos
+  whose receipts are all in Hive (`BatchImport.done`) to the trash: `BatchImport.mediaStoreId` (picker uri → MediaStore
+  id, tested; cloud photos can't) → `MediaStore.createTrashRequest` (Android asks, shows them; API 30+).
   Company report (route / open target "company:<pib>", `ui/CompanyReportScreen`, entry on the Receipts tab when a company
   chip is picked): `domain/CompanyReport` (tested) builds a month (or all) of a PIB's OK receipts with total and VAT per
   rate, from the journal's tax table ("Ознака Име Стопа Порез") else item labels (Ђ 20, Е 10, Г/А 0; Mani imports have

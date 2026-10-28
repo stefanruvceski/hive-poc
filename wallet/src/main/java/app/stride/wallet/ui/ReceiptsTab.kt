@@ -93,6 +93,7 @@ fun ReceiptsTab(
     onPrices: () -> Unit = {},
     onDelete: (Receipt) -> Unit = {},
     onCompany: (String) -> Unit = {},
+    onNoQrList: () -> Unit = {},
     onReceipt: (String) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -136,6 +137,18 @@ fun ReceiptsTab(
                     companies.forEach { pib -> GlassPill(Owners.name(pib, d.companies), owner == pib) { owner = pib } }
                 }
                 GlassPill("★ Saved", saved, StrideColors.Amber) { saved = !saved }
+            }
+        }
+        // Photos from a multi-photo import whose QR couldn't be read, waiting to be checked by their printed fields.
+        if (d.noQr.isNotEmpty()) item {
+            GlassRow(onNoQrList, tint = StrideColors.Amber) {
+                Icon(Icons.Filled.Image, null, tint = StrideColors.Amber, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.size(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Without QR · ${d.noQr.size} to check", color = StrideColors.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Photos whose QR code couldn't be read", color = StrideColors.Dim, fontSize = 12.sp)
+                }
+                Text("›", color = StrideColors.Amber, fontSize = 20.sp)
             }
         }
         // A company picked: its report for the accountant (month totals, VAT per rate, PDF / CSV).
