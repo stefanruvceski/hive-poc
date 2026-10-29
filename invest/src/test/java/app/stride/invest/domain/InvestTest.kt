@@ -132,4 +132,24 @@ class InvestTest {
         val late = d.copy(plan = d.plan.copy(start = "2026-07-01"))
         assertEquals(listOf(true, true), Portfolio.ledger(late, LocalDate.parse("2026-11-20")).periods.map { it.done })
     }
+
+    @Test fun earlierYears() {
+        val today = LocalDate.parse("2026-10-29")
+        var d = Portfolio.merge(InvestData(), FlexParse.statement(report), "now")
+        // The oldest thing read is 2026-10-03, so the year before ends the day before.
+        assertEquals(LocalDate.parse("2025-10-03") to LocalDate.parse("2026-10-02"), Portfolio.earlierChunk(d, today))
+        val older = FlexStatement(
+            snapshot = d.snapshot!!.copy(asOf = "2026-10-02", nav = 1.0),
+            nav = listOf(app.stride.invest.model.NavPoint("2025-11-01", 0.0), app.stride.invest.model.NavPoint("2025-12-01", 500.0)),
+            cash = listOf(dep("old", "2025-11-20", 500.0)), trades = emptyList(),
+        )
+        val snap = d.snapshot
+        d = Portfolio.mergeHistory(d, older)
+        // The current snapshot stays; the zero day before opening is dropped; the deposit joins.
+        assertEquals(snap, d.snapshot)
+        assertEquals("2025-12-01", d.navHistory.first().date)
+        assertEquals(3500.0, Portfolio.contributed(d), 0.001)
+        assertFalse(Portfolio.emptyYear(older))
+        assertTrue(Portfolio.emptyYear(FlexStatement(null, listOf(app.stride.invest.model.NavPoint("2024-01-02", 0.0)), emptyList(), emptyList())))
+    }
 }

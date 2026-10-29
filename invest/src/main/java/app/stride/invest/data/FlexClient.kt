@@ -10,6 +10,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 /**
@@ -20,6 +22,7 @@ import java.util.concurrent.TimeUnit
 object FlexClient {
     private const val BASE = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/"
     private const val PREFS = "invest_secrets"
+    private val YMD = DateTimeFormatter.BASIC_ISO_DATE
     private val http = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build()
 
     class FlexException(message: String) : IOException(message)
@@ -44,11 +47,15 @@ object FlexClient {
         }
     }
 
-    /** The latest report for the saved query. Takes from a few seconds to about a minute. */
-    suspend fun fetch(context: Context): FlexStatement = withContext(Dispatchers.IO) {
+    /**
+     * The report for the saved query: its own period, or [from]..[to] (IBKR's `fd` / `td`, at most 365 days, used to
+     * read earlier years). Takes from a few seconds to about a minute.
+     */
+    suspend fun fetch(context: Context, from: LocalDate? = null, to: LocalDate? = null): FlexStatement = withContext(Dispatchers.IO) {
         val token = token(context) ?: throw FlexException("Add your Flex token first.")
         val query = queryId(context) ?: throw FlexException("Add your Flex Query ID first.")
-        val sent = FlexParse.reply(get("SendRequest", mapOf("t" to token, "q" to query, "v" to "3")))
+        val range = if (from != null && to != null) mapOf("fd" to from.format(YMD), "td" to to.format(YMD)) else emptyMap()
+        val sent = FlexParse.reply(get("SendRequest", mapOf("t" to token, "q" to query, "v" to "3") + range))
         val ref = sent.reference?.takeIf { sent.ok } ?: throw FlexException(sent.error ?: "Interactive Brokers didn't accept the request (${sent.errorCode ?: "no code"}).")
         var wait = 3_000L
         repeat(8) {

@@ -179,6 +179,10 @@ Expect small compile errors on the first build: wrong imports, Compose API signa
   The plan is a ledger (`Portfolio.ledger`, tested): from `Plan.start` (null = Jan 1 of the first deposit's year) every
   period gets the deposits in order, oldest open first (the user pays two quarters at once to catch up); `owed`,
   `behind`, `ahead`; notices name the open periods ("6,000 EUR left for Q3 + Q4 2026").
+  Full history: `FlexClient.fetch(from, to)` passes `fd` / `td` (yyyyMMdd, ≤ 365 days) to SendRequest; "Load full
+  history" (chart card, `InvestViewModel.loadHistory`) reads `Portfolio.earlierChunk` years backwards, 8 s apart (IBKR:
+  ~10 requests/min), `mergeHistory` keeps the current snapshot and drops 0-value NAV days, stops at `emptyYear`
+  (`InvestData.historyDone`).
 - `:music` (`MusicModule`, package `app.stride.music`, neon cyan `MusicAccent`): Tempo (the user's yt-dlp app, its repo is
   gone; rebuilt from the session that wrote it). youtubedl-android 0.17.3 (yt-dlp + ffmpeg + aria2c, `engine/Engine`:
   init off the main thread in `onAppStart`, yt-dlp self-update once a day, prefs `music_engine`). `music.json`

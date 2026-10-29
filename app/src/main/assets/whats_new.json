@@ -1,5 +1,15 @@
 [
   {
+    "id": "2026-10-29-invest-history",
+    "title": "Invest: your whole history",
+    "items": [
+      {
+        "icon": "chart",
+        "text": "\"Load full history\" under the value chart reads your Interactive Brokers account year by year back to when it opened (IBKR's report covers one year at a time), so the chart, returns and deposits start from the beginning."
+      }
+    ]
+  },
+  {
     "id": "2026-10-28-invest-plan-catchup",
     "title": "Invest plan counts catch-up deposits",
     "items": [

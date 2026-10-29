@@ -45,6 +45,25 @@ object Portfolio {
         lastError = null,
     )
 
+    /** Merges an older report (an earlier year): history and transactions only, the current snapshot stays. */
+    fun mergeHistory(d: InvestData, s: FlexStatement): InvestData =
+        // Days before the account opened come back as 0: they aren't history.
+        merge(d, s.copy(snapshot = null, nav = s.nav.filter { it.value != 0.0 }), d.lastSync ?: "").copy(lastSync = d.lastSync, lastError = d.lastError)
+
+    /**
+     * The next earlier year to read for the full history: the 365 days before the oldest thing Hive has (NAV point,
+     * cash move or trade), or before [today] when there's nothing yet.
+     */
+    fun earlierChunk(d: InvestData, today: LocalDate): Pair<LocalDate, LocalDate> {
+        val oldest = (d.navHistory.map { it.date } + d.cash.map { it.date } + d.trades.map { it.date }).minOrNull()
+            ?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() } ?: today.plusDays(1)
+        val to = oldest.minusDays(1)
+        return to.minusDays(364) to to
+    }
+
+    /** An earlier year that holds nothing: no NAV above zero, no cash move, no trade. The account didn't exist yet. */
+    fun emptyYear(s: FlexStatement): Boolean = s.nav.none { it.value != 0.0 } && s.cash.isEmpty() && s.trades.isEmpty()
+
     /** The period [day] falls in; quarters and half years follow the calendar (Jan, Apr, Jul, Oct). */
     fun period(day: LocalDate, every: Cadence): Pair<LocalDate, LocalDate> {
         val m = every.months

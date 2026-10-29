@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
@@ -41,13 +42,15 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-internal fun LazyListScope.overviewTab(host: SectionHost, d: InvestData, syncing: Boolean, onTab: (String) -> Unit) {
+internal fun LazyListScope.overviewTab(
+    host: SectionHost, d: InvestData, syncing: Boolean, history: String?, onLoadHistory: () -> Unit, onTab: (String) -> Unit,
+) {
     val today = LocalDate.now()
     val s = d.snapshot
     with(host) {
         sections {
             section("value") { item(key = "value") { ValueCard(d, syncing, today) } }
-            section("chart") { if (d.navHistory.size >= 2) item(key = "chart") { ChartCard(d) } }
+            section("chart") { if (d.navHistory.size >= 2) item(key = "chart") { ChartCard(d, history, onLoadHistory) } }
             section("plan") { if (d.plan.amount > 0) item(key = "plan") { PlanCard(d, today) { onTab("plan") } } }
             section("cash") { Insights.idleCash(d)?.let { c -> item(key = "cash") { CashCard(s!!, c) } } }
             section("upcoming") {
@@ -99,7 +102,7 @@ private fun ValueCard(d: InvestData, syncing: Boolean, today: LocalDate) {
 }
 
 @Composable
-private fun ChartCard(d: InvestData) {
+private fun ChartCard(d: InvestData, history: String?, onLoadHistory: () -> Unit) {
     val base = d.snapshot?.baseCurrency ?: "EUR"
     var range by rememberSaveable { mutableStateOf("1Y") }
     val today = LocalDate.now()
@@ -125,6 +128,19 @@ private fun ChartCard(d: InvestData) {
             Text("● Money put in", color = StrideColors.Dim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         }
         Text("The gap between the two lines is what the market added (or took).", color = StrideColors.Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+        when {
+            history != null -> Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = InvestAccent)
+                Text("  Reading $history from Interactive Brokers…", color = StrideColors.Dim, fontSize = 12.sp)
+            }
+            !d.historyDone -> Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("IBKR's report covers one year. Read the years before, back to when the account opened?", color = StrideColors.Dim, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton(onClick = onLoadHistory) { Text("Load full history", color = InvestAccent) }
+            }
+            else -> d.navHistory.firstOrNull()?.let {
+                Text("History since ${Dates.full(it.date)}.", color = StrideColors.Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+        }
     }
 }
 

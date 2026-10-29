@@ -76,6 +76,7 @@ fun InvestApp(open: OpenRequest, onHome: (() -> Unit)?) {
     val d by vm.data.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val connected by vm.connected.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
     val layout = d.layout
     val tabs = LayoutOps.visibleTabs(layout, InvestLayouts.ALL)
     var tabId by rememberSaveable { mutableStateOf("overview") }
@@ -150,7 +151,7 @@ fun InvestApp(open: OpenRequest, onHome: (() -> Unit)?) {
                     "positions" -> positionsTab(host, d, onPosition)
                     "activity" -> activityTab(host, d, filter, { filter = it }, onPosition)
                     "plan" -> planTab(host, d, vm::setPlan)
-                    else -> overviewTab(host, d, syncing) { tabId = it }
+                    else -> overviewTab(host, d, syncing, history, vm::loadHistory) { tabId = it }
                 }
             }
         }
