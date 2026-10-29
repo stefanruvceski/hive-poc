@@ -18,6 +18,8 @@ data class InvestData(
     /** When the last report was read (ISO instant) and what went wrong last, if anything. */
     val lastSync: String? = null,
     val lastError: String? = null,
+    /** Earlier years read with "Load full history": true once a year came back empty (before the account opened). */
+    val historyDone: Boolean = false,
     /** Hidden / reordered tabs and sections (ids in ui/InvestLayouts). */
     val layout: LayoutPrefs = LayoutPrefs(),
 )

@@ -66,6 +66,38 @@ class InvestViewModel(app: Application) : AndroidViewModel(app) {
         if (last == null || java.time.Duration.between(last, Instant.now()).toHours() >= 6) sync()
     }
 
+    /** While reading earlier years: the year being read ("2024"), else null. */
+    private val _history = MutableStateFlow<String?>(null)
+    val history: StateFlow<String?> = _history.asStateFlow()
+
+    /**
+     * Reads the account's earlier years one by one (365 days per report, IBKR's limit) until a year comes back empty,
+     * merging each into the stored history. IBKR allows about 10 requests a minute, so the years are spaced out.
+     */
+    fun loadHistory() {
+        if (!FlexClient.connected(getApplication()) || _history.value != null) return
+        viewModelScope.launch {
+            try {
+                repeat(25) { i ->
+                    val (from, to) = Portfolio.earlierChunk(_data.value, java.time.LocalDate.now())
+                    _history.value = if (from.year == to.year) "${from.year}" else "${from.year}–${to.year}"
+                    if (i > 0) kotlinx.coroutines.delay(8_000)
+                    val s = FlexClient.fetch(getApplication(), from, to)
+                    if (Portfolio.emptyYear(s)) {
+                        update { it.copy(historyDone = true) }
+                        return@launch
+                    }
+                    update { Portfolio.mergeHistory(it, s) }
+                }
+                update { it.copy(historyDone = true) }
+            } catch (e: Exception) {
+                update { it.copy(lastError = "Earlier years: " + (e.message ?: "couldn't read them.")) }
+            } finally {
+                _history.value = null
+            }
+        }
+    }
+
     fun connect(token: String, queryId: String) {
         FlexClient.save(getApplication(), token, queryId)
         _connected.value = FlexClient.connected(getApplication())
